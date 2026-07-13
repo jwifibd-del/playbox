@@ -1,0 +1,42 @@
+{
+  "name": "playflix",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "install:all": "npm install && cd backend && npm install",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:db": "docker-compose up -d",
+    "dev:db:down": "docker-compose down",
+    "seed": "cd backend && npm run seed",
+    "dev:android": "cd android && gradlew.bat assembleDebug",
+    "dev:android-tv": "cd android && gradlew.bat assembleDebug",
+    "build:android": "cd android && gradlew.bat assembleRelease",
+    "dev:ios": "cd ios && xcodegen generate && open PlayFlix.xcodeproj",
+    "dev:tvos": "cd ios && xcodegen generate && open PlayFlix.xcodeproj"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.18.2",
+    "hls.js": "^1.6.16",
+    "lucide-react": "^0.577.0",
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tailwind-merge": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.5.2",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5"
+  }
+}
