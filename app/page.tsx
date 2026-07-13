@@ -104,6 +104,9 @@ export default function Home() {
         return <MovieRow key={section.id} title={section.title} movies={popularMovies} animationDuration={duration} />;
       case 'kids':
         return <KidsRow key={section.id} title={section.title} items={kidsContent} animationDuration={duration} />;
+      case 'anime':
+        // Skip anime sections on main home page, they have their own /anime page
+        return null;
       case 'top-rated':
         return <MovieRow key={section.id} title={section.title} movies={topRatedMovies} animationDuration={duration} />;
       case 'movie-genre': {
