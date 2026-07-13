@@ -440,6 +440,8 @@ const MovieModal = ({
     cast: CastMember[];
     crew: CrewMember[];
     imdbId: string;
+    isKids: boolean;
+    isAnime: boolean;
   }>({
     title: '',
     tagline: '',
@@ -460,7 +462,9 @@ const MovieModal = ({
     sources: [],
     cast: [],
     crew: [],
-    imdbId: ''
+    imdbId: '',
+    isKids: false,
+    isAnime: false
   })
 
   useEffect(() => {

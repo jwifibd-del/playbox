@@ -2623,6 +2623,7 @@ export type HomepageSectionType =
   | 'news' 
   | 'popular' 
   | 'kids' 
+  | 'anime'
   | 'top-rated' 
   | 'custom'
   | 'movie-genre'
