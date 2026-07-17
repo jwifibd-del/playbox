@@ -184,7 +184,7 @@ export default function TVShowDetailsPage() {
     <main className="min-h-screen bg-[#080808] text-white">
       <Navbar />
       {/* Hero Section with Backdrop */}
-      <div className="relative w-full aspect-video max-h-[65vh] overflow-hidden">
+      <div className="relative w-full min-h-[80vh] sm:aspect-video sm:max-h-[65vh] overflow-hidden" suppressHydrationWarning>
         {/* Background Video or Image */}
         <div className="absolute inset-0">
           <motion.div
@@ -241,38 +241,22 @@ export default function TVShowDetailsPage() {
           )}
         </div>
         
-        <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#080808] to-transparent w-2/3" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#080808]/70 md:w-2/3 sm:w-3/4 to-transparent hidden sm:block" />
         <motion.div
           className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(59,130,246,0.18),transparent_40%),radial-gradient(circle_at_76%_28%,rgba(168,85,247,0.16),transparent_38%)]"
           animate={{ opacity: [0.28, 0.45, 0.3] }}
           transition={{ duration: 9, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
         />
 
-        {/* Trailer Controls */}
-        {trailerBackground && (
-          <div className="absolute bottom-8 right-8 flex items-center gap-4">
-            <button
-              onClick={handleTrailerToggle}
-              className="p-3 bg-black/50 hover:bg-black/70 rounded-full transition-colors backdrop-blur-sm"
-            >
-              {isTrailerPlaying ? <Pause size={24} /> : <Play size={24} fill="currentColor" />}
-            </button>
-            <button
-              onClick={() => setIsTrailerMuted(!isTrailerMuted)}
-              className="p-3 bg-black/50 hover:bg-black/70 rounded-full transition-colors backdrop-blur-sm"
-            >
-              {isTrailerMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-            </button>
-          </div>
-        )}
+
 
         {/* Hero Content */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 lg:p-16">
-          <div className="flex flex-col gap-6 md:flex-row items-end gap-10">
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 lg:p-16 z-10">
+          <div className="flex flex-col gap-4 sm:gap-6 md:flex-row items-start md:items-end gap-10">
             {/* Poster */}
-            <div className="flex-shrink-0">
-              <div className="w-40 sm:w-48 md:w-64 lg:w-80 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-zinc-800">
+            <div className="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-start">
+              <div className="w-36 sm:w-40 md:w-48 lg:w-64 xl:w-80 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-zinc-800">
                 <img
                   src={show.posterPath}
                   alt={show.title}
@@ -282,18 +266,18 @@ export default function TVShowDetailsPage() {
             </div>
 
             {/* Info */}
-            <div className="flex-1">
+            <div className="flex-1 text-center sm:text-left">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-4"
+                className="text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl font-bold mb-3 sm:mb-4"
               >
                 {show.title}
               </motion.h1>
 
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-zinc-400 mb-6">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 md:gap-4 text-zinc-400 mb-4 sm:mb-6">
                 <span className="flex items-center gap-1 text-yellow-400">
-                  <Star fill="currentColor" size={18} />
+                  <Star fill="currentColor" size={16} />
                   <span className="font-semibold">{show.rating}</span>
                 </span>
                 <span>
@@ -301,16 +285,16 @@ export default function TVShowDetailsPage() {
                   {show.endYear ? ` - ${show.endYear}` : ''}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Calendar size={16} />
+                  <Calendar size={14} />
                   {show.numberOfSeasons || (show.seasons?.length || 0)} Seasons
                 </span>
                 <span className="flex items-center gap-1">
-                  <Clock size={16} />
+                  <Clock size={14} />
                   {show.numberOfEpisodes || (show.seasons?.reduce((total: number, season: any) => total + (season.episodes?.length || 0), 0) || 0)} Episodes
                 </span>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                   {show.genres.map((genre: string) => (
-                    <span key={genre} className="px-3 py-1 bg-zinc-800 rounded-full text-xs sm:text-sm">
+                    <span key={genre} className="px-2 sm:px-3 py-1 bg-zinc-800 rounded-full text-xs sm:text-sm">
                       {genre}
                     </span>
                   ))}
@@ -318,50 +302,50 @@ export default function TVShowDetailsPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-6">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
                 <button
                   onClick={() => watchHref && router.push(watchHref)}
                   disabled={!watchHref}
                   className={cn(
-                    'flex items-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-8 py-3 sm:py-4 bg-white text-black font-semibold rounded-xl transition-colors text-sm sm:text-base',
+                    'flex items-center gap-2 px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3 md:py-4 bg-white text-black font-semibold rounded-xl transition-colors text-sm sm:text-base',
                     watchHref ? 'hover:bg-gray-200' : 'cursor-not-allowed opacity-50'
                   )}
                 >
-                  <Play fill="currentColor" size={20} />
+                  <Play fill="currentColor" size={18} />
                   Watch Now
                 </button>
-                <button className="flex items-center gap-2 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm">
-                  <Plus size={20} />
+                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm">
+                  <Plus size={18} />
                   Add to List
                 </button>
                 <button
                   onClick={() => setIsLiked(!isLiked)}
                   className={cn(
-                    'p-3 sm:p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-all',
+                    'p-2.5 sm:p-3 md:p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-all',
                     isLiked && 'text-red-500 border-red-500 bg-red-500/10'
                   )}
                 >
-                  <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
+                  <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
                 </button>
-                <button className="flex items-center gap-2 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm">
-                  <Download size={20} />
+                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm">
+                  <Download size={18} />
                   Download
                 </button>
                 <button
                   onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm"
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm"
                 >
-                  <Share2 size={20} />
+                  <Share2 size={18} />
                   Share
                 </button>
               </div>
 
               {shareMessage && (
-                <p className="mb-6 text-sm font-medium text-red-400">{shareMessage}</p>
+                <p className="mb-4 sm:mb-6 text-sm font-medium text-red-400">{shareMessage}</p>
               )}
 
-              <p className="text-base sm:text-lg text-zinc-300 max-w-3xl mb-6">
-                {show.tagline && <em className="text-zinc-500 block mb-2">{show.tagline}</em>}
+              <p className="text-sm sm:text-base md:text-lg text-zinc-300 max-w-3xl mb-0">
+                {show.tagline && <em className="text-zinc-500 block mb-1 sm:mb-2">{show.tagline}</em>}
                 {show.overview}
               </p>
             </div>
@@ -370,13 +354,13 @@ export default function TVShowDetailsPage() {
       </div>
 
       {/* Content Sections */}
-      <div className="max-w-7xl mx-auto px-6 md:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 sm:py-12">
         {/* Tabs */}
-        <div className="flex gap-6 md:gap-8 mb-12 border-b border-zinc-800">
+        <div className="flex gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-12 border-b border-zinc-800">
           <button
             onClick={() => setActiveTab('overview')}
             className={cn(
-              'pb-4 px-2 text-base md:text-lg font-semibold transition-colors',
+              'pb-3 sm:pb-4 px-2 text-sm sm:text-base md:text-lg font-semibold transition-colors',
               activeTab === 'overview'
                 ? 'text-white border-b-2 border-red-600'
                 : 'text-zinc-500 hover:text-white'
@@ -387,7 +371,7 @@ export default function TVShowDetailsPage() {
           <button
             onClick={() => setActiveTab('episodes')}
             className={cn(
-              'pb-4 px-2 text-base md:text-lg font-semibold transition-colors',
+              'pb-3 sm:pb-4 px-2 text-sm sm:text-base md:text-lg font-semibold transition-colors',
               activeTab === 'episodes'
                 ? 'text-white border-b-2 border-red-600'
                 : 'text-zinc-500 hover:text-white'
@@ -401,43 +385,31 @@ export default function TVShowDetailsPage() {
         {activeTab === 'overview' && (
           <>
             {/* Show Details */}
-            <section className="mb-16">
-              <h2 className="text-2xl md:text-3xl font-bold mb-8">Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-4">
-                    <span className="text-zinc-400 w-20 md:w-24">Country</span>
+            <section className="mb-12 sm:mb-16">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6 sm:mb-8">Details</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <span className="text-zinc-400 w-20 sm:w-20 md:w-24 flex-shrink-0">Country</span>
                     <span className="text-white font-medium">{show.country}</span>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <span className="text-zinc-400 w-20 md:w-24">Language</span>
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <span className="text-zinc-400 w-20 sm:w-20 md:w-24 flex-shrink-0">Language</span>
                     <span className="text-white font-medium">{show.language}</span>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <span className="text-zinc-400 w-20 md:w-24">Quality</span>
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <span className="text-zinc-400 w-20 sm:w-20 md:w-24 flex-shrink-0">Quality</span>
                     <span className="text-white font-medium">{show.quality}</span>
                   </div>
-                  {show.imdbId && (
-                    <div className="flex items-start gap-4">
-                      <span className="text-zinc-400 w-20 md:w-24">IMDb</span>
-                      <a 
-                        href={`https://www.imdb.com/title/${show.imdbId}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-yellow-500 hover:text-yellow-400 font-medium transition-colors"
-                      >
-                        {show.imdbId}
-                      </a>
-                    </div>
-                  )}
+
                 </div>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-4">
-                    <span className="text-zinc-400 w-20 md:w-24">Studio</span>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <span className="text-zinc-400 w-20 sm:w-20 md:w-24 flex-shrink-0">Studio</span>
                     <span className="text-white font-medium">{show.studio}</span>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <span className="text-zinc-400 w-20 md:w-24">Creator</span>
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <span className="text-zinc-400 w-20 sm:w-20 md:w-24 flex-shrink-0">Creator</span>
                     <span className="text-white font-medium">{show.director}</span>
                   </div>
                 </div>
@@ -446,22 +418,22 @@ export default function TVShowDetailsPage() {
 
             {/* Cast */}
             {show.cast && show.cast.length > 0 && (
-              <section className="mb-16">
-                <h2 className="text-2xl md:text-3xl font-bold mb-8">Cast</h2>
-                <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <section className="mb-12 sm:mb-16">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6 sm:mb-8">Cast</h2>
+                <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 sm:pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {show.cast.map((person: any) => (
-                    <div key={person.id} className="flex-shrink-0 w-28 sm:w-32 md:w-40">
-                      <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 border border-zinc-800">
+                    <div key={person.id} className="flex-shrink-0 w-24 sm:w-28 md:w-32 lg:w-40">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden mb-3 sm:mb-4 border border-zinc-800">
                         <img
                           src={person.profilePath || 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=user%20avatar&image_size=square'}
                           alt={person.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <h3 className="font-semibold text-center text-sm md:text-base">{person.name}</h3>
-                      <p className="text-zinc-500 text-xs md:text-sm text-center">{person.role}</p>
+                      <h3 className="font-semibold text-center text-xs sm:text-sm md:text-base">{person.name}</h3>
+                      <p className="text-zinc-500 text-[10px] sm:text-xs md:text-sm text-center">{person.role}</p>
                       {person.character && (
-                        <p className="text-zinc-400 text-xs text-center mt-1">as {person.character}</p>
+                        <p className="text-zinc-400 text-[10px] sm:text-xs text-center mt-1">as {person.character}</p>
                       )}
                     </div>
                   ))}
@@ -471,20 +443,20 @@ export default function TVShowDetailsPage() {
 
             {/* Crew */}
             {show.crew && show.crew.length > 0 && (
-              <section className="mb-16">
-                <h2 className="text-2xl md:text-3xl font-bold mb-8">Crew</h2>
-                <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <section className="mb-12 sm:mb-16">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6 sm:mb-8">Crew</h2>
+                <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 sm:pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {show.crew.map((person: any) => (
-                    <div key={person.id} className="flex-shrink-0 w-28 sm:w-32 md:w-40">
-                      <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 border border-zinc-800">
+                    <div key={person.id} className="flex-shrink-0 w-24 sm:w-28 md:w-32 lg:w-40">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden mb-3 sm:mb-4 border border-zinc-800">
                         <img
                           src={person.profilePath || 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=user%20avatar&image_size=square'}
                           alt={person.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <h3 className="font-semibold text-center text-sm md:text-base">{person.name}</h3>
-                      <p className="text-zinc-500 text-xs md:text-sm text-center">{person.job}</p>
+                      <h3 className="font-semibold text-center text-xs sm:text-sm md:text-base">{person.name}</h3>
+                      <p className="text-zinc-500 text-[10px] sm:text-xs md:text-sm text-center">{person.job}</p>
                     </div>
                   ))}
                 </div>
@@ -492,32 +464,32 @@ export default function TVShowDetailsPage() {
             )}
 
             {/* Reviews */}
-            <section className="mb-16">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold">User Reviews</h2>
+            <section className="mb-12 sm:mb-16">
+              <div className="flex items-center justify-between mb-6 sm:mb-8">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">User Reviews</h2>
               </div>
               
-              <div className="grid gap-6">
+              <div className="grid gap-4 sm:gap-6">
                 {reviews.slice(0, showAllReviews ? reviews.length : 2).map(review => (
-                  <div key={review.id} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 sm:p-6">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center font-bold text-base sm:text-lg">
+                  <div key={review.id} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-3 sm:p-4 md:p-6">
+                    <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center font-bold text-sm sm:text-base md:text-lg">
                         {review.user[0]}
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{review.user}</h4>
-                        <div className="flex items-center gap-2 text-sm text-zinc-500">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm sm:text-base truncate">{review.user}</h4>
+                        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-zinc-500">
                           <span className="flex items-center gap-1 text-yellow-400">
                             {Array.from({ length: 5 }).map((_, i) => (
-                              <Star key={i} fill={i < review.rating ? 'currentColor' : 'none'} size={14} />
+                              <Star key={i} fill={i < review.rating ? 'currentColor' : 'none'} size={12} />
                             ))}
                           </span>
                           <span>•</span>
-                          <span>{review.date}</span>
+                          <span className="truncate">{review.date}</span>
                         </div>
                       </div>
                     </div>
-                    <p className="text-zinc-300 text-sm md:text-base">{review.comment}</p>
+                    <p className="text-zinc-300 text-xs sm:text-sm md:text-base">{review.comment}</p>
                   </div>
                 ))}
               </div>
@@ -525,7 +497,7 @@ export default function TVShowDetailsPage() {
               {reviews.length > 2 && (
                 <button
                   onClick={() => setShowAllReviews(!showAllReviews)}
-                  className="mt-6 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors text-sm md:text-base"
+                  className="mt-5 sm:mt-6 px-4 sm:px-6 py-2.5 sm:py-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors text-xs sm:text-sm md:text-base"
                 >
                   {showAllReviews ? 'Show less' : 'Show more reviews'}
                 </button>
@@ -535,13 +507,13 @@ export default function TVShowDetailsPage() {
         )}
 
         {activeTab === 'episodes' && (
-          <section className="mb-16">
+          <section className="mb-12 sm:mb-16">
             {/* Season Selector */}
-            <div className="mb-8">
+            <div className="mb-6 sm:mb-8">
               <select
                 value={selectedSeason}
                 onChange={(e) => setSelectedSeason(Number(e.target.value))}
-                className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 md:px-6 py-3 text-white focus:outline-none focus:border-red-500 w-full md:w-auto"
+                className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 text-white focus:outline-none focus:border-red-500 w-full md:w-auto text-sm sm:text-base"
               >
                 {(show.seasons && show.seasons.length > 0 
                   ? show.seasons 
@@ -555,7 +527,7 @@ export default function TVShowDetailsPage() {
             </div>
 
             {/* Episodes List */}
-            <div className="grid gap-6">
+            <div className="grid gap-4 sm:gap-6">
               {(() => {
                 const currentSeason = show.seasons?.find((s: any) => s.seasonNumber === selectedSeason);
                 const episodesToRender = currentSeason?.episodes || episodes;
@@ -564,10 +536,10 @@ export default function TVShowDetailsPage() {
                   <Link
                     key={episode.id}
                     href={`/tv/${params.id}/episode/${episode.id}`}
-                    className="block bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 sm:p-6 hover:bg-zinc-800/50 transition-colors"
+                    className="block bg-zinc-900/50 border border-zinc-800 rounded-2xl p-3 sm:p-4 md:p-6 hover:bg-zinc-800/50 transition-colors"
                   >
-                    <div className="flex flex-col md:flex-row gap-6">
-                      <div className="flex-shrink-0 w-full md:w-64">
+                    <div className="flex flex-col md:flex-row gap-4 sm:gap-6">
+                      <div className="flex-shrink-0 w-full md:w-48 lg:w-64">
                         <div className="w-full aspect-video rounded-xl overflow-hidden bg-zinc-800">
                           <img
                             src={episode.thumbnailPath || show.backdropPath}
@@ -577,19 +549,19 @@ export default function TVShowDetailsPage() {
                         </div>
                       </div>
                       <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-4 mb-3">
-                          <span className="text-zinc-400 text-sm">
+                        <div className="flex flex-wrap items-center gap-3 mb-2 sm:mb-3">
+                          <span className="text-zinc-400 text-xs sm:text-sm">
                             S{episode.season || selectedSeason}:E{episode.episodeNumber || episode.number}
                           </span>
-                          {episode.airDate && <span className="text-zinc-400 text-sm">{episode.airDate}</span>}
-                          {episode.duration && <span className="text-zinc-400 text-sm">{episode.duration}</span>}
+                          {episode.airDate && <span className="text-zinc-400 text-xs sm:text-sm">{episode.airDate}</span>}
+                          {episode.duration && <span className="text-zinc-400 text-xs sm:text-sm">{episode.duration}</span>}
                         </div>
-                        <h3 className="text-xl md:text-2xl font-bold mb-3">{episode.title}</h3>
-                        <p className="text-zinc-400 text-sm md:text-base">{episode.overview || episode.description}</p>
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-2 sm:mb-3">{episode.title}</h3>
+                        <p className="text-zinc-400 text-xs sm:text-sm md:text-base">{episode.overview || episode.description}</p>
                       </div>
-                      <div className="flex items-center md:justify-end">
-                        <button className="p-4 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
-                          <Play size={20} fill="currentColor" />
+                      <div className="flex items-center md:justify-end mt-2 md:mt-0">
+                        <button className="p-3 sm:p-4 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
+                          <Play size={18} fill="currentColor" />
                         </button>
                       </div>
                     </div>
@@ -601,9 +573,9 @@ export default function TVShowDetailsPage() {
         )}
 
         {/* Related Content */}
-        <section className="mb-16">
-          <h2 className="text-2xl md:text-3xl font-bold mb-8">You May Also Like</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6 sm:mb-8">You May Also Like</h2>
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
             {getTVShows().filter(s => s.id.toString() !== show.id.toString()).map(s => (
               <Link key={s.id} href={`/tv/${s.id}`}>
                 <TVShowCard tvShow={s} />

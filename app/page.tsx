@@ -6,14 +6,14 @@ import { Navbar } from '@/components/Navbar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { MovieRow } from '@/components/MovieRow';
 import { Footer } from '@/components/Footer';
+
 import { ContinueWatchingRow } from '@/components/ContinueWatchingRow';
 import { LiveTVRow } from '@/components/LiveTVRow';
 import { NewsRow } from '@/components/NewsRow';
 import { KidsRow } from '@/components/KidsRow';
-import { SearchSuggestions } from '@/components/SearchSuggestions';
 import { HorizontalSlider } from '@/components/HorizontalSlider';
 import { MovieCard } from '@/components/MovieCard';
-import { sampleMovies, continueWatching, liveChannels, newsItems, kidsContent, trendingSearches, recentSearches, getGenres, getTVShows, isAnimeModeActive, isKidsModeActive } from '@/lib/data';
+import { sampleMovies, continueWatching, liveChannels, newsItems, kidsContent, getGenres, getTVShows, isAnimeModeActive, isKidsModeActive } from '@/lib/data';
 import { getHeroBanners, getSliderSections, getHomepageSections, HeroBanner as HeroBannerType, SliderSection, HomepageSection } from '@/lib/data';
 import { TVShowCard } from '@/components/TVShowCard';
 import { TVShowRow } from '@/components/TVShowRow';
@@ -86,6 +86,7 @@ export default function Home() {
   const finalHeroMovies = heroMoviesForCarousel.length > 0 
     ? heroMoviesForCarousel 
     : movies.slice(0, 3);
+  const heroAutoScrollInterval = heroBanners[0]?.autoScrollInterval ?? 10000;
 
   const renderHomepageSection = (section: HomepageSection) => {
     const duration = section.animationDuration || 15;
@@ -148,7 +149,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#080808]">
       <Navbar />
-      <HeroBanner movies={finalHeroMovies} />
+      <HeroBanner movies={finalHeroMovies} autoScrollInterval={heroAutoScrollInterval} />
 
       {/* Horizontal Slider Sections from Admin */}
       {sliderSections.map((section) => {
@@ -167,14 +168,14 @@ export default function Home() {
         if (sectionMovies.length === 0) return null;
 
         return (
-          <div key={section.id} className="px-6 md:px-12 py-8">
-            <h2 className="text-2xl font-bold text-white mb-6">{section.title}</h2>
+          <div key={section.id} className="px-4 sm:px-6 md:px-12 py-6 sm:py-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">{section.title}</h2>
             {section.description && (
-              <p className="text-zinc-400 mb-6">{section.description}</p>
+              <p className="text-sm sm:text-base text-zinc-400 mb-4 sm:mb-6">{section.description}</p>
             )}
             <HorizontalSlider duration={section.animationDuration}>
               {sectionMovies.map((movie) => movie && (
-                <div key={movie.id} className="flex-shrink-0 w-[200px] mr-4">
+                <div key={movie.id} className="flex-shrink-0 w-[145px] sm:w-[170px] lg:w-[200px] mr-3 sm:mr-4">
                   <MovieCard movie={movie} />
                 </div>
               ))}
@@ -186,7 +187,6 @@ export default function Home() {
       {/* Homepage Sections from Admin */}
       {homepageSections.map(renderHomepageSection)}
 
-      <SearchSuggestions trendingSearches={trendingSearches} recentSearches={recentSearches} />
       <Footer />
     </main>
   );

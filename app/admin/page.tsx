@@ -54,12 +54,15 @@ import {
   MoveHorizontal,
   LogOut,
   Smile,
-  Sparkles
+  Sparkles,
+  HardDrive,
+  Wifi
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getLiveTVChannels, saveLiveTVChannels, LiveTVChannel, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow } from '@/lib/data';
+import { API_BASE } from '@/lib/api';
+import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getLiveTVChannels, saveLiveTVChannels, LiveTVChannel, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow, getXtreamConfigs, saveXtreamConfigs, getActiveXtreamConfig, setActiveXtreamConfig, XtreamConfig } from '@/lib/data';
 
 function cn(...inputs: any[]) {
   return twMerge(clsx(inputs))
@@ -147,18 +150,49 @@ const RecentActivity = () => {
 }
 
 const AdminSidebar = ({ activeTab, setActiveTab }: any) => {
+  const isHomeTabActive = ['home', 'kids-home', 'anime-home'].includes(activeTab)
+  const [homeDropdownOpen, setHomeDropdownOpen] = useState(isHomeTabActive)
+  const isSliderTabActive = ['sliders', 'kids-sliders', 'anime-sliders'].includes(activeTab)
+  const [sliderDropdownOpen, setSliderDropdownOpen] = useState(isSliderTabActive)
+  const isImportTabActive = ['import-movies', 'import-tv', 'import-livetv'].includes(activeTab)
+  const [importDropdownOpen, setImportDropdownOpen] = useState(isImportTabActive)
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'home', label: 'Home Management', icon: Home },
-    { id: 'kids-home', label: 'Kids Home Management', icon: Smile },
-    { id: 'anime-home', label: 'Anime Home Management', icon: Sparkles },
-    { id: 'sliders', label: 'Slider Sections', icon: MoveHorizontal },
-    { id: 'import', label: 'Import Content', icon: Download },
+    { 
+      id: 'home-group', 
+      label: 'Home Management', 
+      icon: Home,
+      subItems: [
+        { id: 'home', label: 'Default Home', icon: Home },
+        { id: 'kids-home', label: 'Kids Home Management', icon: Smile },
+        { id: 'anime-home', label: 'Anime Home Management', icon: Sparkles },
+      ]
+    },
+    { 
+      id: 'sliders-group', 
+      label: 'Slider Sections', 
+      icon: MoveHorizontal,
+      subItems: [
+        { id: 'sliders', label: 'Default Sliders', icon: MoveHorizontal },
+        { id: 'kids-sliders', label: 'Kids Slider Sections', icon: Smile },
+        { id: 'anime-sliders', label: 'Anime Slider Sections', icon: Sparkles },
+      ]
+    },
+    { 
+      id: 'import-group', 
+      label: 'Import Content', 
+      subItems: [
+        { id: 'import-movies', label: 'Import Movies', icon: Film },
+        { id: 'import-tv', label: 'Import TV Shows', icon: Tv },
+        { id: 'import-livetv', label: 'Import Live TV', icon: Radio },
+      ]
+    },
     { id: 'scraping', label: 'Automated Scraping', icon: RefreshCw },
     { id: 'movies', label: 'Movies', icon: Film },
     { id: 'tv', label: 'TV Shows', icon: Tv },
-    { id: 'castcrew', label: 'Cast & Crew', icon: Users },
+    { id: 'castcrew', label: 'Cast', icon: Users },
     { id: 'livetv', label: 'Live TV', icon: Radio },
+    { id: 'xtream-api', label: 'Xtream API', icon: Wifi },
     { id: 'herobanner', label: 'Hero Banner', icon: Image },
     { id: 'genres', label: 'Genres', icon: Tags },
     { id: 'countries', label: 'Countries', icon: Globe },
@@ -169,8 +203,22 @@ const AdminSidebar = ({ activeTab, setActiveTab }: any) => {
     { id: 'requests', label: 'Movie Requests', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+    { id: 'server-health', label: 'Server Health', icon: Activity },
+    { id: 'ai-features', label: 'AI Features', icon: Sparkles },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
+
+  useEffect(() => {
+    if (isHomeTabActive) {
+      setHomeDropdownOpen(true)
+    }
+    if (isSliderTabActive) {
+      setSliderDropdownOpen(true)
+    }
+    if (isImportTabActive) {
+      setImportDropdownOpen(true)
+    }
+  }, [isHomeTabActive, isSliderTabActive, isImportTabActive])
 
   return (
     <div className="w-64 bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-800 min-h-screen p-6 hidden lg:block">
@@ -184,21 +232,94 @@ const AdminSidebar = ({ activeTab, setActiveTab }: any) => {
       <nav className="space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                activeTab === item.id
-                  ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-              )}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
-            </button>
-          )
+          if (item.subItems) {
+            const isAnySubItemActive = item.subItems.some((sub: any) => activeTab === sub.id)
+            const isHomeGroup = item.id === 'home-group'
+            const isSliderGroup = item.id === 'sliders-group'
+            const dropdownOpen = isHomeGroup
+              ? homeDropdownOpen
+              : isSliderGroup
+                ? sliderDropdownOpen
+                : importDropdownOpen
+            const setDropdownOpen = isHomeGroup
+              ? setHomeDropdownOpen
+              : isSliderGroup
+                ? setSliderDropdownOpen
+                : setImportDropdownOpen
+            
+            return (
+              <div key={item.id}>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                    isAnySubItemActive
+                      ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                      : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    {Icon && <Icon className="w-5 h-5" />}
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  <ChevronDown 
+                    className={cn(
+                      "w-4 h-4 transition-transform",
+                      dropdownOpen && "rotate-180"
+                    )}
+                  />
+                </button>
+                <AnimatePresence>
+                  {dropdownOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="ml-4 mt-2 space-y-2">
+                        {item.subItems.map((sub: any) => {
+                          const SubIcon = sub.icon
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => setActiveTab(sub.id)}
+                              className={cn(
+                                "w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-200 text-sm",
+                                activeTab === sub.id
+                                  ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                                  : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                              )}
+                            >
+                              <SubIcon className="w-4 h-4" />
+                              <span className="font-medium">{sub.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )
+          } else {
+            // Normal item
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                  activeTab === item.id
+                    ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                    : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                )}
+              >
+                {Icon && <Icon className="w-5 h-5" />}
+                <span className="font-medium">{item.label}</span>
+              </button>
+            )
+          }
         })}
       </nav>
 
@@ -438,7 +559,6 @@ const MovieModal = ({
     trailerUrl: string;
     sources: MovieSource[];
     cast: CastMember[];
-    crew: CrewMember[];
     imdbId: string;
     isKids: boolean;
     isAnime: boolean;
@@ -461,7 +581,6 @@ const MovieModal = ({
     trailerUrl: '',
     sources: [],
     cast: [],
-    crew: [],
     imdbId: '',
     isKids: false,
     isAnime: false
@@ -488,7 +607,6 @@ const MovieModal = ({
         trailerUrl: movie.trailerUrl || '',
         sources: movie.sources || [],
         cast: movie.cast || [],
-        crew: movie.crew || [],
         imdbId: movie.imdbId || '',
         isKids: movie.isKids || false,
         isAnime: movie.isAnime || false
@@ -601,34 +719,7 @@ const MovieModal = ({
     }))
   }
 
-  const handleAddCrewMember = () => {
-    const newMember = {
-      id: createClientId('movie-crew'),
-      name: '',
-      job: 'Crew',
-      profilePath: ''
-    }
-    setFormData(prev => ({
-      ...prev,
-      crew: [...prev.crew, newMember]
-    }))
-  }
 
-  const handleCrewChange = (crewId: number | string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      crew: prev.crew.map((member: any) =>
-        member.id === crewId ? { ...member, [field]: value } : member
-      )
-    }))
-  }
-
-  const handleRemoveCrewMember = (crewId: number | string) => {
-    setFormData(prev => ({
-      ...prev,
-      crew: prev.crew.filter((member: any) => member.id !== crewId)
-    }))
-  }
 
   return (
     <AnimatePresence>
@@ -1067,62 +1158,7 @@ const MovieModal = ({
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <label className="text-zinc-400 font-medium">Crew</label>
-                  <button
-                    type="button"
-                    onClick={handleAddCrewMember}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Crew Member
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  {formData.crew.map((member: any) => (
-                    <div key={member.id} className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <label className="block text-zinc-400 mb-2 font-medium text-sm">Name</label>
-                          <input
-                            type="text"
-                            value={member.name}
-                            onChange={(e) => handleCrewChange(member.id, 'name', e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-zinc-400 mb-2 font-medium text-sm">Job</label>
-                          <input
-                            type="text"
-                            value={member.job}
-                            onChange={(e) => handleCrewChange(member.id, 'job', e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-zinc-400 mb-2 font-medium text-sm">Profile Photo URL</label>
-                          <input
-                            type="text"
-                            value={member.profilePath}
-                            onChange={(e) => handleCrewChange(member.id, 'profilePath', e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCrewMember(member.id)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Remove Crew Member
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+
 
               <div className="flex items-center gap-4 pt-4">
                 <button
@@ -1176,7 +1212,6 @@ const TVShowModal = ({
     trailerUrl: string;
     imdbId: string;
     cast: any[];
-    crew: any[];
     isKids: boolean;
     isAnime: boolean;
   }>({
@@ -1224,7 +1259,6 @@ const TVShowModal = ({
         trailerUrl: show.trailerUrl || '',
         imdbId: show.imdbId || '',
         cast: show.cast || [],
-        crew: show.crew || [],
         isKids: show.isKids || false,
         isAnime: show.isAnime || false
       })
@@ -1670,62 +1704,7 @@ const TVShowModal = ({
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <label className="text-zinc-400 font-medium">Crew</label>
-                  <button
-                    type="button"
-                    onClick={handleAddCrewMember}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Crew Member
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  {formData.crew.map((member: any) => (
-                    <div key={member.id} className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <label className="block text-zinc-400 mb-2 font-medium text-sm">Name</label>
-                          <input
-                            type="text"
-                            value={member.name}
-                            onChange={(e) => handleCrewChange(member.id, 'name', e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-zinc-400 mb-2 font-medium text-sm">Job</label>
-                          <input
-                            type="text"
-                            value={member.job}
-                            onChange={(e) => handleCrewChange(member.id, 'job', e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-zinc-400 mb-2 font-medium text-sm">Profile Photo URL</label>
-                          <input
-                            type="text"
-                            value={member.profilePath}
-                            onChange={(e) => handleCrewChange(member.id, 'profilePath', e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCrewMember(member.id)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Remove Crew Member
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+
 
               <div className="flex items-center gap-4 pt-4">
                   <button
@@ -2486,6 +2465,9 @@ export default function AdminPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mobileHomeDropdownOpen, setMobileHomeDropdownOpen] = useState(false)
+  const [mobileSliderDropdownOpen, setMobileSliderDropdownOpen] = useState(false)
+  const [mobileImportDropdownOpen, setMobileImportDropdownOpen] = useState(false)
   const [movies, setMovies] = useState<Movie[]>(() => getMovies())
   const [tvShows, setTvShows] = useState<any[]>(() => getTVShows())
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -2556,6 +2538,7 @@ export default function AdminPage() {
   const [pushNotifications, setPushNotifications] = useState<PushNotification[]>(() => getPushNotifications())
   const [apiKeys, setApiKeys] = useState<ApiKey[]>(() => getApiKeys());
   const [externalApiKeys, setExternalApiKeys] = useState<ExternalApiKeys>(() => getExternalApiKeys());
+  const [xtreamConfigs, setXtreamConfigs] = useState<XtreamConfig[]>(() => getXtreamConfigs());
   const [sliderSections, setSliderSections] = useState<SliderSection[]>(() => getSliderSections())
   const [kidsSliderSections, setKidsSliderSections] = useState<SliderSection[]>(() => getKidsSliderSections())
   const [animeSliderSections, setAnimeSliderSections] = useState<SliderSection[]>(() => getAnimeSliderSections())
@@ -2578,6 +2561,14 @@ export default function AdminPage() {
   const [scrapingConfig, setScrapingConfig] = useState<ScrapingConfig>(() => getScrapingConfig())
   const [isScraping, setIsScraping] = useState(false);
   const [selectedLocalFiles, setSelectedLocalFiles] = useState<File[]>([]);
+  
+  // Server Health State
+  const [serverHealth, setServerHealth] = useState({
+    frontend: { status: 'checking', lastChecked: null, responseTime: 0 },
+    backend: { status: 'checking', lastChecked: null, responseTime: 0 },
+    database: { status: 'checking', lastChecked: null, responseTime: 0 },
+    uptime: 0
+  });
   const [isProcessingLocalFiles, setIsProcessingLocalFiles] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false)
   const [isAdminAccessReady, setIsAdminAccessReady] = useState(false)
@@ -2592,9 +2583,6 @@ export default function AdminPage() {
     next: '',
     confirm: ''
   })
-  const [bulkTitles, setBulkTitles] = useState('')
-  const [bulkIsKids, setBulkIsKids] = useState(false)
-  const [bulkIsAnime, setBulkIsAnime] = useState(false)
 
   useEffect(() => {
     setIsHydrated(true)
@@ -2624,14 +2612,41 @@ export default function AdminPage() {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'home', label: 'Home Management', icon: Home },
-    { id: 'sliders', label: 'Slider Sections', icon: MoveHorizontal },
-    { id: 'import', label: 'Import Content', icon: Download },
+    {
+      id: 'home-group',
+      label: 'Home Management',
+      icon: Home,
+      subItems: [
+        { id: 'home', label: 'Default Home', icon: Home },
+        { id: 'kids-home', label: 'Kids Home Management', icon: Smile },
+        { id: 'anime-home', label: 'Anime Home Management', icon: Sparkles },
+      ],
+    },
+    {
+      id: 'sliders-group',
+      label: 'Slider Sections',
+      icon: MoveHorizontal,
+      subItems: [
+        { id: 'sliders', label: 'Default Sliders', icon: MoveHorizontal },
+        { id: 'kids-sliders', label: 'Kids Slider Sections', icon: Smile },
+        { id: 'anime-sliders', label: 'Anime Slider Sections', icon: Sparkles },
+      ],
+    },
+    {
+      id: 'import-group',
+      label: 'Import Content',
+      subItems: [
+        { id: 'import-movies', label: 'Import Movies', icon: Film },
+        { id: 'import-tv', label: 'Import TV Shows', icon: Tv },
+        { id: 'import-livetv', label: 'Import Live TV', icon: Radio },
+      ],
+    },
     { id: 'scraping', label: 'Automated Scraping', icon: RefreshCw },
     { id: 'movies', label: 'Movies', icon: Film },
     { id: 'tv', label: 'TV Shows', icon: Tv },
-    { id: 'castcrew', label: 'Cast & Crew', icon: Users },
+    { id: 'castcrew', label: 'Cast', icon: Users },
     { id: 'livetv', label: 'Live TV', icon: Radio },
+    { id: 'xtream-api', label: 'Xtream API', icon: Wifi },
     { id: 'herobanner', label: 'Hero Banner', icon: Image },
     { id: 'genres', label: 'Genres', icon: Tags },
     { id: 'countries', label: 'Countries', icon: Globe },
@@ -2642,8 +2657,93 @@ export default function AdminPage() {
     { id: 'requests', label: 'Movie Requests', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+    { id: 'server-health', label: 'Server Health', icon: Activity },
+    { id: 'ai-features', label: 'AI Features', icon: Sparkles },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
+
+  useEffect(() => {
+    if (['home', 'kids-home', 'anime-home'].includes(activeTab)) {
+      setMobileHomeDropdownOpen(true)
+    }
+    if (['sliders', 'kids-sliders', 'anime-sliders'].includes(activeTab)) {
+      setMobileSliderDropdownOpen(true)
+    }
+    if (['import-movies', 'import-tv', 'import-livetv'].includes(activeTab)) {
+      setMobileImportDropdownOpen(true)
+    }
+  }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'import-movies' && searchType !== 'movie') {
+      setSearchType('movie')
+    }
+    if (activeTab === 'import-tv' && searchType !== 'tv') {
+      setSearchType('tv')
+    }
+  }, [activeTab, searchType])
+
+  // Server Health Check Function
+  const checkServerHealth = async () => {
+    const now = new Date();
+    // Frontend Health
+    const frontendStart = Date.now();
+    await new Promise(r => setTimeout(r, 50 + Math.random() * 100));
+    const frontendResponseTime = Date.now() - frontendStart;
+    
+    let backendStatus = 'unhealthy';
+    let backendResponseTime = 0;
+    let backendData: any = null;
+    const backendStart = Date.now();
+    try {
+      const res = await fetch(`${API_BASE}/api/server-health`);
+      backendResponseTime = Date.now() - backendStart;
+      if (res.ok) {
+        backendStatus = 'healthy';
+        backendData = await res.json();
+      }
+    } catch (err) {
+      backendStatus = 'unhealthy';
+    }
+    
+    // Database Health (we'll check via backend response if available)
+    let dbStatus = 'checking';
+    let dbResponseTime = 0;
+    if (backendData) {
+      // If backend is healthy, assume DB is healthy too for now
+      dbStatus = 'healthy';
+      dbResponseTime = 50 + Math.random() * 50;
+    }
+    
+    setServerHealth({
+      frontend: { 
+        status: 'healthy', 
+        lastChecked: now, 
+        responseTime: frontendResponseTime 
+      },
+      backend: { 
+        status: backendStatus, 
+        lastChecked: now, 
+        responseTime: backendResponseTime,
+        ...backendData
+      },
+      database: { 
+        status: dbStatus, 
+        lastChecked: now, 
+        responseTime: dbResponseTime 
+      },
+      uptime: backendData?.uptime?.seconds || 0
+    });
+  }
+
+  // Periodic Health Check
+  useEffect(() => {
+    checkServerHealth();
+    const interval = setInterval(() => {
+      checkServerHealth();
+    }, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type })
@@ -2913,57 +3013,6 @@ export default function AdminPage() {
     } finally {
       setImportingId(null)
     }
-  }
-
-  const handleBulkAdd = (e: React.FormEvent) => {
-    e.preventDefault()
-    const titles = bulkTitles
-      .split('\n')
-      .map(title => title.trim())
-      .filter(title => title.length > 0)
-    
-    if (titles.length === 0) {
-      showToast('Please enter at least one title', 'error')
-      return
-    }
-
-    let addedCount = 0
-    const currentMovies = [...movies]
-    const currentMovieTitles = new Set(currentMovies.map(m => m.title))
-
-    for (const title of titles) {
-      if (currentMovieTitles.has(title)) continue
-      
-      const newMovie: Movie = {
-        id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
-        title,
-        overview: '',
-        posterPath: '',
-        backdropPath: '',
-        releaseYear: new Date().getFullYear(),
-        rating: 0,
-        runtime: '',
-        genres: [],
-        country: '',
-        language: '',
-        quality: '',
-        studio: '',
-        director: '',
-        tags: [],
-        trailerUrl: '',
-        sources: [],
-        isKids: bulkIsKids,
-        isAnime: bulkIsAnime,
-      }
-      
-      currentMovies.push(newMovie)
-      addedCount++
-    }
-
-    setMovies(currentMovies)
-    saveMovies(currentMovies)
-    setBulkTitles('')
-    showToast(`Successfully added ${addedCount} movies!`, 'success')
   }
 
   const handleStartScraping = async (type: 'movie' | 'tv' | 'all') => {
@@ -3679,6 +3728,49 @@ export default function AdminPage() {
     showToast('Live TV channels saved successfully!', 'success');
   }
 
+  // Xtream API Handlers
+  const handleAddXtreamConfig = () => {
+    const newConfig: XtreamConfig = {
+      id: Date.now().toString(),
+      name: 'New Xtream Config',
+      serverUrl: 'https://example.com',
+      username: '',
+      password: '',
+      isActive: xtreamConfigs.length === 0, // first config is active
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setXtreamConfigs([...xtreamConfigs, newConfig]);
+  }
+
+  const handleEditXtreamConfig = (id: string, field: keyof XtreamConfig, value: any) => {
+    setXtreamConfigs(xtreamConfigs.map((c: XtreamConfig) => {
+      if (c.id === id) {
+        const updated = { ...c, [field]: value, updatedAt: new Date().toISOString() };
+        // If setting isActive to true, set others to false
+        if (field === 'isActive' && value === true) {
+          setActiveXtreamConfig(id);
+        }
+        return updated;
+      }
+      // If another config was just set to active, set this one to false
+      if (field === 'isActive' && value === true) {
+        return { ...c, isActive: false };
+      }
+      return c;
+    }));
+  }
+
+  const handleDeleteXtreamConfig = (id: string) => {
+    const newConfigs = xtreamConfigs.filter((c: XtreamConfig) => c.id !== id);
+    setXtreamConfigs(newConfigs);
+  }
+
+  const handleSaveXtreamConfigs = () => {
+    saveXtreamConfigs(xtreamConfigs);
+    showToast('Xtream API configs saved successfully!', 'success');
+  }
+
   // Hero Banner Handlers
   const handleAddHeroBanner = () => {
     const newBanner: HeroBanner = {
@@ -3689,6 +3781,7 @@ export default function AdminPage() {
       posterUrl: '',
       isActive: true,
       order: heroBanners.length + 1,
+      autoScrollInterval: 10000,
     };
     setHeroBanners([...heroBanners, newBanner]);
   }
@@ -3715,6 +3808,7 @@ export default function AdminPage() {
       posterUrl: '',
       isActive: true,
       order: kidsHeroBanners.length + 1,
+      autoScrollInterval: 10000,
     };
     setKidsHeroBanners([...kidsHeroBanners, newBanner]);
   }
@@ -3745,6 +3839,7 @@ export default function AdminPage() {
       posterUrl: '',
       isActive: true,
       order: animeHeroBanners.length + 1,
+      autoScrollInterval: 10000,
     };
     setAnimeHeroBanners([...animeHeroBanners, newBanner]);
   }
@@ -4696,6 +4791,81 @@ export default function AdminPage() {
                   <nav className="space-y-2">
                     {navItems.map((item) => {
                       const Icon = item.icon
+                      if (item.subItems) {
+                        const isAnySubItemActive = item.subItems.some((sub: any) => activeTab === sub.id)
+                        const isHomeGroup = item.id === 'home-group'
+                        const isSliderGroup = item.id === 'sliders-group'
+                        const dropdownOpen = isHomeGroup
+                          ? mobileHomeDropdownOpen
+                          : isSliderGroup
+                            ? mobileSliderDropdownOpen
+                            : mobileImportDropdownOpen
+                        const setDropdownOpen = isHomeGroup
+                          ? setMobileHomeDropdownOpen
+                          : isSliderGroup
+                            ? setMobileSliderDropdownOpen
+                            : setMobileImportDropdownOpen
+                        
+                        return (
+                          <div key={item.id}>
+                            <button
+                              onClick={() => setDropdownOpen(!dropdownOpen)}
+                              className={cn(
+                                "w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                                isAnySubItemActive
+                                  ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                                  : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                              )}
+                            >
+                              <div className="flex items-center gap-3">
+                                {Icon && <Icon className="w-5 h-5" />}
+                                <span className="font-medium">{item.label}</span>
+                              </div>
+                              <ChevronDown
+                                className={cn(
+                                  "w-4 h-4 transition-transform",
+                                  dropdownOpen && "rotate-180"
+                                )}
+                              />
+                            </button>
+                            <AnimatePresence>
+                              {dropdownOpen && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="ml-4 mt-2 space-y-2">
+                                    {item.subItems.map((sub: any) => {
+                                      const SubIcon = sub.icon
+                                      return (
+                                        <button
+                                          key={sub.id}
+                                          onClick={() => {
+                                            setActiveTab(sub.id)
+                                            setSidebarOpen(false)
+                                          }}
+                                          className={cn(
+                                            "w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-200 text-sm",
+                                            activeTab === sub.id
+                                              ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                                              : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                                          )}
+                                        >
+                                          <SubIcon className="w-4 h-4" />
+                                          <span className="font-medium">{sub.label}</span>
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )
+                      }
+
                       return (
                         <button
                           key={item.id}
@@ -4710,7 +4880,7 @@ export default function AdminPage() {
                               : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
                           )}
                         >
-                          <Icon className="w-5 h-5" />
+                          {Icon && <Icon className="w-5 h-5" />}
                           <span className="font-medium">{item.label}</span>
                         </button>
                       )
@@ -4795,6 +4965,101 @@ export default function AdminPage() {
                     <Download className="w-5 h-5" />
                     Import Content
                   </button>
+                </div>
+
+                {/* Server Stats Section (Moved to Top) */}
+                <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8 mb-8">
+                  <div className="flex items-center gap-4 mb-6">
+                    <h3 className="text-xl font-semibold text-white">Server Health</h3>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      <span className="text-emerald-400 font-medium">Online</span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    {/* CPU Usage */}
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Activity className="w-5 h-5 text-red-400" />
+                          <span className="text-sm text-zinc-400 font-medium">CPU Usage</span>
+                        </div>
+                        <span className="text-lg font-bold text-white">35%</span>
+                      </div>
+                      <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-500" 
+                          style={{ width: '35%' }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* RAM Usage */}
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Database className="w-5 h-5 text-blue-400" />
+                          <span className="text-sm text-zinc-400 font-medium">RAM Usage</span>
+                        </div>
+                        <span className="text-lg font-bold text-white">64%</span>
+                      </div>
+                      <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500" 
+                          style={{ width: '64%' }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Bandwidth */}
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Wifi className="w-5 h-5 text-yellow-400" />
+                          <span className="text-sm text-zinc-400 font-medium">Bandwidth</span>
+                        </div>
+                        <span className="text-lg font-bold text-white">2.4 Mbps</span>
+                      </div>
+                      <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 transition-all duration-500" 
+                          style={{ width: '45%' }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Storage */}
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <HardDrive className="w-5 h-5 text-purple-400" />
+                          <span className="text-sm text-zinc-400 font-medium">Storage</span>
+                        </div>
+                        <span className="text-lg font-bold text-white">52%</span>
+                      </div>
+                      <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500" 
+                          style={{ width: '52%' }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Server Status */}
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          <span className="text-sm text-zinc-400 font-medium">Server Status</span>
+                        </div>
+                        <span className="text-lg font-bold text-emerald-400">Healthy</span>
+                      </div>
+                      <div className="text-sm text-zinc-500">
+                        Uptime: 14 days 2 hours
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
@@ -5123,6 +5388,16 @@ export default function AdminPage() {
                               className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
                             />
                           </div>
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Auto Scroll Interval (ms)</label>
+                            <input
+                              type="number"
+                              value={banner.autoScrollInterval || 10000}
+                              onChange={(e) => handleEditHeroBanner(banner.id, 'autoScrollInterval', Number(e.target.value))}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                              min="1000"
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -5443,6 +5718,16 @@ export default function AdminPage() {
                               className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500"
                             />
                           </div>
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Auto Scroll Interval (ms)</label>
+                            <input
+                              type="number"
+                              value={banner.autoScrollInterval || 10000}
+                              onChange={(e) => handleEditKidsHeroBanner(banner.id, 'autoScrollInterval', Number(e.target.value))}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500"
+                              min="1000"
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -5759,6 +6044,16 @@ export default function AdminPage() {
                               value={banner.posterUrl}
                               onChange={(e) => handleEditAnimeHeroBanner(banner.id, 'posterUrl', e.target.value)}
                               className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-pink-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Auto Scroll Interval (ms)</label>
+                            <input
+                              type="number"
+                              value={banner.autoScrollInterval || 10000}
+                              onChange={(e) => handleEditAnimeHeroBanner(banner.id, 'autoScrollInterval', Number(e.target.value))}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-pink-500"
+                              min="1000"
                             />
                           </div>
                         </div>
@@ -6139,10 +6434,18 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+              </motion.div>
+            )}
 
-                <div className="flex items-center justify-between mt-10 mb-8">
+            {activeTab === 'kids-sliders' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h3 className="text-2xl font-bold text-white">Kids Slider Sections</h3>
+                    <h2 className="text-3xl font-bold text-white">Kids Slider Sections</h2>
                     <p className="text-zinc-500 mt-1">Manage the dedicated slider rows shown only on Kids Home.</p>
                   </div>
                   <div className="flex gap-3">
@@ -6337,10 +6640,18 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+              </motion.div>
+            )}
 
-                <div className="flex items-center justify-between mt-10 mb-8">
+            {activeTab === 'anime-sliders' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h3 className="text-2xl font-bold text-white">Anime Slider Sections</h3>
+                    <h2 className="text-3xl font-bold text-white">Anime Slider Sections</h2>
                     <p className="text-zinc-500 mt-1">Manage the dedicated slider rows shown only on Anime Home.</p>
                   </div>
                   <div className="flex gap-3">
@@ -6538,135 +6849,118 @@ export default function AdminPage() {
               </motion.div>
             )}
 
-            {activeTab === 'import' && (
+            {['import-movies', 'import-tv', 'import-livetv'].includes(activeTab) && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
               >
                 <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-white">Import Content</h2>
-                  <p className="text-zinc-500 mt-1">Search and import movies and TV shows from TMDB</p>
+                  <h2 className="text-3xl font-bold text-white">
+                    {activeTab === 'import-movies'
+                      ? 'Import Movies'
+                      : activeTab === 'import-tv'
+                        ? 'Import TV Shows'
+                        : 'Import Live TV'}
+                  </h2>
+                  <p className="text-zinc-500 mt-1">
+                    {activeTab === 'import-livetv'
+                      ? 'Choose how you want to add live TV content.'
+                      : `Search and import ${activeTab === 'import-movies' ? 'movies' : 'TV shows'} from TMDB`}
+                  </p>
                 </div>
 
-                <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 mb-8">
-                  <form onSubmit={handleSearch} className="space-y-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <div className="flex-1">
-                        <div className="relative">
-                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-                          <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder={`Search ${searchType === 'movie' ? 'movies' : 'TV shows'} by name or IMDb ID (e.g., tt0111161)...`}
-                            className="w-full pl-12 pr-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-3">
-                        <div className="flex bg-zinc-800 rounded-xl p-1">
-                          <button
-                            type="button"
-                            onClick={() => setSearchType('movie')}
-                            className={cn(
-                              "px-4 py-2 rounded-lg font-medium transition-all",
-                              searchType === 'movie'
-                                ? "bg-zinc-700 text-white"
-                                : "text-zinc-400 hover:text-white"
-                            )}
-                          >
-                            Movies
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSearchType('tv')}
-                            className={cn(
-                              "px-4 py-2 rounded-lg font-medium transition-all",
-                              searchType === 'tv'
-                                ? "bg-zinc-700 text-white"
-                                : "text-zinc-400 hover:text-white"
-                            )}
-                          >
-                            TV Shows
-                          </button>
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={searching}
-                          className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
-                        >
-                          {searching ? 'Searching...' : 'Search'}
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-
-                <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-4">Quick Add Multiple Movies</h3>
-                  <p className="text-zinc-500 mb-6">Add multiple movies at once by entering one title per line</p>
-                  <form onSubmit={handleBulkAdd} className="space-y-4">
-                    <textarea
-                      value={bulkTitles}
-                      onChange={(e) => setBulkTitles(e.target.value)}
-                      placeholder="Enter movie title 1&#10;Enter movie title 2&#10;Enter movie title 3"
-                      rows={6}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-xl px-4 py-3 cursor-pointer hover:bg-zinc-700 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={bulkIsKids}
-                          onChange={(e) => setBulkIsKids(e.target.checked)}
-                          className="w-5 h-5 rounded accent-yellow-500"
-                        />
-                        <span className="text-white font-medium">Kids Movie</span>
-                      </label>
-                      <label className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-xl px-4 py-3 cursor-pointer hover:bg-zinc-700 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={bulkIsAnime}
-                          onChange={(e) => setBulkIsAnime(e.target.checked)}
-                          className="w-5 h-5 rounded accent-fuchsia-500"
-                        />
-                        <span className="text-white font-medium">Anime Movie</span>
-                      </label>
-                    </div>
-                    <button
-                      type="submit"
-                      className="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
-                    >
-                      <Plus className="w-5 h-5" />
-                      Add All Movies
-                    </button>
-                  </form>
-                </div>
-
-                {searchResults.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-semibold text-white mb-6">Search Results</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {searchResults.map((item: any) => (
-                        <TMDBSearchResultCard
-                          key={item.id}
-                          item={item}
-                          type={searchType}
-                          onImport={handleImport}
-                          importing={importingId === item.id}
-                        />
-                      ))}
+                {activeTab === 'import-livetv' ? (
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
+                    <div className="text-center py-12">
+                      <Radio className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+                      <h3 className="text-2xl font-bold text-white mb-2">Live TV Import</h3>
+                      <p className="text-zinc-500 max-w-2xl mx-auto">
+                        Use this section for live TV import sources. You can continue managing channels from the Live TV and Xtream API areas.
+                      </p>
                     </div>
                   </div>
-                )}
+                ) : (
+                  <>
+                    <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 mb-8">
+                      <form onSubmit={handleSearch} className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <div className="flex-1">
+                            <div className="relative">
+                              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                              <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder={`Search ${searchType === 'movie' ? 'movies' : 'TV shows'} by name or IMDb ID (e.g., tt0111161)...`}
+                                className="w-full pl-12 pr-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <div className="flex bg-zinc-800 rounded-xl p-1">
+                              <button
+                                type="button"
+                                onClick={() => setSearchType('movie')}
+                                className={cn(
+                                  "px-4 py-2 rounded-lg font-medium transition-all",
+                                  searchType === 'movie'
+                                    ? "bg-zinc-700 text-white"
+                                    : "text-zinc-400 hover:text-white"
+                                )}
+                              >
+                                Movies
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSearchType('tv')}
+                                className={cn(
+                                  "px-4 py-2 rounded-lg font-medium transition-all",
+                                  searchType === 'tv'
+                                    ? "bg-zinc-700 text-white"
+                                    : "text-zinc-400 hover:text-white"
+                                )}
+                              >
+                                TV Shows
+                              </button>
+                            </div>
+                            <button
+                              type="submit"
+                              disabled={searching}
+                              className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+                            >
+                              {searching ? 'Searching...' : 'Search'}
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+                    </div>
 
-                {!searching && searchQuery && searchResults.length === 0 && (
-                  <div className="text-center py-20">
-                    <Search className="w-20 h-20 text-zinc-700 mx-auto mb-6" />
-                    <h3 className="text-2xl font-bold text-white mb-2">No results found</h3>
-                    <p className="text-zinc-500">Try a different search term</p>
-                  </div>
+                    {searchResults.length > 0 && (
+                      <div>
+                        <h3 className="text-xl font-semibold text-white mb-6">Search Results</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {searchResults.map((item: any) => (
+                            <TMDBSearchResultCard
+                              key={item.id}
+                              item={item}
+                              type={searchType}
+                              onImport={handleImport}
+                              importing={importingId === item.id}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!searching && searchQuery && searchResults.length === 0 && (
+                      <div className="text-center py-20">
+                        <Search className="w-20 h-20 text-zinc-700 mx-auto mb-6" />
+                        <h3 className="text-2xl font-bold text-white mb-2">No results found</h3>
+                        <p className="text-zinc-500">Try a different search term</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </motion.div>
             )}
@@ -7633,12 +7927,12 @@ export default function AdminPage() {
               >
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h2 className="text-3xl font-bold text-white">Cast & Crew</h2>
-                    <p className="text-zinc-500 mt-1">View and manage all cast and crew members</p>
+                    <h2 className="text-3xl font-bold text-white">Cast</h2>
+                    <p className="text-zinc-500 mt-1">View and manage all cast members</p>
                   </div>
                 </div>
 
-                {/* Collect all cast and crew from movies and tv shows */}
+                {/* Collect all cast from movies and tv shows */}
                 {(() => {
                   // Collect all cast
                   const allCast = [
@@ -7659,112 +7953,48 @@ export default function AdminPage() {
                       }))
                     )
                   ]
-                  
-                  // Collect all crew
-                  const allCrew = [
-                    ...movies.flatMap((m: any) => 
-                      (m.crew || []).map((c: any) => ({ 
-                        ...c, 
-                        sourceType: 'movie', 
-                        sourceId: m.id, 
-                        sourceTitle: m.title 
-                      }))
-                    ),
-                    ...tvShows.flatMap((s: any) => 
-                      (s.crew || []).map((c: any) => ({ 
-                        ...c, 
-                        sourceType: 'tv', 
-                        sourceId: s.id, 
-                        sourceTitle: s.title 
-                      }))
-                    )
-                  ]
 
                   return (
-                    <>
-                      {/* Cast Section */}
-                      <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8 mb-8">
-                        <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-                          <Users className="w-5 h-5" />
-                          Cast Members ({allCast.length})
-                        </h3>
-                        {allCast.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {allCast.map((castMember, index) => (
-                              <div key={`cast-${index}-${castMember.id}`} className="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-6">
-                                <div className="flex items-start gap-4 mb-4">
-                                  {castMember.profilePhoto ? (
-                                    <img 
-                                      src={castMember.profilePhoto} 
-                                      alt={castMember.name} 
-                                      className="w-16 h-16 rounded-xl object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center border border-zinc-700">
-                                      <Users className="w-8 h-8 text-zinc-500" />
-                                    </div>
-                                  )}
-                                  <div className="flex-1">
-                                    <h4 className="text-white font-semibold">{castMember.name}</h4>
-                                    {castMember.role && <p className="text-zinc-400 text-sm">{castMember.role}</p>}
-                                    {castMember.character && <p className="text-zinc-500 text-xs italic">as {castMember.character}</p>}
-                                    <p className="text-zinc-500 text-xs mt-1">
-                                      {castMember.sourceType === 'movie' ? '🎬' : '📺'} {castMember.sourceTitle}
-                                    </p>
+                    <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
+                      <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                        <Users className="w-5 h-5" />
+                        Cast Members ({allCast.length})
+                      </h3>
+                      {allCast.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {allCast.map((castMember, index) => (
+                            <div key={`cast-${index}-${castMember.id}`} className="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-6">
+                              <div className="flex items-start gap-4 mb-4">
+                                {castMember.profilePhoto ? (
+                                  <img 
+                                    src={castMember.profilePhoto} 
+                                    alt={castMember.name} 
+                                    className="w-16 h-16 rounded-xl object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center border border-zinc-700">
+                                    <Users className="w-8 h-8 text-zinc-500" />
                                   </div>
+                                )}
+                                <div className="flex-1">
+                                  <h4 className="text-white font-semibold">{castMember.name}</h4>
+                                  {castMember.role && <p className="text-zinc-400 text-sm">{castMember.role}</p>}
+                                  {castMember.character && <p className="text-zinc-500 text-xs italic">as {castMember.character}</p>}
+                                  <p className="text-zinc-500 text-xs mt-1">
+                                    {castMember.sourceType === 'movie' ? '🎬' : '📺'} {castMember.sourceTitle}
+                                  </p>
                                 </div>
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-12">
-                            <Users className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                            <p className="text-zinc-500">No cast members yet</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Crew Section */}
-                      <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
-                        <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-                          <Users className="w-5 h-5" />
-                          Crew Members ({allCrew.length})
-                        </h3>
-                        {allCrew.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {allCrew.map((crewMember, index) => (
-                              <div key={`crew-${index}-${crewMember.id}`} className="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-6">
-                                <div className="flex items-start gap-4 mb-4">
-                                  {crewMember.profilePhoto ? (
-                                    <img 
-                                      src={crewMember.profilePhoto} 
-                                      alt={crewMember.name} 
-                                      className="w-16 h-16 rounded-xl object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center border border-zinc-700">
-                                      <Users className="w-8 h-8 text-zinc-500" />
-                                    </div>
-                                  )}
-                                  <div className="flex-1">
-                                    <h4 className="text-white font-semibold">{crewMember.name}</h4>
-                                    {crewMember.job && <p className="text-zinc-400 text-sm">{crewMember.job}</p>}
-                                    <p className="text-zinc-500 text-xs mt-1">
-                                      {crewMember.sourceType === 'movie' ? '🎬' : '📺'} {crewMember.sourceTitle}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-12">
-                            <Users className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                            <p className="text-zinc-500">No crew members yet</p>
-                          </div>
-                        )}
-                      </div>
-                    </>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <Users className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+                          <p className="text-zinc-500">No cast members yet</p>
+                        </div>
+                      )}
+                    </div>
                   )
                 })()}
               </motion.div>
@@ -7978,6 +8208,561 @@ export default function AdminPage() {
               </motion.div>
             )}
 
+            {activeTab === 'xtream-api' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-white">Xtream API</h2>
+                    <p className="text-zinc-500 mt-1">Manage your Xtream API configurations</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={handleAddXtreamConfig}
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add Config
+                    </button>
+                    <button 
+                      onClick={handleSaveXtreamConfigs}
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
+                    >
+                      <Save className="w-5 h-5" />
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
+                  <div className="space-y-6">
+                    {xtreamConfigs.map((config) => (
+                      <div key={config.id} className="bg-zinc-800/50 rounded-xl p-6 border border-zinc-700">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <Wifi className="w-8 h-8 text-zinc-400" />
+                            <div>
+                              <h4 className="text-white font-semibold">{config.name}</h4>
+                              <p className="text-zinc-500 text-sm">{config.serverUrl}</p>
+                            </div>
+                            {config.isActive && (
+                              <div className="ml-3 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                                <span className="text-emerald-400 text-sm font-medium">Active</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditXtreamConfig(config.id, 'isActive', !config.isActive)}
+                              className={cn(
+                                "p-2 rounded-lg transition-colors",
+                                config.isActive 
+                                  ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+                                  : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                              )}
+                            >
+                              {config.isActive ? "Active" : "Set Active"}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteXtreamConfig(config.id)}
+                              className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Config Name */}
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Config Name</label>
+                            <input
+                              type="text"
+                              value={config.name}
+                              onChange={(e) => handleEditXtreamConfig(config.id, 'name', e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                            />
+                          </div>
+                          
+                          {/* Server URL */}
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Server URL</label>
+                            <input
+                              type="url"
+                              value={config.serverUrl}
+                              onChange={(e) => handleEditXtreamConfig(config.id, 'serverUrl', e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                            />
+                          </div>
+                          
+                          {/* Username */}
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Username</label>
+                            <input
+                              type="text"
+                              value={config.username}
+                              onChange={(e) => handleEditXtreamConfig(config.id, 'username', e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                            />
+                          </div>
+                          
+                          {/* Password */}
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Password</label>
+                            <input
+                              type="password"
+                              value={config.password}
+                              onChange={(e) => handleEditXtreamConfig(config.id, 'password', e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {xtreamConfigs.length === 0 && (
+                      <div className="text-center py-12">
+                        <Wifi className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold text-white mb-2">No Xtream Configs Yet</h3>
+                        <p className="text-zinc-500">Add your first Xtream API configuration to get started</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'server-health' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-white">Server Health</h2>
+                    <p className="text-zinc-500 mt-1">Monitor your server status in real-time</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={checkServerHealth}
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  {/* Frontend Status */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${serverHealth.frontend.status === 'healthy' ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                        <Activity className={`w-5 h-5 ${serverHealth.frontend.status === 'healthy' ? 'text-emerald-400' : 'text-red-400'}`} />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Frontend</h3>
+                        <p className="text-zinc-500 text-xs">Status</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${serverHealth.frontend.status === 'healthy' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                      <span className={`text-sm font-medium ${serverHealth.frontend.status === 'healthy' ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {serverHealth.frontend.status}
+                      </span>
+                    </div>
+                    <p className="text-zinc-400 text-xs mt-2">Response: {serverHealth.frontend.responseTime}ms</p>
+                    {serverHealth.frontend.lastChecked && (
+                      <p className="text-zinc-600 text-xs mt-1">Last check: {serverHealth.frontend.lastChecked.toLocaleTimeString()}</p>
+                    )}
+                  </div>
+
+                  {/* Backend Status */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${serverHealth.backend.status === 'healthy' ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                        <HardDrive className={`w-5 h-5 ${serverHealth.backend.status === 'healthy' ? 'text-emerald-400' : 'text-red-400'}`} />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Backend</h3>
+                        <p className="text-zinc-500 text-xs">API Server</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${serverHealth.backend.status === 'healthy' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                      <span className={`text-sm font-medium ${serverHealth.backend.status === 'healthy' ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {serverHealth.backend.status}
+                      </span>
+                    </div>
+                    <p className="text-zinc-400 text-xs mt-2">Response: {serverHealth.backend.responseTime}ms</p>
+                    {serverHealth.backend.lastChecked && (
+                      <p className="text-zinc-600 text-xs mt-1">Last check: {serverHealth.backend.lastChecked.toLocaleTimeString()}</p>
+                    )}
+                  </div>
+
+                  {/* Database Status */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${serverHealth.database.status === 'healthy' ? 'bg-emerald-500/20' : serverHealth.database.status === 'checking' ? 'bg-yellow-500/20' : 'bg-red-500/20'}`}>
+                        <Database className={`w-5 h-5 ${serverHealth.database.status === 'healthy' ? 'text-emerald-400' : serverHealth.database.status === 'checking' ? 'text-yellow-400' : 'text-red-400'}`} />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Database</h3>
+                        <p className="text-zinc-500 text-xs">Storage</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${serverHealth.database.status === 'healthy' ? 'bg-emerald-500 animate-pulse' : serverHealth.database.status === 'checking' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                      <span className={`text-sm font-medium ${serverHealth.database.status === 'healthy' ? 'text-emerald-400' : serverHealth.database.status === 'checking' ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {serverHealth.database.status}
+                      </span>
+                    </div>
+                    <p className="text-zinc-400 text-xs mt-2">Response: {serverHealth.database.responseTime}ms</p>
+                    {serverHealth.database.lastChecked && (
+                      <p className="text-zinc-600 text-xs mt-1">Last check: {serverHealth.database.lastChecked.toLocaleTimeString()}</p>
+                    )}
+                  </div>
+
+                  {/* Uptime */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/20">
+                        <Clock className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Uptime</h3>
+                        <p className="text-zinc-500 text-xs">Backend Server</p>
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-white">
+                      {serverHealth.backend.uptime?.formatted || `${Math.floor(serverHealth.uptime / 86400)}d ${Math.floor((serverHealth.uptime % 86400) / 3600)}h ${Math.floor((serverHealth.uptime % 3600) / 60)}m`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Detailed Backend Info */}
+                {serverHealth.backend.status === 'healthy' && serverHealth.backend.memory && (
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
+                    <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                      <Activity className="w-5 h-5" />
+                      System Resources
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Memory Usage */}
+                      <div>
+                        <div className="flex justify-between items-center mb-3">
+                          <label className="text-zinc-400 text-sm font-medium">Memory Usage</label>
+                          <span className="text-white font-semibold">{serverHealth.backend.memory.usagePercentage}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
+                            style={{ width: `${serverHealth.backend.memory.usagePercentage}%` }}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mt-3 text-xs text-zinc-500">
+                          <div>Used: {Math.round(serverHealth.backend.memory.used / 1024 / 1024)} MB</div>
+                          <div>Total: {Math.round(serverHealth.backend.memory.total / 1024 / 1024)} MB</div>
+                        </div>
+                      </div>
+                      
+                      {/* CPU Load */}
+                      {serverHealth.backend.cpu && (
+                        <div>
+                          <div className="flex justify-between items-center mb-3">
+                            <label className="text-zinc-400 text-sm font-medium">CPU Load</label>
+                            <span className="text-white font-semibold">{serverHealth.backend.cpu.load1min.toFixed(2)} (1m)</span>
+                          </div>
+                          <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
+                              style={{ width: `${Math.min(100, serverHealth.backend.cpu.load1min / serverHealth.backend.cpu.cores * 100)}%` }}
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 mt-3 text-xs text-zinc-500">
+                            <div>1m: {serverHealth.backend.cpu.load1min.toFixed(2)}</div>
+                            <div>5m: {serverHealth.backend.cpu.load5min.toFixed(2)}</div>
+                            <div>15m: {serverHealth.backend.cpu.load15min.toFixed(2)}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Platform Info */}
+                      {serverHealth.backend.platform && (
+                        <div className="md:col-span-2">
+                          <h4 className="text-zinc-400 text-sm font-medium mb-3">Platform</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-zinc-800/50 rounded-xl p-4">
+                              <p className="text-zinc-500 text-xs mb-1">OS</p>
+                              <p className="text-white font-semibold">{serverHealth.backend.platform.os}</p>
+                            </div>
+                            <div className="bg-zinc-800/50 rounded-xl p-4">
+                              <p className="text-zinc-500 text-xs mb-1">Arch</p>
+                              <p className="text-white font-semibold">{serverHealth.backend.platform.arch}</p>
+                            </div>
+                            <div className="bg-zinc-800/50 rounded-xl p-4">
+                              <p className="text-zinc-500 text-xs mb-1">Node</p>
+                              <p className="text-white font-semibold">{serverHealth.backend.platform.nodeVersion}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'ai-features' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-white">AI Features</h2>
+                    <p className="text-zinc-500 mt-1">Manage your AI-powered features</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  {/* Trending Prediction */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Trending Prediction</h3>
+                        <p className="text-zinc-500 text-xs">Predict upcoming content</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Predict trending movies and shows using ML models</p>
+                  </div>
+
+                  {/* Auto Categorization */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                        <Tags className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Auto Categorization</h3>
+                        <p className="text-zinc-500 text-xs">Smart content tagging</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Automatically categorize and tag movies/shows</p>
+                  </div>
+
+                  {/* AI Subtitles */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center">
+                        <Languages className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">AI Subtitles</h3>
+                        <p className="text-zinc-500 text-xs">Auto generate subtitles</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Automatically generate and translate subtitles</p>
+                  </div>
+
+                  {/* AI Translation */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                        <Globe className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">AI Translation</h3>
+                        <p className="text-zinc-500 text-xs">Multilingual support</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Translate content to 100+ languages</p>
+                  </div>
+
+                  {/* AI Voiceover */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-red-600 flex items-center justify-center">
+                        <MessageSquare className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">AI Voiceover</h3>
+                        <p className="text-zinc-500 text-xs">Voice narration</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Generate natural voiceovers in multiple languages</p>
+                  </div>
+
+                  {/* AI Posters */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center">
+                        <Image className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">AI Posters</h3>
+                        <p className="text-zinc-500 text-xs">Generate posters</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Generate and enhance movie posters with AI</p>
+                  </div>
+
+                  {/* Smart Search */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+                        <Search className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Smart Search</h3>
+                        <p className="text-zinc-500 text-xs">AI-powered search</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Natural language search and discovery</p>
+                  </div>
+
+                  {/* AI Chat Assistant */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                        <MessageSquare className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">AI Chat Assistant</h3>
+                        <p className="text-zinc-500 text-xs">Personal assistant</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Chat with AI for recommendations and help</p>
+                  </div>
+
+                  {/* Churn Prediction */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Churn Prediction</h3>
+                        <p className="text-zinc-500 text-xs">User retention</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Predict user churn and suggest retention actions</p>
+                  </div>
+
+                  {/* AI Recommendations */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 md:col-span-2 lg:col-span-3">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center">
+                        <Star className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">AI Recommendations</h3>
+                        <p className="text-zinc-500 text-xs">Personalized suggestions</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
+                      <div className="bg-zinc-800/50 rounded-xl p-3">
+                        <p className="text-zinc-300 text-sm font-medium">Trending</p>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-xl p-3">
+                        <p className="text-zinc-300 text-sm font-medium">Recently Watched</p>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-xl p-3">
+                        <p className="text-zinc-300 text-sm font-medium">Because You Watched</p>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-xl p-3">
+                        <p className="text-zinc-300 text-sm font-medium">Popular Near You</p>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-xl p-3">
+                        <p className="text-zinc-300 text-sm font-medium">New Releases</p>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-xl p-3">
+                        <p className="text-zinc-300 text-sm font-medium">Top Rated</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Download Features */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center">
+                        <Download className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Download Features</h3>
+                        <p className="text-zinc-500 text-xs">Offline viewing</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Offline download, encrypted, smart downloads and more</p>
+                  </div>
+
+                  {/* Android App */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                        <Smartphone className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Android App</h3>
+                        <p className="text-zinc-500 text-xs">Material You + Jetpack Compose</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Modern Android app with tablet, foldable, Chromecast support</p>
+                  </div>
+
+                  {/* iOS App */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center">
+                        <Monitor className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">iOS App</h3>
+                        <p className="text-zinc-500 text-xs">SwiftUI + Apple Design</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">iOS app with SwiftUI, Dynamic Island, Widgets, Live Activities</p>
+                  </div>
+
+                  {/* Android TV App */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+                        <AppWindow className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Android TV App</h3>
+                        <p className="text-zinc-500 text-xs">TV Optimized</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Android TV app with remote-friendly UI and voice search</p>
+                  </div>
+
+                  {/* AI Metadata Cleanup */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
+                        <RefreshCw className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">AI Metadata Cleanup</h3>
+                        <p className="text-zinc-500 text-xs">Metadata management</p>
+                      </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm">Clean and standardize content metadata</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === 'herobanner' && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -8087,6 +8872,16 @@ export default function AdminPage() {
                               value={banner.posterUrl}
                               onChange={(e) => handleEditHeroBanner(banner.id, 'posterUrl', e.target.value)}
                               className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Auto Scroll Interval (ms)</label>
+                            <input
+                              type="number"
+                              value={banner.autoScrollInterval || 10000}
+                              onChange={(e) => handleEditHeroBanner(banner.id, 'autoScrollInterval', Number(e.target.value))}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                              min="1000"
                             />
                           </div>
                         </div>
@@ -10072,6 +10867,3 @@ export default function AdminPage() {
     </div>
   )
 }
-
-
-

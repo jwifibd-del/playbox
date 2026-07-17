@@ -2,7 +2,7 @@
 
 import { type ChangeEvent, type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import Hls, { Level } from 'hls.js';
+import Hls, { Level as HlsLevel } from 'hls.js';
 import {
   clearMiniPlayerState,
   getMiniPlayerState,
@@ -11,6 +11,14 @@ import {
   type MediaSourceType,
   type MediaSubtitleTrack,
 } from '@/lib/data';
+
+interface QualityLevel {
+  height: number;
+  level?: number;
+  bitrate?: number;
+  width?: number;
+  name?: string;
+}
 
 interface Bookmark {
   id: number;
@@ -39,6 +47,13 @@ interface VideoPlayerProps {
   enableMiniPlayer?: boolean;
   onCloseMiniPlayer?: () => void;
   onExpandMiniPlayer?: () => void;
+  drmConfig?: {
+    type: 'widevine' | 'playready' | 'fairplay';
+    licenseUrl: string;
+    headers?: Record<string, string>;
+  }[];
+  enableAutoRefresh?: boolean;
+  autoRefreshInterval?: number; // in seconds
 }
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -147,11 +162,16 @@ export default function VideoPlayer({
   enableMiniPlayer = true,
   onCloseMiniPlayer,
   onExpandMiniPlayer,
+  drmConfig,
+  enableAutoRefresh = false,
+  autoRefreshInterval = 300, // 5 minutes default
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const dashRef = useRef<any | null>(null);
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
   const miniTransferTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const resumeTimeRef = useRef(0);
   const isMiniPlayer = mode === 'mini';
 
@@ -164,7 +184,7 @@ export default function VideoPlayer({
   const [showControls, setShowControls] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [qualities, setQualities] = useState<Level[]>([]);
+  const [qualities, setQualities] = useState<QualityLevel[]>([]);
   const [currentQuality, setCurrentQuality] = useState(-1); // -1 means auto
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
@@ -339,7 +359,7 @@ export default function VideoPlayer({
     return () => clearInterval(interval);
   }, [sleepTimerRemaining]);
 
-  // Initialize HLS
+  // Initialize HLS or DASH
   useEffect(() => {
     const video = videoRef.current;
     if (!video || externalSource) return;
@@ -350,11 +370,21 @@ export default function VideoPlayer({
         lowLatencyMode: true,
       });
       hlsRef.current = hls;
+      
       hls.loadSource(src);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setQualities(hls.levels);
+        setQualities(hls.levels.map((level, index) => ({
+          height: level.height,
+          bitrate: level.bitrate,
+          width: level.width,
+          name: level.name,
+          level: index
+        })));
+        if (autoplay) {
+          video.play().catch(() => { /* Autoplay may be blocked */ });
+        }
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
@@ -378,6 +408,28 @@ export default function VideoPlayer({
           setCurrentAudioTrack(String(selectedTrack.id ?? `hls-audio-${data.id}`));
         }
       });
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.error('HLS network error, trying to recover');
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.error('HLS media error, trying to recover');
+              hls.recoverMediaError();
+              break;
+          }
+        }
+      });
+    } else if (src.endsWith('.mpd')) {
+      (async () => {
+        const dashjs = await import('dashjs');
+        const dash = dashjs.MediaPlayer().create();
+        dashRef.current = dash;
+        dash.initialize(video, src, autoplay);
+      })();
     } else {
       const nativeTracks = mapNativeAudioTracks(video);
       if (nativeTracks.length > 0) {
@@ -415,8 +467,50 @@ export default function VideoPlayer({
       video.removeEventListener('volumechange', handleVolumeChange);
       video.removeEventListener('ratechange', handleRateChange);
       hlsRef.current?.destroy();
+      dashRef.current?.reset();
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+      }
     };
-  }, [audioTracks, externalSource, src]);
+  }, [audioTracks, externalSource, src, autoplay, drmConfig, enableAutoRefresh, autoRefreshInterval]);
+
+  // Auto-refresh for streams
+  useEffect(() => {
+    if (!enableAutoRefresh) return;
+
+    const refreshStream = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      const currentTime = video.currentTime;
+      const wasPlaying = !video.paused;
+
+      if (hlsRef.current) {
+        hlsRef.current.loadSource(src);
+        hlsRef.current.attachMedia(video);
+      } else if (dashRef.current) {
+        dashRef.current.attachSource(src);
+      } else {
+        video.src = src;
+      }
+
+      if (!isNaN(currentTime)) {
+        video.currentTime = currentTime;
+      }
+
+      if (wasPlaying) {
+        video.play().catch(() => { /* Autoplay may be blocked */ });
+      }
+    };
+
+    autoRefreshTimerRef.current = setInterval(refreshStream, autoRefreshInterval * 1000);
+
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+      }
+    };
+  }, [enableAutoRefresh, autoRefreshInterval, src]);
 
   // Play/Pause
   const togglePlay = () => {
@@ -479,9 +573,17 @@ export default function VideoPlayer({
   };
 
   // Quality control
-  const setQuality = (levelIndex: number) => {
+  const setQuality = async (levelIndex: number) => {
     if (hlsRef.current) {
       hlsRef.current.currentLevel = levelIndex;
+      setCurrentQuality(levelIndex);
+      setShowQualityMenu(false);
+    } else if (dashRef.current) {
+      if (levelIndex === -1) {
+        dashRef.current.setQualityFor('video', -1);
+      } else {
+        dashRef.current.setQualityFor('video', levelIndex);
+      }
       setCurrentQuality(levelIndex);
       setShowQualityMenu(false);
     }

@@ -16,6 +16,53 @@ import type { TVRailItem } from '@/components/tv/TVMediaCard';
 import { getLiveTVChannels, sampleMovies, type LiveTVChannel, type Movie, type TVShow } from '@/lib/data';
 import { fetchMovies, fetchTVShows } from '@/lib/api';
 
+interface SpeechRecognitionAlternativeLike {
+  transcript: string;
+}
+
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  0: SpeechRecognitionAlternativeLike;
+  length: number;
+}
+
+interface SpeechRecognitionResultListLike {
+  [index: number]: SpeechRecognitionResultLike;
+  length: number;
+}
+
+interface SpeechRecognitionEventLike extends Event {
+  resultIndex: number;
+  results: SpeechRecognitionResultListLike;
+}
+
+interface SpeechRecognitionErrorEventLike extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionLike extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onstart: ((event: Event) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: ((event: Event) => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
+
 const platformCards = [
   { name: 'Android TV', status: 'UI starter ready', note: 'Large cards and focus rails are available.' },
   { name: 'Google TV', status: 'Layout starter ready', note: 'Shared TV shell is prepared for brand-specific polish.' },
@@ -92,9 +139,12 @@ function mapChannelToRailItem(channel: LiveTVChannel): TVRailItem {
 export default function TVAppPage() {
   const router = useRouter();
   const primaryActionRef = useRef<HTMLButtonElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [movies, setMovies] = useState<Movie[]>(sampleMovies);
   const [shows, setShows] = useState<TVShow[]>([]);
   const [channels, setChannels] = useState<LiveTVChannel[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceMessage, setVoiceMessage] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -111,6 +161,12 @@ export default function TVAppPage() {
 
   useEffect(() => {
     primaryActionRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort();
+    };
   }, []);
 
   const featuredMovie = movies[0] || sampleMovies[0];
@@ -136,8 +192,76 @@ export default function TVAppPage() {
     [movies]
   );
 
+  const getVoiceSearchError = (error: string) => {
+    switch (error) {
+      case 'not-allowed':
+      case 'service-not-allowed':
+        return 'Microphone permission was denied.';
+      case 'no-speech':
+        return 'No speech was detected. Try again.';
+      case 'audio-capture':
+        return 'No microphone was found on this device.';
+      case 'network':
+        return 'Voice search needs a network connection.';
+      default:
+        return 'Voice search could not start.';
+    }
+  };
+
   const handleVoiceSearch = () => {
-    router.push(`/search?q=${encodeURIComponent(featuredMovie?.title || 'Family movies')}`);
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionAPI) {
+      setVoiceMessage('Voice search is not supported in this browser.');
+      return;
+    }
+
+    const recognition = recognitionRef.current ?? new SpeechRecognitionAPI();
+    recognitionRef.current = recognition;
+    setVoiceMessage('Listening...');
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (transcript) {
+        setVoiceMessage(`Searching for "${transcript}"`);
+        router.push(`/search?q=${encodeURIComponent(transcript)}`);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      setVoiceMessage(getVoiceSearchError(event.error));
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setVoiceMessage((current) => (current === 'Listening...' ? 'No speech was detected. Try again.' : current));
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      setIsListening(false);
+      setVoiceMessage('Voice search is already active. Try again in a moment.');
+    }
   };
 
   return (
@@ -181,9 +305,10 @@ export default function TVAppPage() {
                     className="tv-focus-ring inline-flex items-center gap-3 rounded-2xl border border-sky-400/35 bg-sky-500/10 px-6 py-4 text-base font-semibold text-sky-100"
                   >
                     <Mic className="h-5 w-5" />
-                    Voice Search Starter
+                    {isListening ? 'Listening...' : 'Voice Search'}
                   </button>
                 </div>
+                {voiceMessage && <p className="mt-4 text-sm text-zinc-300">{voiceMessage}</p>}
 
                 <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {roadmapSetup.map((item) => (

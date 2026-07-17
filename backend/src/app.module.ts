@@ -18,6 +18,8 @@ import { ImdbModule } from './imdb/imdb.module';
 import { CsvImportModule } from './csv-import/csv-import.module';
 import { LiveTVModule } from './live-tv/live-tv.module';
 import { StorageModule } from './storage/storage.module';
+import { XtreamApiModule } from './xtream-api/xtream-api.module';
+import { ServerHealthModule } from './server-health/server-health.module';
 
 @Module({
   imports: [
@@ -72,6 +74,8 @@ import { StorageModule } from './storage/storage.module';
     ImdbModule,
     CsvImportModule,
     LiveTVModule,
+    XtreamApiModule,
+    ServerHealthModule,
   ],
   controllers: [],
   providers: [AppResolver],

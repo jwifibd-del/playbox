@@ -1,0 +1,75 @@
+name: playflix
+
+packages:
+  - packages/*
+  - apps/*
+
+command:
+  version:
+    # Generate commit links in package changelogs.
+    linkToCommits: true
+    # Only allow versioning when all packages are at the same version.
+    # If you want to allow independent versions, set this to false.
+    # This is recommended for most projects.
+    allPackages: true
+    # Additional options for versioning.
+    # For a full list, see https://melos.invertase.dev/configuration/commands#version
+    workspaceChangelog: true
+    branch: main
+
+scripts:
+  lint:all:
+    run: melos run analyze && melos run format
+    description: Run all static analysis checks.
+
+  analyze:
+    run: melos exec -- "flutter analyze"
+    description: Run `flutter analyze` for all packages.
+
+  format:
+    run: melos exec -- "dart format ."
+    description: Run `dart format` for all packages.
+
+  format:check:
+    run: melos exec -- "dart format --set-exit-if-changed ."
+    description: Check if all files are formatted correctly.
+
+  test:
+    run: melos run test:select --no-select
+    description: Run all tests in all packages.
+    packageFilters:
+      dirExists:
+        - test
+
+  test:select:
+    run: melos exec -- "flutter test"
+    description: Run `flutter test` for selected packages.
+    packageFilters:
+      dirExists:
+        - test
+
+  clean:deep:
+    run: melos clean && melos exec -- "flutter clean"
+    description: Clean all packages and Melos workspace.
+
+  build:all:
+    run: melos run build:playflix && melos run build:playflix_tv && melos run build:playflix_web
+    description: Build all apps.
+
+  build:playflix:
+    run: cd apps/playflix && flutter build apk --release
+    description: Build PlayFlix Android APK.
+    packageFilters:
+      scope: playflix
+
+  build:playflix_tv:
+    run: cd apps/playflix_tv && flutter build apk --release
+    description: Build PlayFlix TV Android APK.
+    packageFilters:
+      scope: playflix_tv
+
+  build:playflix_web:
+    run: cd apps/playflix_web && flutter build web --release
+    description: Build PlayFlix Web app.
+    packageFilters:
+      scope: playflix_web

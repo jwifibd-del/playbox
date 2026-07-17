@@ -192,7 +192,7 @@ export function Navbar() {
     <>
       <nav
         className={cn(
-          'fixed top-0 left-0 right-0 z-50 px-6 md:px-12 py-4',
+          'fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-12 py-3 sm:py-4',
           navbarSettings.navbarAnimationType === 'fade'
             ? 'transition-opacity duration-500'
             : navbarSettings.navbarAnimationType === 'slide'
@@ -205,17 +205,17 @@ export function Navbar() {
           scrolled ? 'bg-[#080808]/90 backdrop-blur-md shadow-lg' : 'bg-gradient-to-b from-[#080808]/80 to-transparent'
         )}
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-8 w-1/4">
-            <Link href={homeHref} className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex min-w-0 flex-1 items-center lg:w-1/4 lg:flex-none">
+            <Link href={homeHref} className="flex min-w-0 items-center gap-2">
               {navbarSettings.navbarLogo ? (
                 <img
                   src={navbarSettings.navbarLogo}
                   alt={navbarSettings.navbarName}
-                  className="h-10 w-auto"
+                  className="h-8 sm:h-10 w-auto"
                 />
               ) : (
-                <span className="text-2xl font-bold text-white tracking-wider">
+                <span className="truncate text-lg sm:text-2xl font-bold text-white tracking-wider">
                   {navbarSettings.navbarName.split(' ').map((word, index) => {
                     if (index === 0) return <span key={index}>{word}</span>;
                     return <span key={index} style={{ color: navbarSettings.navbarColor }}>{word}</span>;
@@ -224,7 +224,7 @@ export function Navbar() {
               )}
             </Link>
           </div>
-          <div className="hidden md:flex items-center gap-6 justify-center">
+          <div className="hidden lg:flex flex-1 items-center justify-center gap-4 xl:gap-6">
             {navLinks.map(({ href, label, icon: Icon, match }) => {
               const isActive = match(pathname);
 
@@ -246,9 +246,9 @@ export function Navbar() {
                 );
               })}
           </div>
-          <div className="flex items-center justify-end gap-4 md:gap-6 w-1/4">
+          <div className="flex flex-1 items-center justify-end gap-2 sm:gap-4 lg:w-1/4 lg:flex-none">
             <button
-              className="md:hidden text-white hover:text-gray-300 transition-colors"
+              className="lg:hidden text-white hover:text-gray-300 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -260,7 +260,7 @@ export function Navbar() {
                 {animeMode && (
                   <button
                     onClick={handleAnimeModeToggle}
-                    className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all bg-gradient-to-r from-fuchsia-500 to-cyan-400 text-white hover:from-fuchsia-400 hover:to-cyan-300"
+                    className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all text-white hover:text-gray-200"
                   >
                     <Sparkles size={18} />
                     Anime On
@@ -269,7 +269,7 @@ export function Navbar() {
                 {kidsMode && (
                   <button
                     onClick={handleKidsModeToggle}
-                    className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all bg-gradient-to-r from-yellow-400 to-orange-500 text-black hover:from-yellow-300 hover:to-orange-400"
+                    className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all text-white hover:text-gray-200"
                   >
                     <Smile size={18} />
                     Kids On
@@ -278,10 +278,10 @@ export function Navbar() {
               </>
             ) : (
               // Show Mod dropdown when no mode is active
-              <div ref={dropdownRef} className="relative hidden md:block">
+              <div ref={dropdownRef} className="relative hidden lg:block">
                 <button
                   onClick={() => setModDropdownOpen(!modDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all border border-zinc-700 bg-zinc-900/70 text-zinc-200 hover:border-zinc-500 hover:text-white"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all text-zinc-200 hover:text-white"
                 >
                   Modes
                 <ChevronDown size={18} />
@@ -315,14 +315,15 @@ export function Navbar() {
                 )}
               </div>
             )}
-            <Link href="/search" className="text-gray-300 hover:text-white transition-colors">
-              <Search size={20} />
+            <Link href="/search" className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white transition-all duration-300">
+              <Search size={20} className="sm:w-6 sm:h-6" />
+              <span className="hidden sm:inline text-sm font-medium">Search</span>
             </Link>
-            <button className="text-gray-300 hover:text-white transition-colors">
+            <button className="hidden sm:block text-gray-300 hover:text-white transition-colors">
               <Bell size={20} />
             </button>
             <Link href={userLoggedIn ? '/account' : '/login'} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
-              <div className="w-8 h-8 md:w-12 md:h-12 rounded-full overflow-hidden border border-white/10 bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden border border-white/10 bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
                 {userLoggedIn && userAvatar ? (
                   <img
                     src={userAvatar}
@@ -339,12 +340,12 @@ export function Navbar() {
       </nav>
 
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 flex md:hidden">
+        <div className="fixed inset-0 z-40 flex lg:hidden">
           <div 
             className="fixed inset-0 bg-black/50"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="relative ml-auto flex h-full w-3/4 max-w-xs flex-col overflow-y-auto bg-[#080808]/95 backdrop-blur-xl py-6 px-6 border-l border-zinc-800">
+          <div className="relative ml-auto flex h-full w-full max-w-sm sm:w-3/4 flex-col overflow-y-auto bg-[#080808]/95 backdrop-blur-xl py-6 px-5 sm:px-6 border-l border-zinc-800">
             <div className="flex items-center justify-between mb-8">
               <Link href={homeHref} className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
                 {navbarSettings.navbarLogo ? (
@@ -403,8 +404,8 @@ export function Navbar() {
                   className={cn(
                     'flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all',
                     animeMode
-                      ? 'bg-gradient-to-r from-fuchsia-500 to-cyan-400 text-white hover:from-fuchsia-400 hover:to-cyan-300'
-                      : 'border border-zinc-700 bg-zinc-900/70 text-zinc-200 hover:border-fuchsia-400/60 hover:text-white'
+                      ? 'text-white hover:text-gray-200'
+                      : 'text-zinc-200 hover:text-white'
                   )}
                 >
                   <Sparkles size={18} />
@@ -419,8 +420,8 @@ export function Navbar() {
                 className={cn(
                   'flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all',
                   kidsMode
-                    ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black hover:from-yellow-300 hover:to-orange-400'
-                    : 'border border-zinc-700 bg-zinc-900/70 text-zinc-200 hover:border-yellow-400/60 hover:text-white'
+                    ? 'text-white hover:text-gray-200'
+                    : 'text-zinc-200 hover:text-white'
                 )}
               >
                 <Smile size={18} />

@@ -1148,6 +1148,40 @@ export function getAIRecommendations(): Movie[] {
 
 export const aiRecommendations = getAIRecommendations();
 
+// "Because You Watched" - Recommendations based on last watched item
+export function getBecauseYouWatched(): Movie[] {
+  if (continueWatching.length === 0) {
+    return sampleMovies.slice(0, 5);
+  }
+  const lastWatched = continueWatching[0];
+  const scoredMovies = sampleMovies.map(movie => {
+    let score = 0;
+    if (movie.id === lastWatched.id) return null;
+    const genreMatches = movie.genres.filter(g => lastWatched.genres.includes(g)).length;
+    score += genreMatches * 3;
+    if (movie.director === lastWatched.director) score += 5;
+    if (movie.country === lastWatched.country) score += 2;
+    if (movie.language === lastWatched.language) score += 2;
+    score += Math.random();
+    return { movie, score };
+  }).filter(Boolean) as { movie: Movie, score: number }[];
+  scoredMovies.sort((a, b) => b.score - a.score);
+  return scoredMovies.map(s => s.movie).slice(0, 6);
+}
+export const becauseYouWatched = getBecauseYouWatched();
+
+// "Popular Near You" - Simulated local popularity
+export function getPopularNearYou(): Movie[] {
+  return [...sampleMovies].sort((a, b) => b.rating - a.rating).slice(0, 6);
+}
+export const popularNearYou = getPopularNearYou();
+
+// "New Releases" - Simulate latest movies
+export function getNewReleases(): Movie[] {
+  return [...sampleMovies].sort((a, b) => b.releaseYear - a.releaseYear).slice(0, 6);
+}
+export const newReleases = getNewReleases();
+
 // App Download Links
 export interface AppLink {
   platform: string;
@@ -1179,7 +1213,7 @@ const defaultAppLinks: AppLink[] = [
     platform: "appletv",
     name: "Apple TV",
     url: "https://tv.apple.com/",
-    icon: "monitor"
+    icon: "tv"
   }
 ];
 
@@ -1191,7 +1225,7 @@ export function getAppLinks(): AppLink[] {
   if (saved) {
     try {
       const parsedLinks = JSON.parse(saved);
-      if (Array.isArray(parsedLinks)) {
+      if (Array.isArray(parsedLinks) && parsedLinks.length > 0) {
         return defaultAppLinks.map((defaultLink) => {
           const savedLink = parsedLinks.find((link) => link.platform === defaultLink.platform);
           return savedLink ? { ...defaultLink, ...savedLink } : defaultLink;
@@ -1819,6 +1853,91 @@ export function submitMovieRequest(input: {
   return { success: true, request: newRequest };
 }
 
+// Downloads Management
+export type DownloadStatus = 'pending' | 'downloading' | 'paused' | 'completed' | 'failed';
+
+export interface Download {
+  id: string;
+  title: string;
+  posterPath: string;
+  url: string;
+  status: DownloadStatus;
+  progress: number;
+  size: string;
+  downloadedSize: string;
+  quality: string;
+  addedAt: string;
+  completedAt?: string;
+  isEncrypted: boolean;
+}
+
+const defaultDownloads: Download[] = [
+  {
+    id: '1',
+    title: 'Interstellar Odyssey',
+    posterPath: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=epic%20sci-fi%20movie%20poster%2C%20interstellar%2C%20cinematic%2C%20space%2C%20black%20hole&image_size=portrait_4_3',
+    url: 'https://example.com/interstellar-4k.mkv',
+    status: 'completed',
+    progress: 100,
+    size: '12.5 GB',
+    downloadedSize: '12.5 GB',
+    quality: '4K',
+    addedAt: '2025-07-10T14:30:00',
+    isEncrypted: true,
+  },
+  {
+    id: '2',
+    title: 'The Dark Knight',
+    posterPath: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=dark%20knight%20movie%20poster%2C%20batman%2C%20joker%2C%20cinematic%2C%20dark%20tones&image_size=portrait_4_3',
+    url: 'https://example.com/dark-knight-1080p.mp4',
+    status: 'downloading',
+    progress: 65,
+    size: '3.8 GB',
+    downloadedSize: '2.5 GB',
+    quality: '1080p',
+    addedAt: '2025-07-15T10:00:00',
+    isEncrypted: false,
+  }
+];
+
+export function getDownloads(): Download[] {
+  if (typeof window === 'undefined') return defaultDownloads;
+  const saved = localStorage.getItem('playflix_downloads');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return defaultDownloads;
+    }
+  }
+  return defaultDownloads;
+}
+
+export function saveDownloads(downloads: Download[]): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('playflix_downloads', JSON.stringify(downloads));
+    window.dispatchEvent(new CustomEvent('playflix-downloads-updated'));
+  }
+}
+
+// Storage Manager
+export interface StorageStats {
+  totalAvailable: string;
+  used: string;
+  downloadsUsed: string;
+  free: string;
+}
+
+export function getStorageStats(): StorageStats {
+  // Simulate storage info
+  return {
+    totalAvailable: '512 GB',
+    used: '256 GB',
+    downloadsUsed: '16.3 GB',
+    free: '256 GB',
+  };
+}
+
 // Parental Control & Kids Mode
 export interface ParentalControlSettings {
   pinEnabled: boolean;
@@ -2116,6 +2235,19 @@ export interface HeroBanner {
   tvShowId?: string | number;
   isActive: boolean;
   order: number;
+  autoScrollInterval: number;
+}
+
+function normalizeHeroBanner(banner: Partial<HeroBanner> & Pick<HeroBanner, 'id' | 'title' | 'description' | 'backdropUrl' | 'posterUrl' | 'isActive' | 'order'>): HeroBanner {
+  return {
+    ...banner,
+    autoScrollInterval: Math.max(1000, Number(banner.autoScrollInterval ?? 10000) || 10000),
+    // Default any optional missing fields if needed
+    contentType: banner.contentType,
+    contentId: banner.contentId,
+    movieId: banner.movieId,
+    tvShowId: banner.tvShowId,
+  };
 }
 
 const defaultHeroBanners: HeroBanner[] = [
@@ -2127,6 +2259,7 @@ const defaultHeroBanners: HeroBanner[] = [
     posterUrl: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=epic%20sci-fi%20movie%20poster%2C%20interstellar%2C%20cinematic%2C%20space%2C%20black%20hole&image_size=portrait_4_3',
     isActive: true,
     order: 1,
+    autoScrollInterval: 10000,
   },
   {
     id: '2',
@@ -2136,6 +2269,7 @@ const defaultHeroBanners: HeroBanner[] = [
     posterUrl: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=dark%20knight%20movie%20poster%2C%20batman%2C%20joker%2C%20cinematic%2C%20dark%20tones&image_size=portrait_4_3',
     isActive: true,
     order: 2,
+    autoScrollInterval: 10000,
   },
   {
     id: '3',
@@ -2145,6 +2279,7 @@ const defaultHeroBanners: HeroBanner[] = [
     posterUrl: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=inception%20movie%20poster%2C%20spinning%20top%2C%20dream%2C%20mind%20bending%2C%20cinematic&image_size=portrait_4_3',
     isActive: true,
     order: 3,
+    autoScrollInterval: 10000,
   }
 ];
 
@@ -2153,7 +2288,7 @@ export function getHeroBanners(): HeroBanner[] {
   const saved = localStorage.getItem('playflix_hero_banners');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      return JSON.parse(saved).map(normalizeHeroBanner);
     } catch {
       return defaultHeroBanners;
     }
@@ -2163,7 +2298,7 @@ export function getHeroBanners(): HeroBanner[] {
 
 export function saveHeroBanners(banners: HeroBanner[]): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_hero_banners', JSON.stringify(banners));
+    localStorage.setItem('playflix_hero_banners', JSON.stringify(banners.map(normalizeHeroBanner)));
   }
 }
 
@@ -2178,6 +2313,7 @@ const defaultKidsHeroBanners: HeroBanner[] = kidsContent.slice(0, 3).map((item, 
   movieId: item.id,
   isActive: true,
   order: index + 1,
+  autoScrollInterval: 10000,
 }));
 
 export function getKidsHeroBanners(): HeroBanner[] {
@@ -2185,7 +2321,7 @@ export function getKidsHeroBanners(): HeroBanner[] {
   const saved = localStorage.getItem('playflix_kids_hero_banners');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      return JSON.parse(saved).map(normalizeHeroBanner);
     } catch {
       return defaultKidsHeroBanners;
     }
@@ -2195,7 +2331,7 @@ export function getKidsHeroBanners(): HeroBanner[] {
 
 export function saveKidsHeroBanners(banners: HeroBanner[]): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_kids_hero_banners', JSON.stringify(banners));
+    localStorage.setItem('playflix_kids_hero_banners', JSON.stringify(banners.map(normalizeHeroBanner)));
   }
 }
 
@@ -2210,6 +2346,7 @@ const defaultAnimeHeroBanners: HeroBanner[] = getFilteredAnimeMovies().slice(0, 
   movieId: movie.id,
   isActive: true,
   order: index + 1,
+  autoScrollInterval: 10000,
 }));
 
 export function getAnimeHeroBanners(): HeroBanner[] {
@@ -2217,7 +2354,7 @@ export function getAnimeHeroBanners(): HeroBanner[] {
   const saved = localStorage.getItem('playflix_anime_hero_banners');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      return JSON.parse(saved).map(normalizeHeroBanner);
     } catch {
       return defaultAnimeHeroBanners;
     }
@@ -2227,7 +2364,7 @@ export function getAnimeHeroBanners(): HeroBanner[] {
 
 export function saveAnimeHeroBanners(banners: HeroBanner[]): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_anime_hero_banners', JSON.stringify(banners));
+    localStorage.setItem('playflix_anime_hero_banners', JSON.stringify(banners.map(normalizeHeroBanner)));
   }
 }
 
@@ -3259,4 +3396,52 @@ export function parseFilename(filename: string): { title?: string; year?: number
   const title = cleanName.replace(/\./g, ' ').replace(/_/g, ' ').replace(/\(\d{4}\)|\d{4}/g, '').trim();
   
   return { title, year, type: 'movie' };
+}
+
+// Xtream API Config
+export interface XtreamConfig {
+  id: string;
+  name: string;
+  serverUrl: string;
+  username: string;
+  password: string;
+  isActive: boolean;
+  authData?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const defaultXtreamConfigs: XtreamConfig[] = [];
+
+export function getXtreamConfigs(): XtreamConfig[] {
+  if (typeof window === 'undefined') return defaultXtreamConfigs;
+  const saved = localStorage.getItem('playflix_xtream_configs');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return defaultXtreamConfigs;
+    }
+  }
+  return defaultXtreamConfigs;
+}
+
+export function saveXtreamConfigs(configs: XtreamConfig[]): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('playflix_xtream_configs', JSON.stringify(configs));
+  }
+}
+
+export function getActiveXtreamConfig(): XtreamConfig | undefined {
+  const configs = getXtreamConfigs();
+  return configs.find(c => c.isActive);
+}
+
+export function setActiveXtreamConfig(configId: string): void {
+  const configs = getXtreamConfigs();
+  const updated = configs.map(c => ({
+    ...c,
+    isActive: c.id === configId
+  }));
+  saveXtreamConfigs(updated);
 }

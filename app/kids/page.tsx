@@ -94,13 +94,16 @@ export default function KidsModePage() {
   }));
 
   const kidsHeroMovies = heroMoviesForCarousel.length > 0 ? heroMoviesForCarousel : fallbackHeroMovies;
+  const kidsHeroAutoScrollInterval = heroBanners[0]?.autoScrollInterval ?? 10000;
 
 
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-900 via-purple-900 to-pink-900 text-white">
       <Navbar />
-      {kidsHeroMovies.length > 0 && <HeroBanner movies={kidsHeroMovies} />}
+      {kidsHeroMovies.length > 0 && (
+        <HeroBanner movies={kidsHeroMovies} autoScrollInterval={kidsHeroAutoScrollInterval} />
+      )}
       <div className="max-w-7xl mx-auto px-6 pt-12 pb-12">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-12">

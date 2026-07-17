@@ -118,6 +118,7 @@ export default function AnimeModePage() {
 
     return animeMovies.slice(0, 3);
   }, [animeMovies, heroBanners]);
+  const animeHeroAutoScrollInterval = heroBanners[0]?.autoScrollInterval ?? 10000;
 
   const renderAnimeHomepageSection = (section: HomepageSection) => {
     const duration = section.animationDuration || 15;
@@ -434,7 +435,9 @@ export default function AnimeModePage() {
       </div>
 
       <Navbar />
-      {animeHeroMovies.length > 0 && <HeroBanner movies={animeHeroMovies} />}
+      {animeHeroMovies.length > 0 && (
+        <HeroBanner movies={animeHeroMovies} autoScrollInterval={animeHeroAutoScrollInterval} />
+      )}
 
       <div className="max-w-7xl mx-auto px-6 pt-12 pb-12 relative z-10">
         {/* Hero Section */}
