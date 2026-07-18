@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
@@ -62,7 +62,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { API_BASE } from '@/lib/api';
-import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getLiveTVChannels, saveLiveTVChannels, LiveTVChannel, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow, getXtreamConfigs, saveXtreamConfigs, getActiveXtreamConfig, setActiveXtreamConfig, XtreamConfig } from '@/lib/data';
+import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getLiveTVChannels, saveLiveTVChannels, LiveTVChannel, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, getTMDBSeasonDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow, getXtreamConfigs, saveXtreamConfigs, getActiveXtreamConfig, setActiveXtreamConfig, XtreamConfig } from '@/lib/data';
 
 function cn(...inputs: any[]) {
   return twMerge(clsx(inputs))
@@ -539,6 +539,8 @@ const MovieModal = ({
   onSave 
 }: any) => {
   const [genres, setGenres] = useState(getGenres())
+  const perSourceFileInputRef = useRef<HTMLInputElement>(null) // for single file selection for specific existing source
+  const [editingSourceId, setEditingSourceId] = useState<number | string | null>(null)
   
   const [formData, setFormData] = useState<{
     title: string;
@@ -559,6 +561,7 @@ const MovieModal = ({
     trailerUrl: string;
     sources: MovieSource[];
     cast: CastMember[];
+    crew: CrewMember[];
     imdbId: string;
     isKids: boolean;
     isAnime: boolean;
@@ -581,10 +584,53 @@ const MovieModal = ({
     trailerUrl: '',
     sources: [],
     cast: [],
+    crew: [],
     imdbId: '',
     isKids: false,
     isAnime: false
   })
+
+  const handleSelectVideoForSource = (sourceId: number | string) => {
+    setEditingSourceId(sourceId)
+    if (perSourceFileInputRef.current) {
+      perSourceFileInputRef.current.click()
+    }
+  }
+
+  const handlePerSourceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0 || editingSourceId === null) return
+
+    const videoExtensions = ['.mp4', '.mkv', '.webm', '.mov', '.avi', '.m4v']
+    let videoFile: File | null = null
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+      if (videoExtensions.includes(ext)) {
+        videoFile = file
+        break
+      }
+    }
+
+    if (videoFile) {
+      const objectUrl = URL.createObjectURL(videoFile)
+      handleSourceChange(editingSourceId, 'url', objectUrl)
+      handleSourceChange(editingSourceId, 'type', 'Local Storage')
+      handleSourceChange(editingSourceId, 'isLocal', true)
+      // Only update title if it's still the default or empty
+      const currentSource = formData.sources.find(s => s.id === editingSourceId)
+      if (!currentSource?.title || currentSource.title === 'New Source') {
+        handleSourceChange(editingSourceId, 'title', videoFile.name)
+      }
+      handleSourceChange(editingSourceId, 'size', (videoFile.size / (1024 * 1024)).toFixed(2) + ' MB')
+    }
+
+    setEditingSourceId(null)
+    // Reset the input
+    if (perSourceFileInputRef.current) {
+      perSourceFileInputRef.current.value = ''
+    }
+  }
 
   useEffect(() => {
     if (movie) {
@@ -607,6 +653,7 @@ const MovieModal = ({
         trailerUrl: movie.trailerUrl || '',
         sources: movie.sources || [],
         cast: movie.cast || [],
+        crew: movie.crew || [],
         imdbId: movie.imdbId || '',
         isKids: movie.isKids || false,
         isAnime: movie.isAnime || false
@@ -1008,6 +1055,14 @@ const MovieModal = ({
                     Add Source
                   </button>
                 </div>
+                {/* Hidden file input for selecting individual video files for specific existing source */}
+                <input
+                  ref={perSourceFileInputRef}
+                  type="file"
+                  accept="video/*"
+                  style={{ display: 'none' }}
+                  onChange={handlePerSourceFileChange}
+                />
                 <div className="space-y-4">
                   {formData.sources.map((source: any) => (
                     <div key={source.id} className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
@@ -1070,14 +1125,24 @@ const MovieModal = ({
                           Local Source
                         </label>
                       </div>
-                      <div className="mb-4">
-                        <label className="block text-zinc-400 mb-2 font-medium text-sm">Source URL</label>
-                        <input
-                          type="text"
-                          value={source.url}
-                          onChange={(e) => handleSourceChange(source.id, 'url', e.target.value)}
-                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
-                        />
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="flex-1">
+                          <label className="block text-zinc-400 mb-2 font-medium text-sm">Source URL</label>
+                          <input
+                            type="text"
+                            value={source.url}
+                            onChange={(e) => handleSourceChange(source.id, 'url', e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectVideoForSource(source.id)}
+                          className="mt-6 flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                        >
+                          <Video className="w-4 h-4" />
+                          Insert Video File
+                        </button>
                       </div>
                       <button
                         type="button"
@@ -1192,6 +1257,8 @@ const TVShowModal = ({
   onSave 
 }: any) => {
   const [genres] = useState(getGenres())
+  const perSourceFileInputRef = useRef<HTMLInputElement>(null)
+  const [editingSourceId, setEditingSourceId] = useState<number | string | null>(null)
   
   const [formData, setFormData] = useState<{
     title: string;
@@ -1212,6 +1279,8 @@ const TVShowModal = ({
     trailerUrl: string;
     imdbId: string;
     cast: any[];
+    crew: any[];
+    sources: any[];
     isKids: boolean;
     isAnime: boolean;
   }>({
@@ -1234,6 +1303,7 @@ const TVShowModal = ({
     imdbId: '',
     cast: [],
     crew: [],
+    sources: [],
     isKids: false,
     isAnime: false
   })
@@ -1259,6 +1329,8 @@ const TVShowModal = ({
         trailerUrl: show.trailerUrl || '',
         imdbId: show.imdbId || '',
         cast: show.cast || [],
+        crew: show.crew || [],
+        sources: show.sources || [],
         isKids: show.isKids || false,
         isAnime: show.isAnime || false
       })
@@ -1283,6 +1355,7 @@ const TVShowModal = ({
         imdbId: '',
         cast: [],
         crew: [],
+        sources: [],
         isKids: false,
         isAnime: false
       })
@@ -1363,6 +1436,78 @@ const TVShowModal = ({
       ...prev,
       crew: prev.crew.filter((member: any) => member.id !== crewId)
     }))
+  }
+
+  const handleAddSource = () => {
+    const newSource = {
+      id: Date.now(),
+      title: 'New Source',
+      quality: '1080p',
+      size: '1.0 GB',
+      type: 'MP4' as const,
+      isLocal: false,
+      url: ''
+    }
+    setFormData(prev => ({
+      ...prev,
+      sources: [...prev.sources, newSource]
+    }))
+  }
+
+  const handleSourceChange = (sourceId: number | string, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      sources: prev.sources.map((source: any) =>
+        source.id === sourceId ? { ...source, [field]: value } : source
+      )
+    }))
+  }
+
+  const handleRemoveSource = (sourceId: number | string) => {
+    setFormData(prev => ({
+      ...prev,
+      sources: prev.sources.filter((source: any) => source.id !== sourceId)
+    }))
+  }
+
+  const handleSelectVideoForSource = (sourceId: number | string) => {
+    setEditingSourceId(sourceId)
+    if (perSourceFileInputRef.current) {
+      perSourceFileInputRef.current.click()
+    }
+  }
+
+  const handlePerSourceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0 || editingSourceId === null) return
+
+    const videoExtensions = ['.mp4', '.mkv', '.webm', '.mov', '.avi', '.m4v']
+    let videoFile: File | null = null
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+      if (videoExtensions.includes(ext)) {
+        videoFile = file
+        break
+      }
+    }
+
+    if (videoFile) {
+      const objectUrl = URL.createObjectURL(videoFile)
+      handleSourceChange(editingSourceId, 'url', objectUrl)
+      handleSourceChange(editingSourceId, 'type', 'Local Storage')
+      handleSourceChange(editingSourceId, 'isLocal', true)
+      const currentSource = formData.sources.find(s => s.id === editingSourceId)
+      if (!currentSource?.title || currentSource.title === 'New Source') {
+        handleSourceChange(editingSourceId, 'title', videoFile.name)
+      }
+      handleSourceChange(editingSourceId, 'size', (videoFile.size / (1024 * 1024)).toFixed(2) + ' MB')
+    }
+
+    setEditingSourceId(null)
+    if (perSourceFileInputRef.current) {
+      perSourceFileInputRef.current.value = ''
+    }
   }
 
   return (
@@ -2089,6 +2234,8 @@ const EpisodeModal = ({
   episode,
   onSave 
 }: any) => {
+  const [loading, setLoading] = useState(false);
+  
   const [formData, setFormData] = useState<{
     episodeNumber: number;
     title: string;
@@ -2105,7 +2252,7 @@ const EpisodeModal = ({
     rating: 8.0,
     airDate: '',
     thumbnailPath: ''
-  })
+  });
 
   useEffect(() => {
     if (episode) {
@@ -2129,13 +2276,62 @@ const EpisodeModal = ({
         thumbnailPath: ''
       })
     }
-  }, [episode, isOpen])
+  }, [episode, isOpen]);
+
+  const handleAutoFillFromTMDB = async () => {
+    setLoading(true);
+    try {
+      // Get tv show and season
+      const tvShows = getTVShows();
+      const tvShow = tvShows.find((s) => s.id === tvShowId);
+      if (!tvShow || !tvShow.tmdbId) {
+        alert('No TMDB ID found for this TV show');
+        setLoading(false);
+        return;
+      }
+
+      const season = tvShow.seasons?.find((s) => s.id === seasonId);
+      if (!season) {
+        alert('Season not found');
+        setLoading(false);
+        return;
+      }
+
+      // Get season details
+      const seasonDetails = await getTMDBSeasonDetails(tvShow.tmdbId, season.seasonNumber);
+
+      // Find the episode in the season
+      const ep = seasonDetails.episodes?.find((e: any) => e.episode_number === formData.episodeNumber);
+      if (!ep) {
+        alert('Episode not found in TMDB for this episode number');
+        setLoading(false);
+        return;
+      }
+
+      // Fill form
+      setFormData({
+        episodeNumber: ep.episode_number || formData.episodeNumber,
+        title: ep.name || '',
+        overview: ep.overview || '',
+        runtime: ep.runtime ? `${ep.runtime}` : '45',
+        rating: ep.vote_average || 8.0,
+        airDate: ep.air_date || '',
+        thumbnailPath: ep.still_path ? `https://image.tmdb.org/t/p/w500${ep.still_path}` : ''
+      });
+
+    } catch (err) {
+      console.error(err);
+      alert('Failed to auto-fill from TMDB');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = (e: any) => {
-    e.preventDefault()
-    onSave(tvShowId, seasonId, episode?.id, formData)
-    onClose()
-  }
+    e.preventDefault();
+    onSave(tvShowId, seasonId, episode?.id, formData);
+    onClose();
+  };
 
   return (
     <AnimatePresence>
@@ -2168,6 +2364,27 @@ const EpisodeModal = ({
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="flex gap-4 mb-6">
+                  <button
+                    type="button"
+                    onClick={handleAutoFillFromTMDB}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors"
+                  >
+                    {loading ? (
+                      <>
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="w-5 h-5" />
+                        Auto-fill from TMDB
+                      </>
+                    )}
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-zinc-400 mb-2 font-medium">Episode Number</label>
@@ -2278,6 +2495,8 @@ const SourceModal = ({
   source,
   onSave 
 }: any) => {
+  const perSourceFileInputRef = useRef<HTMLInputElement>(null)
+  
   const [formData, setFormData] = useState<{
     title: string;
     quality: string;
@@ -2315,6 +2534,44 @@ const SourceModal = ({
       })
     }
   }, [source, isOpen])
+
+  const handleSelectVideoForSource = () => {
+    if (perSourceFileInputRef.current) {
+      perSourceFileInputRef.current.click()
+    }
+  }
+
+  const handlePerSourceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const videoExtensions = ['.mp4', '.mkv', '.webm', '.mov', '.avi', '.m4v']
+    let videoFile: File | null = null
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+      if (videoExtensions.includes(ext)) {
+        videoFile = file
+        break
+      }
+    }
+
+    if (videoFile) {
+      const objectUrl = URL.createObjectURL(videoFile)
+      setFormData(prev => ({
+        ...prev,
+        url: objectUrl,
+        type: 'Local Storage',
+        isLocal: true,
+        title: prev.title || videoFile.name,
+        size: (videoFile.size / (1024 * 1024)).toFixed(2) + ' MB'
+      }))
+    }
+
+    if (perSourceFileInputRef.current) {
+      perSourceFileInputRef.current.value = ''
+    }
+  }
 
   const handleSubmit = (e: any) => {
     e.preventDefault()
@@ -2424,16 +2681,36 @@ const SourceModal = ({
                   </label>
                 </div>
 
+                <input
+                  ref={perSourceFileInputRef}
+                  type="file"
+                  accept="video/*"
+                  style={{ display: 'none' }}
+                  onChange={handlePerSourceFileChange}
+                />
+
                 <div>
-                  <label className="block text-zinc-400 mb-2 font-medium">Source URL</label>
-                  <input
-                    type="text"
-                    value={formData.url}
-                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                    placeholder={formData.type === 'YouTube URL' ? 'https://youtube.com/watch?v=...' : formData.type === 'Embed URL' ? 'https://example.com/embed/...' : formData.type === 'Local Storage' ? '/videos/episode-01.mp4' : 'https://example.com/video.mp4'}
-                    required
-                  />
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="block text-zinc-400 font-medium">Source URL</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={formData.url}
+                      onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                      placeholder={formData.type === 'YouTube URL' ? 'https://youtube.com/watch?v=...' : formData.type === 'Embed URL' ? 'https://example.com/embed/...' : formData.type === 'Local Storage' ? '/videos/episode-01.mp4' : 'https://example.com/video.mp4'}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSelectVideoForSource}
+                      className="flex items-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-medium transition-colors"
+                    >
+                      <Video className="w-4 h-4" />
+                      Insert Video File
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4 pt-4">
@@ -2973,15 +3250,19 @@ export default function AdminPage() {
     setEpisodeFormData(getEpisodeFormDefaults(managedTVShowId, managedSeasonId))
   }
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!searchQuery.trim()) return
+  const handleSearch = async (query = searchQuery, e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault()
+    }
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
 
     setSearching(true)
-    setSearchResults([])
 
     try {
-      const results = await searchTMDB(searchQuery, searchType)
+      const results = await searchTMDB(query, searchType)
       setSearchResults(results)
     } catch (error) {
       showToast((error as Error).message || 'Search failed', 'error')
@@ -2989,6 +3270,19 @@ export default function AdminPage() {
       setSearching(false)
     }
   }
+
+  // Live search with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim()) {
+        handleSearch(searchQuery)
+      } else {
+        setSearchResults([])
+      }
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, searchType])
 
   const handleImport = async (tmdbId: number, type: 'movie' | 'tv') => {
     setImportingId(tmdbId)

@@ -16,7 +16,8 @@
     "dev:android-tv": "cd android && gradlew.bat assembleDebug",
     "build:android": "cd android && gradlew.bat assembleRelease",
     "dev:ios": "cd ios && xcodegen generate && open PlayFlix.xcodeproj",
-    "dev:tvos": "cd ios && xcodegen generate && open PlayFlix.xcodeproj"
+    "dev:tvos": "cd ios && xcodegen generate && open PlayFlix.xcodeproj",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\""
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -25,6 +26,7 @@
     "framer-motion": "^11.18.2",
     "hls.js": "^1.6.16",
     "lucide-react": "^0.577.0",
+    "multer": "^2.2.0",
     "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -35,6 +37,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.5.2",
+    "concurrently": "^10.0.3",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",

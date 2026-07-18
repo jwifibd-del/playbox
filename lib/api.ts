@@ -1,6 +1,6 @@
 import { Movie, sampleMovies, getAIRecommendations, sampleTVShows } from './data';
 
-const API_BASE = 'http://localhost:3002';
+export const API_BASE = 'http://localhost:3002';
 
 // Check if backend is available once, cache the result
 let backendAvailable: boolean | null = null;

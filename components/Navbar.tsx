@@ -224,7 +224,7 @@ export function Navbar() {
               )}
             </Link>
           </div>
-          <div className="hidden lg:flex flex-1 items-center justify-center gap-4 xl:gap-6">
+          <div className="hidden lg:flex flex-1 items-center justify-start gap-4 xl:gap-6">
             {navLinks.map(({ href, label, icon: Icon, match }) => {
               const isActive = match(pathname);
 
@@ -233,7 +233,7 @@ export function Navbar() {
                     key={label}
                     href={href}
                     className={cn(
-                      'transition-all duration-200 flex items-center gap-2',
+                      'transition-all duration-200 flex items-center gap-2 font-bold',
                       isActive 
                         ? 'text-white scale-105' 
                         : 'text-gray-300 hover:text-white hover:scale-105'
@@ -381,7 +381,7 @@ export function Navbar() {
                     href={href}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      'transition-all duration-200 flex items-center gap-3 text-lg',
+                      'transition-all duration-200 flex items-center gap-3 text-lg font-bold',
                       isActive 
                         ? 'text-white scale-105' 
                         : 'text-gray-300 hover:text-white hover:scale-105'

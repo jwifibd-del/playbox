@@ -1279,7 +1279,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   registrationEnabled: true,
   pushNotificationsEnabled: true,
   navbarName: 'PlayFlix',
-  navbarFontSize: '23px',
+  navbarFontSize: '18px',
   navbarColor: '#ef4444',
   navbarAnimationType: 'fade',
   navbarLogo: ''
@@ -3021,6 +3021,7 @@ export function convertTMDBToMovie(tmdbMovie: any): Movie {
 export function convertTMDBToTVShow(tmdbShow: any): TVShow {
   const seasons: Season[] = (tmdbShow.seasons || []).map((season: any) => ({
     id: season.id || Date.now() + Math.random(),
+    tmdbId: season.id,
     seasonNumber: season.season_number || 1,
     title: season.name || `Season ${season.season_number || 1}`,
     overview: season.overview || '',
@@ -3051,6 +3052,7 @@ export function convertTMDBToTVShow(tmdbShow: any): TVShow {
 
   return {
     id: Date.now(),
+    tmdbId: tmdbShow.id,
     title: tmdbShow.name,
     tagline: tmdbShow.tagline || '',
     overview: tmdbShow.overview || '',
@@ -3108,6 +3110,7 @@ export async function convertTMDBToTVShowWithEpisodes(tmdbShow: any): Promise<TV
         const seasonDetails = await getTMDBSeasonDetails(tmdbShow.id, season.season_number);
         const episodes: Episode[] = (seasonDetails.episodes || []).map((ep: any) => ({
           id: ep.id || Date.now() + Math.random(),
+          tmdbId: ep.id,
           title: ep.name || `Episode ${ep.episode_number}`,
           overview: ep.overview || '',
           episodeNumber: ep.episode_number,
@@ -3174,6 +3177,7 @@ export async function convertTMDBToTVShowWithEpisodes(tmdbShow: any): Promise<TV
 // Movies and TV Shows persistence
 export interface Episode {
   id: string | number;
+  tmdbId?: number;
   title: string;
   overview: string;
   episodeNumber: number;
@@ -3186,6 +3190,7 @@ export interface Episode {
 
 export interface Season {
   id: string | number;
+  tmdbId?: number;
   seasonNumber: number;
   title: string;
   overview: string;
@@ -3195,6 +3200,7 @@ export interface Season {
 
 export interface TVShow {
   id: string | number;
+  tmdbId?: number;
   title: string;
   tagline?: string;
   overview: string;
@@ -3212,6 +3218,7 @@ export interface TVShow {
   tags?: string[];
   trailerUrl?: string;
   seasons: Season[];
+  sources?: MovieSource[];
   cast?: CastMember[];
   crew?: CrewMember[];
   imdbId?: string;

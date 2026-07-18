@@ -140,6 +140,28 @@ export default function MovieDetailsPage() {
     }
   };
 
+  const handleDownload = async () => {
+    if (!playback?.url) {
+      alert('No download source available for this movie.');
+      return;
+    }
+    try {
+      const response = await fetch(playback.url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${movie.title.replace(/[^a-zA-Z0-9]/g, '_')}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Failed to download the movie.');
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#080808] text-white">
       <Navbar />
@@ -277,7 +299,10 @@ export default function MovieDetailsPage() {
                 >
                   <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
                 </button>
-                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm">
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm"
+                >
                   <Download size={18} />
                   Download
                 </button>
