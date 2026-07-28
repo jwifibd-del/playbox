@@ -4,6 +4,9 @@ node_modules/
 # Build outputs
 dist/
 
+# Uploads (video, thumbnails, subtitles, transcoded outputs, temp)
+uploads/
+
 # Logs
 *.log
 npm-debug.log*

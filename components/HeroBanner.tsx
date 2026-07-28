@@ -6,7 +6,7 @@ import { Play, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { isUserAuthenticated } from '@/lib/data';
-import { cn } from '@/lib/utils';
+import { cn, formatRating } from '@/lib/utils';
 
 interface HeroBannerItem {
   id: string | number;
@@ -172,7 +172,7 @@ export function HeroBanner({ movies, autoScrollInterval = 10000 }: HeroBannerPro
             )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-3 mb-5 sm:mb-8 text-sm sm:text-base text-white">
               <span className="text-yellow-400 font-bold text-sm sm:text-lg flex items-center gap-2 drop-shadow-[0_4px_12px_rgb(0,0,0,0.5)]">
-                ★ {currentMovie.rating.toFixed(1)}
+                ★ {formatRating(currentMovie.rating)}
               </span>
               <span className="drop-shadow-[0_4px_12px_rgb(0,0,0,0.5)]">{yearLabel}</span>
               <span className="drop-shadow-[0_4px_12px_rgb(0,0,0,0.5)]">{runtimeLabel}</span>

@@ -23,7 +23,6 @@ import {
   Save,
   Download,
   Database,
-  Radio,
   ChevronUp,
   ChevronDown,
   PlayCircle,
@@ -56,13 +55,33 @@ import {
   Smile,
   Sparkles,
   HardDrive,
-  Wifi
+  Wifi,
+  AlertTriangle,
+  ExternalLink,
+  Zap,
+  FileVideo,
+  Server,
+  Cpu,
+  Pause,
+  Play,
+  RotateCcw,
+  StopCircle,
+  Loader2,
+  Gauge,
+  Palette,
+  Radio,
+  Check,
+  Ban,
+  ListTodo,
+  SortAsc,
+  Pencil,
+  AlertCircle
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { API_BASE } from '@/lib/api';
-import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getLiveTVChannels, saveLiveTVChannels, LiveTVChannel, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, getTMDBSeasonDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow, getXtreamConfigs, saveXtreamConfigs, getActiveXtreamConfig, setActiveXtreamConfig, XtreamConfig } from '@/lib/data';
+import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, getTMDBSeasonDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, convertTMDBToMovieWithFanart, convertTMDBToTVShowWithEpisodesAndFanart, enrichMovieWithFanart, enrichTVShowWithFanart, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, deleteUser, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow, getXtreamConfigs, saveXtreamConfigs, getActiveXtreamConfig, setActiveXtreamConfig, XtreamConfig, getFanartMovieArt, getFanartTvArt, pickBestFanartImage, FanartMovieArt, FanartTvArt, TvChannel, getTvChannels, saveTvChannels, getTvChannelCategories } from '@/lib/data';
 
 function cn(...inputs: any[]) {
   return twMerge(clsx(inputs))
@@ -70,6 +89,22 @@ function cn(...inputs: any[]) {
 
 function createClientId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+function isValidStreamUrl(url: string): boolean {
+  if (!url || !url.trim()) return false
+  const trimmed = url.trim()
+  try {
+    const u = new URL(trimmed)
+    return (
+      u.protocol === 'http:' ||
+      u.protocol === 'https:' ||
+      u.protocol === 'rtmp:' ||
+      u.protocol === 'rtmps:'
+    )
+  } catch {
+    return false
+  }
 }
 
 const EPISODE_VIDEO_SOURCE_TYPES: MovieSource['type'][] = [
@@ -149,15 +184,1484 @@ const RecentActivity = () => {
   )
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  queued: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+  running: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  paused: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  completed: 'bg-green-500/10 text-green-400 border-green-500/30',
+  failed: 'bg-red-500/10 text-red-400 border-red-500/30',
+  cancelled: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/30',
+  retrying: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  analyzing: 'Analyzing Media',
+  'extracting-thumbnails': 'Extracting Thumbnails',
+  'transcoding-video': 'Transcoding Video',
+  'transcoding-audio': 'Transcoding Audio',
+  'packaging-hls': 'Packaging HLS',
+  'packaging-dash': 'Packaging DASH',
+  'generating-sprite': 'Generating Sprite',
+  'converting-subtitles': 'Converting Subtitles',
+  'registering-assets': 'Registering Assets',
+  finalizing: 'Finalizing',
+}
+
+const formatBytes = (bytes: number) => {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+}
+
+const formatDuration = (sec: number) => {
+  if (!sec || sec <= 0) return '0s'
+  if (sec < 60) return `${Math.round(sec)}s`
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ${Math.round(sec % 60)}s`
+  return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`
+}
+
+const TranscodingJobsPanel = () => {
+  const [jobs, setJobs] = useState<any[]>([])
+  const [live, setLive] = useState<any>({ byStatus: {}, runningJobs: [], busyWorkers: 0 })
+  const [filter, setFilter] = useState<string>('all')
+  const [loading, setLoading] = useState(true)
+
+  const getHeaders = (extra?: Record<string, string>): Record<string, string> => {
+    const h: Record<string, string> = { ...(extra || {}) }
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('adminToken')
+      if (token) h['Authorization'] = `Bearer ${token}`
+    }
+    return h
+  }
+
+  const loadJobs = async () => {
+    try {
+      const url = filter === 'all'
+        ? `${API_BASE}/transcoding/jobs?take=100`
+        : `${API_BASE}/transcoding/jobs?status=${filter}&take=100`
+      const res = await fetch(url, { headers: getHeaders() })
+      if (res.ok) {
+        const data = await res.json()
+        setJobs(data || [])
+      }
+    } catch (e) { console.warn(e) }
+  }
+
+  const loadLive = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/transcoding/live`, { headers: getHeaders() })
+      if (res.ok) {
+        const data = await res.json()
+        setLive(data || { byStatus: {}, runningJobs: [], busyWorkers: 0 })
+      }
+    } catch (e) { console.warn(e) }
+  }
+
+  const runAction = async (id: string, action: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/transcoding/jobs/${id}/${action}`, {
+        method: 'POST',
+        headers: getHeaders(),
+      })
+      if (!res.ok) throw new Error(`Action ${action} failed (${res.status})`)
+      await Promise.all([loadJobs(), loadLive()])
+    } catch (err) {
+      alert(`Action failed: ${(err as Error).message}`)
+    }
+  }
+
+  useEffect(() => {
+    loadJobs()
+    loadLive()
+    setLoading(false)
+    const interval = setInterval(() => {
+      loadJobs()
+      loadLive()
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [filter])
+
+  const counts = live.byStatus || {}
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-3xl font-bold text-white">Transcoding Jobs</h2>
+          <p className="text-zinc-500 mt-1">Monitor and manage background conversion tasks</p>
+        </div>
+        <div className="flex gap-3">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="bg-zinc-800 text-white px-4 py-2.5 rounded-xl border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          >
+            <option value="all">All Jobs</option>
+            <option value="queued">Queued</option>
+            <option value="running">Running</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+            <option value="paused">Paused</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button
+            onClick={() => { loadJobs(); loadLive() }}
+            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-5 py-2.5 rounded-xl font-medium border border-zinc-700 transition-colors"
+          >
+            <RefreshCw className="w-5 h-5" />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Cpu className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-zinc-400 text-sm font-medium">Active Workers</h3>
+          </div>
+          <p className="text-3xl font-bold text-white">{live.busyWorkers || 0}</p>
+        </div>
+        <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Loader2 className="w-5 h-5 text-blue-400" />
+            <h3 className="text-zinc-400 text-sm font-medium">Queued</h3>
+          </div>
+          <p className="text-3xl font-bold text-white">{counts.queued || 0}</p>
+        </div>
+        <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Gauge className="w-5 h-5 text-amber-400" />
+            <h3 className="text-zinc-400 text-sm font-medium">Completed</h3>
+          </div>
+          <p className="text-3xl font-bold text-white">{counts.completed || 0}</p>
+        </div>
+        <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <XCircle className="w-5 h-5 text-red-400" />
+            <h3 className="text-zinc-400 text-sm font-medium">Failed</h3>
+          </div>
+          <p className="text-3xl font-bold text-white">{counts.failed || 0}</p>
+        </div>
+      </div>
+
+      {(live.runningJobs || []).length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Now Processing
+          </h3>
+          <div className="space-y-3">
+            {(live.runningJobs || []).map((job: any) => (
+              <div key={job.id} className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="text-white font-semibold">{job.videoTitle || `Video ${job.videoId?.slice(0, 8)}`}</h4>
+                    <p className="text-zinc-500 text-xs mt-1">
+                      Profile: {job.profileName || 'Default'}
+                      {job.currentQuality && <span className="ml-3">Quality: <span className="text-white">{job.currentQuality}</span></span>}
+                      {job.stage && <span className="ml-3">{STAGE_LABELS[job.stage] || job.stage}</span>}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white font-semibold">{job.progressPercent || 0}%</p>
+                    {job.speedMbps > 0 && <p className="text-zinc-500 text-xs">{job.speedMbps.toFixed?.(job.speedMbps) || job.speedMbps} Mbps</p>}
+                  </div>
+                </div>
+                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${job.progressPercent || 0}%` }}
+                    transition={{ duration: 0.5 }}
+                    className="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-zinc-800/50 border-b border-zinc-800">
+              <tr>
+                <th className="text-left text-zinc-400 font-medium text-xs uppercase px-6 py-4">Video</th>
+                <th className="text-left text-zinc-400 font-medium text-xs uppercase px-6 py-4">Profile</th>
+                <th className="text-left text-zinc-400 font-medium text-xs uppercase px-6 py-4">Status</th>
+                <th className="text-left text-zinc-400 font-medium text-xs uppercase px-6 py-4">Progress</th>
+                <th className="text-left text-zinc-400 font-medium text-xs uppercase px-6 py-4">Source</th>
+                <th className="text-left text-zinc-400 font-medium text-xs uppercase px-6 py-4">Created</th>
+                <th className="text-left text-zinc-400 font-medium text-xs uppercase px-6 py-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800">
+              {loading && <tr><td colSpan={7} className="px-6 py-10 text-center text-zinc-500">Loading...</td></tr>}
+              {!loading && jobs.length === 0 && <tr><td colSpan={7} className="px-6 py-10 text-center text-zinc-500">No jobs yet. Upload a video to get started!</td></tr>}
+              {jobs.map((job: any) => (
+                <tr key={job.id} className="hover:bg-zinc-800/30 transition-colors">
+                  <td className="px-6 py-4">
+                    <p className="text-white font-medium text-sm">
+                      {(job.video as any)?.title || job.videoId?.slice(0, 10)}
+                    </p>
+                    <p className="text-zinc-500 text-xs">
+                      {job.generatedQualities?.join(', ') || 'Pending...'}
+                    </p>
+                    {job.lastError && <p className="text-red-400 text-xs mt-1 max-w-xs truncate">{job.lastError}</p>}
+                  </td>
+                  <td className="px-6 py-4 text-zinc-300 text-sm">
+                    {(job.profile as any)?.name || (job.profileId || '').slice(0, 8)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${STATUS_COLORS[job.status] || 'bg-zinc-700'}`}>
+                      {job.status}
+                    </span>
+                    {job.retryCount > 0 && <span className="ml-2 text-xs text-amber-400">retry {job.retryCount}</span>}
+                  </td>
+                  <td className="px-6 py-4 w-56">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-zinc-800 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                          style={{ width: `${Math.min(100, job.progressPercent || 0)}%` }}
+                        />
+                      </div>
+                      <span className="text-zinc-400 text-xs w-10 text-right">{job.progressPercent || 0}%</span>
+                    </div>
+                    <div className="text-zinc-500 text-xs mt-1 flex gap-3 mt-2">
+                      <span>{job.fps || 0} fps</span>
+                      <span>{formatBytes(job.bytesProcessed || 0)}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      job.triggerSource === 'on-upload' ? 'bg-indigo-500/10 text-indigo-400' :
+                      job.triggerSource === 'schedule' ? 'bg-purple-500/10 text-purple-400' :
+                      job.triggerSource === 'manual' ? 'bg-zinc-700 text-zinc-300' :
+                      'bg-orange-500/10 text-orange-400'
+                    }`}>
+                      {job.triggerSource}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-zinc-400 text-xs">
+                    {job.createdAt ? new Date(job.createdAt).toLocaleString() : '-'}
+                    {job.startedAt && <p className="mt-1">Started: {new Date(job.startedAt).toLocaleTimeString()}</p>}
+                    {job.completedAt && <p className="mt-1">Done: {new Date(job.completedAt).toLocaleTimeString()}</p>}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-1">
+                      {job.status === 'running' && (
+                        <>
+                          <button
+                            title="Pause"
+                            onClick={() => runAction(job.id, 'pause')}
+                            className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-amber-400"
+                          ><Pause className="w-4 h-4" /></button>
+                          <button
+                            title="Cancel"
+                            onClick={() => runAction(job.id, 'cancel')}
+                            className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-red-400"
+                          ><StopCircle className="w-4 h-4" /></button>
+                        </>
+                      )}
+                      {job.status === 'paused' && (
+                        <button
+                          title="Resume"
+                          onClick={() => runAction(job.id, 'resume')}
+                          className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-emerald-400"
+                        ><Play className="w-4 h-4" /></button>
+                      )}
+                      {(job.status === 'failed' || job.status === 'cancelled') && (
+                        <button
+                          title="Retry"
+                          onClick={() => runAction(job.id, 'retry')}
+                          className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-blue-400"
+                        ><RotateCcw className="w-4 h-4" /></button>
+                      )}
+                      <button
+                        title="Delete"
+                        onClick={() => {
+                          if (confirm('Delete this job?')) fetch(`${API_BASE}/transcoding/jobs/${job.id}`, { method: 'DELETE', headers: getHeaders() }).then(() => { loadJobs(); loadLive() })
+                        }}
+                        className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-red-400"
+                      ><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+const TranscodingProfilesPanel = () => {
+  const [profiles, setProfiles] = useState<any[]>([])
+  const [editing, setEditing] = useState<any>(null)
+  const [showEditor, setShowEditor] = useState(false)
+
+  const getHeaders = (extra?: Record<string, string>): Record<string, string> => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json', ...(extra || {}) }
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('adminToken')
+      if (token) h['Authorization'] = `Bearer ${token}`
+    }
+    return h
+  }
+
+  const bootstrapJwtRetry = async (): Promise<boolean> => {
+    try {
+      const saved = getAdminCredentials();
+      const attempts = [
+        { username: saved?.username || 'admin', password: saved?.password || 'admin' },
+        { username: 'admin', password: 'admin' },
+      ]
+      for (const a of attempts) {
+        const res = await fetch(`${API_BASE}/auth/admin-panel-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(a),
+        })
+        if (res.ok) {
+          const json = await res.json()
+          if (json?.access_token) {
+            localStorage.setItem('adminToken', json.access_token)
+            return true
+          }
+        }
+      }
+      return false
+    } catch (e) {
+      return false
+    }
+  }
+
+  const load = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/transcoding/profiles`, { headers: getHeaders({}) })
+      if (res.ok) setProfiles(await res.json())
+    } catch (e) { console.warn(e) }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const save = async (profile: any, allowRetry = true) => {
+    try {
+      const method = profile.id ? 'PUT' : 'POST'
+      const url = profile.id ? `${API_BASE}/transcoding/profiles/${profile.id}` : `${API_BASE}/transcoding/profiles`
+      if (!profile?.name || String(profile.name).trim() === '') {
+        throw new Error('Profile name is required — please set a name before saving. (400)')
+      }
+      const payload: any = { ...profile }
+      if (typeof payload.name === 'string') payload.name = payload.name.trim()
+      if (Array.isArray(payload.qualities)) {
+        payload.qualities = payload.qualities.map((q: any) => ({
+          label: q?.label || '720p',
+          width: Number(q?.width || 0),
+          height: Number(q?.height || 0),
+          videoBitrateKbps: Number(q?.videoBitrateKbps || 0),
+          audioBitrateKbps: Number(q?.audioBitrateKbps || 0),
+          fps: Number(q?.fps || 0),
+        }))
+      }
+      const res = await fetch(url, {
+        method,
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      })
+      if (res.status === 401 && allowRetry) {
+        const refreshed = await bootstrapJwtRetry()
+        if (refreshed) return save(profile, false)
+      }
+      if (!res.ok) {
+        let msg = `Save failed (${res.status})`
+        let detail = ''
+        try {
+          const txt = await res.text()
+          if (txt && txt.trim()) {
+            detail = txt
+            if (txt.trim().startsWith('{')) {
+              try {
+                const json = JSON.parse(txt)
+                if (json?.message) {
+                  const m = Array.isArray(json.message) ? json.message.join('; ') : String(json.message)
+                  msg = `${msg} — ${m}`
+                } else if (json?.error) {
+                  msg = `${msg} — ${json.error}`
+                } else {
+                  msg = `${msg} — ${txt.slice(0, 220)}`
+                }
+              } catch (_) {
+                msg = `${msg} — ${txt.slice(0, 220)}`
+              }
+            } else {
+              msg = `${msg} — ${txt.slice(0, 220)}`
+            }
+          }
+        } catch (_) {}
+        throw new Error(msg + (detail ? `  (detail_length=${detail.length})` : ''))
+      }
+      setShowEditor(false)
+      setEditing(null)
+      await load()
+    } catch (e) {
+      const msg = (e as Error).message || String(e)
+      let userMsg = msg
+      if (msg.includes('401')) {
+        userMsg = 'Admin session expired (401). Please log out of the admin panel and log back in, then try saving again.'
+      } else if (msg.includes('500')) {
+        userMsg = `Transcoding backend returned an internal error while saving. Details: ${msg}.`
+      } else if (msg.includes('400') || msg.toLowerCase().includes('validation') || /already exists|name is required/i.test(msg)) {
+        userMsg = `Save was rejected by the server (400). This is usually a naming conflict or invalid quality-ladder values.\n\nFull error: ${msg}`
+      } else if (msg.includes('Failed to fetch') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) {
+        userMsg = `PlayFlix backend appears offline. Start the backend server (port 3002), wait 10 seconds for NestJS to fully boot, then try again. Raw error: ${msg}.`
+      } else if (msg.includes('403') || msg.includes('404')) {
+        userMsg = `Unexpected server response while saving: ${msg}. (Is TranscodingModule registered in app.module & backend restarted?)`
+      } else if (msg.includes('409')) {
+        userMsg = `Profile name conflict — a profile with that name already exists. Rename it and try again. (${msg})`
+      }
+      alert(`Failed to save profile:\n\n${userMsg}`)
+    }
+  }
+
+  const remove = async (id: string) => {
+    if (!confirm('Delete this profile?')) return
+    try {
+      const res = await fetch(`${API_BASE}/transcoding/profiles/${id}`, { method: 'DELETE', headers: getHeaders({}) })
+      if (!res.ok) throw new Error(`Delete failed (${res.status})`)
+      await load()
+    } catch (e) {
+      alert(`Delete failed: ${(e as Error).message}`)
+    }
+  }
+
+  const triggerScheduled = async (profileId?: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/transcoding/jobs/trigger-scheduled`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: profileId ? JSON.stringify({ profileId }) : '{}',
+      })
+      if (!res.ok) throw new Error(`Trigger failed (${res.status})`)
+      const r = await res.json()
+      alert(`Triggered ${r.triggered} jobs`)
+    } catch (e) {
+      alert(`Scheduled trigger failed: ${(e as Error).message}`)
+    }
+  }
+
+  const queueManual = async (profileId: string) => {
+    const videoId = prompt('Enter a video ID to transcode:')
+    if (!videoId) return
+    try {
+      const res = await fetch(`${API_BASE}/transcoding/jobs/queue`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ videoId, profileId }),
+      })
+      if (!res.ok) throw new Error(`Queue failed (${res.status})`)
+      const j = await res.json()
+      alert(`Job queued (${j.id})`)
+    } catch (e) {
+      alert(`Queue failed: ${(e as Error).message}`)
+    }
+  }
+
+  const makeDefaultProfile = () => ({
+    name: 'New Profile',
+    outputFormat: 'hls+dash',
+    codec: 'h264-main',
+    presetSpeed: 'medium',
+    crf: 23,
+    audioCodec: 'aac',
+    audioChannels: 2,
+    qualities: [
+      { label: '1080p', width: 1920, height: 1080, videoBitrateKbps: 8000, audioBitrateKbps: 192, fps: 30 },
+      { label: '720p', width: 1280, height: 720, videoBitrateKbps: 4000, audioBitrateKbps: 160, fps: 30 },
+      { label: '480p', width: 854, height: 480, videoBitrateKbps: 1200, audioBitrateKbps: 96, fps: 25 },
+    ],
+    segmentDurationSec: 4,
+    keyframeAlignment: true,
+    produceThumbnailSprite: true,
+    generateSubtitleWebVTT: true,
+    twoPass: false,
+    hardwareAcceleration: false,
+    isDefault: false,
+    priority: 0,
+    enabled: true,
+    autoTriggerMode: 'on-upload',
+    scheduleCron: '',
+    retryOnFailure: true,
+    maxRetries: 3,
+    retryBackoffSeconds: 60,
+    maxConcurrentWorkers: 2,
+  })
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-3xl font-bold text-white">Transcoding Profiles</h2>
+          <p className="text-zinc-500 mt-1">Define conversion presets, formats, and auto-trigger rules</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => triggerScheduled()}
+            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-5 py-2.5 rounded-xl font-medium border border-zinc-700 transition-colors"
+          >
+            <Clock className="w-5 h-5" />
+            Run Scheduled
+          </button>
+          <button
+            onClick={() => { setEditing(makeDefaultProfile()); setShowEditor(true) }}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            New Profile
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {profiles.map((p: any) => (
+          <motion.div
+            key={p.id}
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "bg-zinc-900/50 backdrop-blur-xl rounded-2xl border p-6 transition-all",
+              p.isDefault ? "border-red-500/50 shadow-lg shadow-red-500/10" : "border-zinc-800"
+            )}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-white">{p.name}</h3>
+                  {p.isDefault && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/30">
+                      Default
+                    </span>
+                  )}
+                  {!p.enabled && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-700 text-zinc-400 border border-zinc-600">
+                      Disabled
+                    </span>
+                  )}
+                </div>
+                <p className="text-zinc-500 text-xs mt-1">{p.outputFormat} · {p.codec} · {p.presetSpeed}</p>
+              </div>
+              <Zap className={cn("w-6 h-6", p.enabled ? "text-amber-400" : "text-zinc-600")} />
+            </div>
+
+            <div className="space-y-3 mb-5">
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">CRF / Quality</span>
+                <span className="text-white font-medium">{p.crf}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Audio</span>
+                <span className="text-white font-medium">{p.audioCodec} · {p.audioChannels}ch</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Segment Duration</span>
+                <span className="text-white font-medium">{p.segmentDurationSec}s</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Workers</span>
+                <span className="text-white font-medium">{p.maxConcurrentWorkers}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Auto-Trigger</span>
+                <span className="text-white font-medium">{p.autoTriggerMode}</span>
+              </div>
+              <div className="pt-2 border-t border-zinc-800">
+                <p className="text-zinc-500 text-xs mb-2">Qualities</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(p.qualities || []).map((q: any, i: number) => (
+                    <span key={i} className="px-2 py-1 bg-zinc-800 rounded-lg text-xs text-zinc-300 border border-zinc-700">
+                      {q.label}
+                      <span className="text-zinc-500 ml-1">{q.videoBitrateKbps}k</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="pt-2 border-t border-zinc-800 flex flex-wrap gap-1.5">
+                {p.produceThumbnailSprite && <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Sprite</span>}
+                {p.generateSubtitleWebVTT && <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">WebVTT</span>}
+                {p.keyframeAlignment && <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Aligned GOP</span>}
+                {p.twoPass && <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">2-Pass</span>}
+                {p.hardwareAcceleration && <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">HW {p.hardwareEncoder || ''}</span>}
+                {p.retryOnFailure && <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">Retry ({p.maxRetries}x)</span>}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t border-zinc-800">
+              <button
+                onClick={() => { setEditing({ ...p }); setShowEditor(true) }}
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors"
+              >
+                <Edit className="w-4 h-4" /> Edit
+              </button>
+              <button
+                onClick={() => queueManual(p.id)}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors"
+                title="Queue a video with this profile"
+              >
+                <Play className="w-4 h-4" />
+              </button>
+              {!p.isDefault && (
+                <button
+                  onClick={() => remove(p.id)}
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-red-600/20 text-zinc-400 hover:text-red-400 text-sm transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <AnimatePresence>
+        {showEditor && editing && (
+          <ProfileEditorModal
+            profile={editing}
+            onClose={() => { setShowEditor(false); setEditing(null) }}
+            onSave={save}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+const ProfileEditorModal = ({ profile, onClose, onSave }: any) => {
+  const [form, setForm] = useState<any>(profile || {})
+  const update = (patch: any) => setForm((p: any) => ({ ...p, ...patch }))
+  const updateQuality = (i: number, patch: any) => {
+    const next = [...(form.qualities || [])]
+    next[i] = { ...next[i], ...patch }
+    update({ qualities: next })
+  }
+  const removeQuality = (i: number) => {
+    const next = (form.qualities || []).filter((_: any, idx: number) => idx !== i)
+    update({ qualities: next })
+  }
+  const addQuality = () => {
+    const next = [...(form.qualities || []), { label: '720p', width: 1280, height: 720, videoBitrateKbps: 4000, audioBitrateKbps: 160, fps: 30 }]
+    update({ qualities: next })
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        layout
+        initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+      >
+        <div className="p-6 border-b border-zinc-800 flex items-center justify-between sticky top-0 bg-zinc-900 z-10">
+          <div>
+            <h3 className="text-xl font-bold text-white">{form.id ? 'Edit Profile' : 'New Profile'}</h3>
+            <p className="text-zinc-500 text-sm mt-1">Configure conversion settings</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-zinc-800 text-zinc-400 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Name">
+              <input value={form.name || ''} onChange={(e) => update({ name: e.target.value })} className={inputCls} />
+            </Field>
+            <Field label="Auto-Trigger Mode">
+              <select value={form.autoTriggerMode || 'on-upload'} onChange={(e) => update({ autoTriggerMode: e.target.value })} className={inputCls}>
+                <option value="on-upload">On Upload (Immediate)</option>
+                <option value="schedule-only">Schedule Only (Cron)</option>
+                <option value="manual">Manual Only</option>
+              </select>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Field label="Output Format">
+              <select value={form.outputFormat || 'hls+dash'} onChange={(e) => update({ outputFormat: e.target.value })} className={inputCls}>
+                <option value="hls+dash">HLS + DASH</option>
+                <option value="hls">HLS</option>
+                <option value="dash">DASH</option>
+                <option value="mp4">MP4 (Progressive)</option>
+                <option value="webm">WebM (VP9)</option>
+              </select>
+            </Field>
+            <Field label="Codec">
+              <select value={form.codec || 'h264-main'} onChange={(e) => update({ codec: e.target.value })} className={inputCls}>
+                <option value="h264-fast">H.264 Fast</option>
+                <option value="h264-main">H.264 Balanced</option>
+                <option value="h264-slow">H.264 Slow (High Quality)</option>
+                <option value="h265-fast">H.265 Fast</option>
+                <option value="h265-slow">H.265 Slow</option>
+                <option value="av1">AV1</option>
+                <option value="vp9">VP9</option>
+                <option value="copy">Copy (no re-encode)</option>
+              </select>
+            </Field>
+            <Field label="Preset Speed">
+              <select value={form.presetSpeed || 'medium'} onChange={(e) => update({ presetSpeed: e.target.value })} className={inputCls}>
+                {['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="CRF (0–51, lower = better)">
+              <input type="number" min={0} max={51} value={form.crf ?? 23} onChange={(e) => update({ crf: Number(e.target.value) })} className={inputCls} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Field label="Audio Codec">
+              <select value={form.audioCodec || 'aac'} onChange={(e) => update({ audioCodec: e.target.value })} className={inputCls}>
+                <option value="aac">AAC</option>
+                <option value="opus">Opus</option>
+                <option value="mp3">MP3</option>
+                <option value="ac3">AC-3</option>
+                <option value="copy">Copy</option>
+              </select>
+            </Field>
+            <Field label="Audio Channels">
+              <input type="number" min={1} max={8} value={form.audioChannels ?? 2} onChange={(e) => update({ audioChannels: Number(e.target.value) })} className={inputCls} />
+            </Field>
+            <Field label="Segment (s)">
+              <input type="number" min={1} max={30} value={form.segmentDurationSec ?? 4} onChange={(e) => update({ segmentDurationSec: Number(e.target.value) })} className={inputCls} />
+            </Field>
+            <Field label="Max Workers">
+              <input type="number" min={1} max={16} value={form.maxConcurrentWorkers ?? 2} onChange={(e) => update({ maxConcurrentWorkers: Number(e.target.value) })} className={inputCls} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <Toggle label="Keyframe Aligned GOP" value={!!form.keyframeAlignment} onChange={(v: boolean) => update({ keyframeAlignment: v })} />
+            <Toggle label="Thumbnail Sprite" value={!!form.produceThumbnailSprite} onChange={(v: boolean) => update({ produceThumbnailSprite: v })} />
+            <Toggle label="WebVTT Subtitles" value={!!form.generateSubtitleWebVTT} onChange={(v: boolean) => update({ generateSubtitleWebVTT: v })} />
+            <Toggle label="Two-Pass" value={!!form.twoPass} onChange={(v: boolean) => update({ twoPass: v })} />
+            <Toggle label="Hardware Accel" value={!!form.hardwareAcceleration} onChange={(v: boolean) => update({ hardwareAcceleration: v })} />
+            <Toggle label="Retry on Failure" value={!!form.retryOnFailure} onChange={(v: boolean) => update({ retryOnFailure: v })} />
+            <Toggle label="Default Profile" value={!!form.isDefault} onChange={(v: boolean) => update({ isDefault: v })} />
+            <Toggle label="Enabled" value={form.enabled !== false} onChange={(v: boolean) => update({ enabled: v })} />
+            <Field label="Priority (0 = highest)">
+              <input type="number" value={form.priority ?? 0} onChange={(e) => update({ priority: Number(e.target.value) })} className={inputCls} />
+            </Field>
+          </div>
+
+          {form.retryOnFailure && (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Max Retries">
+                <input type="number" min={0} max={10} value={form.maxRetries ?? 3} onChange={(e) => update({ maxRetries: Number(e.target.value) })} className={inputCls} />
+              </Field>
+              <Field label="Retry Backoff (s)">
+                <input type="number" min={0} value={form.retryBackoffSeconds ?? 60} onChange={(e) => update({ retryBackoffSeconds: Number(e.target.value) })} className={inputCls} />
+              </Field>
+            </div>
+          )}
+
+          {form.autoTriggerMode === 'schedule-only' && (
+            <Field label="Schedule Cron (optional, default = daily 2 AM)">
+              <input placeholder="0 2 * * *" value={form.scheduleCron || ''} onChange={(e) => update({ scheduleCron: e.target.value })} className={inputCls} />
+            </Field>
+          )}
+
+          {form.hardwareAcceleration && (
+            <Field label="Hardware Encoder (e.g. h264_nvenc, h264_videotoolbox, h264_qsv)">
+              <input placeholder="h264_nvenc" value={form.hardwareEncoder || ''} onChange={(e) => update({ hardwareEncoder: e.target.value })} className={inputCls} />
+            </Field>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-semibold">Quality Ladder</h4>
+              <button onClick={addQuality} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">
+                <Plus className="w-4 h-4" /> Add Quality
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(form.qualities || []).map((q: any, i: number) => (
+                <div key={i} className="grid grid-cols-6 gap-3 items-end bg-zinc-800/40 border border-zinc-800 rounded-xl p-4">
+                  <Field label="Label">
+                    <select value={q.label} onChange={(e) => updateQuality(i, { label: e.target.value })} className={inputCls}>
+                      {['2160p', '1440p', '1080p', '720p', '576p', '480p', '360p', 'original'].map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="W px"><input type="number" value={q.width || 0} onChange={(e) => updateQuality(i, { width: Number(e.target.value) })} className={inputCls} /></Field>
+                  <Field label="H px"><input type="number" value={q.height || 0} onChange={(e) => updateQuality(i, { height: Number(e.target.value) })} className={inputCls} /></Field>
+                  <Field label="Video kbps"><input type="number" value={q.videoBitrateKbps || 0} onChange={(e) => updateQuality(i, { videoBitrateKbps: Number(e.target.value) })} className={inputCls} /></Field>
+                  <Field label="Audio kbps"><input type="number" value={q.audioBitrateKbps || 0} onChange={(e) => updateQuality(i, { audioBitrateKbps: Number(e.target.value) })} className={inputCls} /></Field>
+                  <div className="flex items-end gap-2">
+                    <Field label="FPS"><input type="number" value={q.fps || 0} onChange={(e) => updateQuality(i, { fps: Number(e.target.value) })} className={inputCls} /></Field>
+                    <button onClick={() => removeQuality(i)} title="Remove quality" className="p-2 rounded-lg bg-zinc-900 hover:bg-red-600/20 text-zinc-400 hover:text-red-400">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-zinc-800 flex items-center justify-end gap-3 sticky bottom-0 bg-zinc-900">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-medium">
+            Cancel
+          </button>
+          <button onClick={() => onSave(form)} className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium flex items-center gap-2">
+            <Save className="w-4 h-4" /> Save Profile
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+const inputCls = "w-full bg-zinc-800 text-white px-3 py-2 rounded-xl border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+
+const Field = ({ label, children }: any) => (
+  <label className="block">
+    <span className="block text-zinc-400 text-xs mb-1.5">{label}</span>
+    {children}
+  </label>
+)
+
+const Toggle = ({ label, value, onChange }: any) => (
+  <button
+    type="button"
+    onClick={() => onChange(!value)}
+    className={cn(
+      "flex items-center justify-between px-3 py-2 rounded-xl border text-sm transition-colors",
+      value ? "bg-red-500/10 border-red-500/40 text-white" : "bg-zinc-800 border-zinc-700 text-zinc-400"
+    )}
+  >
+    <span className="font-medium">{label}</span>
+    <span className={cn(
+      "relative inline-block w-10 h-6 rounded-full transition-colors",
+      value ? "bg-red-500" : "bg-zinc-700"
+    )}>
+      <span className={cn(
+        "absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform",
+        value && "translate-x-4"
+      )} />
+    </span>
+  </button>
+)
+
+const categoryAccent: Record<string, string> = {
+  News: 'from-red-500 to-orange-500',
+  Sports: 'from-emerald-500 to-teal-500',
+  Entertainment: 'from-fuchsia-500 to-pink-500',
+  Documentary: 'from-sky-500 to-cyan-500',
+  Kids: 'from-yellow-400 to-orange-400',
+  Music: 'from-pink-500 to-rose-500',
+  Lifestyle: 'from-amber-500 to-yellow-400',
+  Culture: 'from-violet-500 to-indigo-500',
+}
+
+const AdminTvChannelCard = ({
+  channel,
+  onEdit,
+  onDelete,
+  onToggleFeatured,
+  onToggleActive,
+  isSelected,
+  onSelect,
+}: any) => {
+  const gradient = categoryAccent[channel.category] || 'from-sky-500 to-blue-500';
+  const totalViewers = (channel.viewerCount || 0);
+  const prettyViewers = totalViewers >= 1000000
+    ? `${(totalViewers / 1000000).toFixed(1)}M`
+    : totalViewers >= 1000
+    ? `${(totalViewers / 1000).toFixed(0)}K`
+    : String(totalViewers);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        'relative group overflow-hidden rounded-3xl border transition-all',
+        isSelected
+          ? 'border-red-500/70 bg-red-500/5 shadow-lg shadow-red-500/10 ring-2 ring-red-500/40'
+          : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900'
+      )}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onSelect(); }}
+        className={cn(
+          'absolute top-3 left-3 z-20 w-6 h-6 rounded-lg border flex items-center justify-center transition-all',
+          isSelected
+            ? 'bg-red-500 border-red-400 text-white'
+            : 'bg-zinc-900/80 border-zinc-700 text-zinc-500 opacity-0 group-hover:opacity-100 hover:text-white hover:border-zinc-500'
+        )}
+      >
+        <Check className="w-3.5 h-3.5" />
+      </button>
+
+      <div className={`h-24 bg-gradient-to-br ${gradient} relative overflow-hidden`}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.25),transparent_60%)]" />
+        <div className="absolute inset-0 opacity-20"
+             style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)', backgroundSize: '14px 14px' }} />
+
+        <div className="absolute bottom-3 right-3 flex flex-wrap gap-1.5 justify-end">
+          {channel.isFeatured && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur text-[10px] font-semibold text-white border border-white/20">
+              <Star className="w-2.5 h-2.5 text-yellow-300 fill-yellow-300" />
+              FEATURED
+            </span>
+          )}
+          {channel.is4K && (
+            <span className="px-2 py-0.5 rounded-full bg-blue-500/90 text-[10px] font-bold text-white shadow-lg">
+              4K
+            </span>
+          )}
+          {!channel.is4K && channel.isHD && (
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/90 text-[10px] font-bold text-white shadow-lg">
+              HD
+            </span>
+          )}
+          {channel.isPaid && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/90 text-[10px] font-bold text-black shadow-lg">
+              PREMIUM
+            </span>
+          )}
+        </div>
+
+        {!channel.isActive && (
+          <div className="absolute inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900/90 border border-zinc-700 text-zinc-300 text-sm font-semibold">
+              <Ban className="w-4 h-4" />
+              INACTIVE
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="px-5 py-4 -mt-8 relative">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="relative w-16 h-16 rounded-2xl overflow-hidden border border-zinc-800 shadow-xl bg-zinc-900 shrink-0">
+            {channel.logoPath ? (
+              <img
+                src={channel.logoPath}
+                alt={channel.name}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : (
+              <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+                <Radio className="w-7 h-7 text-white drop-shadow-lg" />
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1 pt-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="text-white font-bold text-base truncate">
+                  {channel.name}
+                </h3>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white bg-gradient-to-r ${gradient}`}>
+                    {channel.category || 'General'}
+                  </span>
+                  {channel.country && (
+                    <span className="text-zinc-500 text-[11px] flex items-center gap-1">
+                      <Globe className="w-3 h-3" />
+                      {channel.country}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="relative group/actions shrink-0">
+                <div className="flex items-center gap-1 text-zinc-400 text-xs font-medium">
+                  <Users className="w-3 h-3" />
+                  {prettyViewers}
+                </div>
+                {typeof channel.rating === 'number' && channel.rating > 0 && (
+                  <div className="flex items-center gap-1 mt-1 text-zinc-300 text-[11px] justify-end">
+                    <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                    {channel.rating.toFixed(1)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-4">
+          <div className="flex items-start gap-2 text-xs">
+            <div className="mt-0.5 shrink-0 relative flex items-center gap-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+              <span className="text-red-400 font-bold uppercase tracking-wider">Now</span>
+            </div>
+            <p className="text-zinc-200 line-clamp-1 font-medium flex-1">
+              {channel.nowPlaying || 'Live Programming'}
+            </p>
+          </div>
+          <div className="flex items-start gap-2 text-xs pl-4">
+            <span className="text-zinc-600 font-bold uppercase tracking-wider shrink-0">Next</span>
+            <p className="text-zinc-500 line-clamp-1 flex-1">
+              {channel.nextProgram || 'TBD'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleActive(); }}
+            className={cn(
+              'flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors',
+              channel.isActive
+                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20'
+                : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700'
+            )}
+          >
+            <Wifi className="w-3.5 h-3.5" />
+            {channel.isActive ? 'Live' : 'Offline'}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFeatured(); }}
+            className={cn(
+              'flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors',
+              channel.isFeatured
+                ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/20'
+                : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700'
+            )}
+          >
+            <Star className={cn('w-3.5 h-3.5', channel.isFeatured && 'fill-yellow-300')} />
+            {channel.isFeatured ? 'Pinned' : 'Feature'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-4 text-[11px] text-zinc-500">
+          {channel.language && (
+            <div className="flex items-center gap-1 truncate">
+              <Languages className="w-3 h-3 shrink-0" />
+              <span className="truncate">{channel.language}</span>
+            </div>
+          )}
+          {channel.packageName && (
+            <div className="flex items-center gap-1 truncate">
+              <CreditCard className="w-3 h-3 shrink-0" />
+              <span className="truncate">{channel.packageName}</span>
+            </div>
+          )}
+          {channel.epgId && (
+            <div className="flex items-center gap-1 truncate">
+              <ListTodo className="w-3 h-3 shrink-0" />
+              <span className="truncate">EPG: {channel.epgId}</span>
+            </div>
+          )}
+          {typeof channel.order === 'number' && (
+            <div className="flex items-center gap-1 truncate">
+              <SortAsc className="w-3 h-3 shrink-0" />
+              <span>Order #{channel.order}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 pt-3 border-t border-zinc-800/60">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+const TvChannelModal = ({ channel, onClose, onSave, categories }: any) => {
+  const isEdit = !!channel
+  const [form, setForm] = useState<TvChannel>(() => ({
+    id: '',
+    name: '',
+    description: '',
+    logoPath: '',
+    logoThumbPath: '',
+    streamUrl: '',
+    category: 'Entertainment',
+    language: 'English',
+    country: 'USA',
+    isHD: true,
+    is4K: false,
+    isActive: true,
+    isFeatured: false,
+    isPaid: false,
+    order: 0,
+    epgId: '',
+    nowPlaying: '',
+    nextProgram: '',
+    viewerCount: 0,
+    rating: 0,
+    timezone: 'UTC',
+    packageName: '',
+    ...(channel || {}),
+  }))
+
+  const update = (patch: Partial<TvChannel>) => setForm((f) => ({ ...f, ...patch }))
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 30, scale: 0.97 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="h-2 bg-gradient-to-r from-red-500 via-orange-500 to-pink-500" />
+        <div className="overflow-y-auto max-h-[calc(90vh-8px)]">
+          <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800 px-6 sm:px-8 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-red-500/20">
+                <Radio className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-white text-xl font-bold truncate">
+                  {isEdit ? 'Edit TV Channel' : 'Add New TV Channel'}
+                </h2>
+                <p className="text-zinc-500 text-xs truncate">
+                  {isEdit ? `Updating: ${channel?.name || ''}` : 'Configure a new live stream with metadata and EPG info'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="shrink-0 w-10 h-10 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6 sm:p-8 space-y-7">
+            <section className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+              <div className="md:col-span-5 space-y-3">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-zinc-500">Branding</span>
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 space-y-4">
+                  <div className="aspect-[16/9] rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-800 relative overflow-hidden flex items-center justify-center">
+                    {form.logoPath ? (
+                      <img
+                        src={form.logoPath}
+                        alt="Logo preview"
+                        className="max-w-[80%] max-h-[80%] object-contain drop-shadow-2xl"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="text-center space-y-2 opacity-70">
+                        <div className={`w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br ${categoryAccent[form.category ?? 'Entertainment'] || 'from-sky-500 to-blue-500'} flex items-center justify-center shadow-lg`}>
+                          <Radio className="w-8 h-8 text-white" />
+                        </div>
+                        <p className="text-xs text-zinc-500">Add a logo URL to preview</p>
+                      </div>
+                    )}
+                    {(form.isHD || form.is4K || form.isPaid || form.isFeatured) && (
+                      <div className="absolute top-3 right-3 flex flex-wrap gap-1.5 justify-end max-w-[60%]">
+                        {form.isFeatured && (
+                          <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur text-[10px] font-bold text-yellow-300 border border-yellow-300/30">
+                            ⭐ FEATURED
+                          </span>
+                        )}
+                        {form.is4K && (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500 text-[10px] font-bold text-white">4K</span>
+                        )}
+                        {!form.is4K && form.isHD && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-[10px] font-bold text-white">HD</span>
+                        )}
+                        {form.isPaid && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-400 text-[10px] font-bold text-black">PREMIUM</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <Field label="Channel Name *">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={form.name}
+                      onChange={(e) => update({ name: e.target.value })}
+                      placeholder="e.g. CNN International"
+                    />
+                  </Field>
+                  <Field label="Logo URL">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={form.logoPath || ''}
+                      onChange={(e) => update({ logoPath: e.target.value })}
+                      placeholder="https://.../logo.svg"
+                    />
+                  </Field>
+                  <Field label="Thumbnail Logo URL (optional)">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={form.logoThumbPath || ''}
+                      onChange={(e) => update({ logoThumbPath: e.target.value })}
+                      placeholder="Smaller logo for lists"
+                    />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="md:col-span-7 space-y-3">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-zinc-500">Stream & Classification</span>
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 space-y-4">
+                  <Field label="Stream URL *">
+                    <input
+                      type="text"
+                      className={cn(inputCls, 'font-mono text-xs')}
+                      value={form.streamUrl}
+                      onChange={(e) => update({ streamUrl: e.target.value })}
+                      placeholder="http:// or https:// or rtmp:// stream (e.g. https://live.example.com/ch.m3u8)"
+                    />
+                    <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+                      Supported: <span className="text-emerald-400 font-semibold">http://</span>,{' '}
+                      <span className="text-emerald-400 font-semibold">https://</span>,{' '}
+                      <span className="text-emerald-400 font-semibold">rtmp://</span>.{' '}
+                      Formats: M3U8 / HLS / MPEG-TS / MP4 / WebM.
+                    </p>
+                    {form.streamUrl && !isValidStreamUrl(form.streamUrl) && (
+                      <p className="text-[11px] text-red-400 mt-1.5 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        URL must start with http://, https://, or rtmp://
+                      </p>
+                    )}
+                  </Field>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <Field label="Category *">
+                      <select
+                        className={inputCls}
+                        value={form.category}
+                        onChange={(e) => update({ category: e.target.value })}
+                      >
+                        {(categories && categories.length ? categories : Object.keys(categoryAccent)).map((c: string) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Country">
+                      <input
+                        type="text"
+                        className={inputCls}
+                        value={form.country || ''}
+                        onChange={(e) => update({ country: e.target.value })}
+                        placeholder="USA"
+                      />
+                    </Field>
+                    <Field label="Language">
+                      <input
+                        type="text"
+                        className={inputCls}
+                        value={form.language || ''}
+                        onChange={(e) => update({ language: e.target.value })}
+                        placeholder="English"
+                      />
+                    </Field>
+                    <Field label="Timezone">
+                      <input
+                        type="text"
+                        className={inputCls}
+                        value={form.timezone || ''}
+                        onChange={(e) => update({ timezone: e.target.value })}
+                        placeholder="UTC, EST, GMT+2"
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <Field label="Sort Order">
+                      <input
+                        type="number"
+                        className={inputCls}
+                        value={form.order ?? 0}
+                        onChange={(e) => update({ order: Number(e.target.value) })}
+                      />
+                    </Field>
+                    <Field label="Viewer Count">
+                      <input
+                        type="number"
+                        className={inputCls}
+                        value={form.viewerCount ?? 0}
+                        onChange={(e) => update({ viewerCount: Number(e.target.value) })}
+                      />
+                    </Field>
+                    <Field label="Rating (0-10)">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="10"
+                        className={inputCls}
+                        value={form.rating ?? 0}
+                        onChange={(e) => update({ rating: Math.min(10, Math.max(0, Number(e.target.value))) })}
+                      />
+                    </Field>
+                    <Field label="Package / Tier">
+                      <input
+                        type="text"
+                        className={inputCls}
+                        value={form.packageName || ''}
+                        onChange={(e) => update({ packageName: e.target.value })}
+                        placeholder="Premium, Sports, Basic"
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
+                    <Toggle label="HD Ready" value={!!form.isHD} onChange={(v: boolean) => update({ isHD: v })} />
+                    <Toggle label="4K UHD" value={!!form.is4K} onChange={(v: boolean) => update({ is4K: v })} />
+                    <Toggle label="Live / Active" value={!!form.isActive} onChange={(v: boolean) => update({ isActive: v })} />
+                    <Toggle label="Featured" value={!!form.isFeatured} onChange={(v: boolean) => update({ isFeatured: v })} />
+                    <Toggle label="Paid / Premium" value={!!form.isPaid} onChange={(v: boolean) => update({ isPaid: v })} />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <span className="text-[11px] font-bold tracking-wider uppercase text-zinc-500">EPG & Schedule</span>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="Now Playing">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={form.nowPlaying || ''}
+                      onChange={(e) => update({ nowPlaying: e.target.value })}
+                      placeholder="e.g. Breaking News Hour"
+                    />
+                  </Field>
+                  <Field label="Next Program">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={form.nextProgram || ''}
+                      onChange={(e) => update({ nextProgram: e.target.value })}
+                      placeholder="e.g. World Report"
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Field label="EPG ID / XMLTV ID">
+                    <input
+                      type="text"
+                      className={cn(inputCls, 'font-mono text-xs')}
+                      value={form.epgId || ''}
+                      onChange={(e) => update({ epgId: e.target.value })}
+                      placeholder="cnn.us"
+                    />
+                  </Field>
+                </div>
+                <Field label="Description">
+                  <textarea
+                    className={cn(inputCls, 'min-h-[96px] resize-y')}
+                    value={form.description || ''}
+                    onChange={(e) => update({ description: e.target.value })}
+                    placeholder="Short description of what this channel broadcasts..."
+                  />
+                </Field>
+              </div>
+            </section>
+
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-medium border border-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {!form.name.trim() || !form.streamUrl.trim() || !isValidStreamUrl(form.streamUrl) ? (
+                  <div className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-500 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-400" />
+                    {!isValidStreamUrl(form.streamUrl)
+                      ? 'Stream URL must be a valid http://, https://, or rtmp:// address'
+                      : 'Name and Stream URL are required'}
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={!form.name.trim() || !form.streamUrl.trim() || !isValidStreamUrl(form.streamUrl)}
+                  onClick={() => {
+                    if (!form.name.trim() || !form.streamUrl.trim() || !isValidStreamUrl(form.streamUrl)) return
+                    onSave(form)
+                  }}
+                  className={cn(
+                    'px-7 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all',
+                    !form.name.trim() || !form.streamUrl.trim() || !isValidStreamUrl(form.streamUrl)
+                      ? 'bg-zinc-800 text-zinc-600 border border-zinc-800 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white shadow-xl shadow-red-500/20 hover:shadow-red-500/40'
+                  )}
+                >
+                  <Check className="w-5 h-5" />
+                  {isEdit ? 'Save Changes' : 'Add Channel'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 const AdminSidebar = ({ activeTab, setActiveTab }: any) => {
   const isHomeTabActive = ['home', 'kids-home', 'anime-home'].includes(activeTab)
   const [homeDropdownOpen, setHomeDropdownOpen] = useState(isHomeTabActive)
   const isSliderTabActive = ['sliders', 'kids-sliders', 'anime-sliders'].includes(activeTab)
   const [sliderDropdownOpen, setSliderDropdownOpen] = useState(isSliderTabActive)
-  const isImportTabActive = ['import-movies', 'import-tv', 'import-livetv'].includes(activeTab)
+  const isImportTabActive = ['import-movies', 'import-tv'].includes(activeTab)
   const [importDropdownOpen, setImportDropdownOpen] = useState(isImportTabActive)
+  const isHeroTabActive = ['default-hero', 'kids-hero', 'anime-hero'].includes(activeTab)
+  const [heroDropdownOpen, setHeroDropdownOpen] = useState(isHeroTabActive)
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { 
+      id: 'hero-group', 
+      label: 'Hero Banner', 
+      icon: Image,
+      subItems: [
+        { id: 'default-hero', label: 'Default Hero Banner', icon: Image },
+        { id: 'kids-hero', label: 'Kids Hero Banners', icon: Smile },
+        { id: 'anime-hero', label: 'Anime Hero Banners', icon: Sparkles },
+      ]
+    },
     { 
       id: 'home-group', 
       label: 'Home Management', 
@@ -184,16 +1688,16 @@ const AdminSidebar = ({ activeTab, setActiveTab }: any) => {
       subItems: [
         { id: 'import-movies', label: 'Import Movies', icon: Film },
         { id: 'import-tv', label: 'Import TV Shows', icon: Tv },
-        { id: 'import-livetv', label: 'Import Live TV', icon: Radio },
       ]
     },
     { id: 'scraping', label: 'Automated Scraping', icon: RefreshCw },
+    { id: 'transcoding-jobs', label: 'Transcoding Jobs', icon: Cpu },
+    { id: 'transcoding-profiles', label: 'Transcoding Profiles', icon: Zap },
     { id: 'movies', label: 'Movies', icon: Film },
     { id: 'tv', label: 'TV Shows', icon: Tv },
+    { id: 'tv-channels', label: 'TV Channels', icon: Radio },
     { id: 'castcrew', label: 'Cast', icon: Users },
-    { id: 'livetv', label: 'Live TV', icon: Radio },
     { id: 'xtream-api', label: 'Xtream API', icon: Wifi },
-    { id: 'herobanner', label: 'Hero Banner', icon: Image },
     { id: 'genres', label: 'Genres', icon: Tags },
     { id: 'countries', label: 'Countries', icon: Globe },
     { id: 'languages', label: 'Languages', icon: Languages },
@@ -218,7 +1722,10 @@ const AdminSidebar = ({ activeTab, setActiveTab }: any) => {
     if (isImportTabActive) {
       setImportDropdownOpen(true)
     }
-  }, [isHomeTabActive, isSliderTabActive, isImportTabActive])
+    if (isHeroTabActive) {
+      setHeroDropdownOpen(true)
+    }
+  }, [isHomeTabActive, isSliderTabActive, isImportTabActive, isHeroTabActive])
 
   return (
     <div className="w-64 bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-800 min-h-screen p-6 hidden lg:block">
@@ -236,16 +1743,21 @@ const AdminSidebar = ({ activeTab, setActiveTab }: any) => {
             const isAnySubItemActive = item.subItems.some((sub: any) => activeTab === sub.id)
             const isHomeGroup = item.id === 'home-group'
             const isSliderGroup = item.id === 'sliders-group'
+            const isHeroGroup = item.id === 'hero-group'
             const dropdownOpen = isHomeGroup
               ? homeDropdownOpen
               : isSliderGroup
                 ? sliderDropdownOpen
-                : importDropdownOpen
+                : isHeroGroup
+                  ? heroDropdownOpen
+                  : importDropdownOpen
             const setDropdownOpen = isHomeGroup
               ? setHomeDropdownOpen
               : isSliderGroup
                 ? setSliderDropdownOpen
-                : setImportDropdownOpen
+                : isHeroGroup
+                  ? setHeroDropdownOpen
+                  : setImportDropdownOpen
             
             return (
               <div key={item.id}>
@@ -380,7 +1892,7 @@ const AdminMovieCard = ({ movie, onEdit, onDelete, isSelected, onSelect }: any) 
         </div>
       </div>
       <div className="flex items-center gap-3 text-zinc-400 text-sm mb-2">
-        <span className="text-yellow-400 font-bold">★ {movie.rating}</span>
+        <span className="text-yellow-400 font-bold">â˜… {movie.rating}</span>
         <span>{movie.releaseYear}</span>
         <span>{movie.runtime}</span>
       </div>
@@ -434,7 +1946,7 @@ const AdminTVShowCard = ({
         <h3 className="text-white font-bold text-lg line-clamp-2">{tvShow.title}</h3>
         <div className="flex items-center gap-2 text-zinc-300 text-sm mt-1">
           <span>{tvShow.startYear}{tvShow.endYear ? ` - ${tvShow.endYear}` : ''}</span>
-          <span>•</span>
+          <span>â€¢</span>
           <span>{tvShow.numberOfSeasons} Season{tvShow.numberOfSeasons !== 1 ? 's' : ''}</span>
         </div>
         <div className="flex items-center gap-2 text-zinc-200 text-sm mt-3">
@@ -446,7 +1958,7 @@ const AdminTVShowCard = ({
     <div className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-yellow-400 font-bold">★ {tvShow.rating}</span>
+          <span className="text-yellow-400 font-bold">â˜… {tvShow.rating}</span>
           {tvShow.genres?.slice(0, 2).map((genre: string, i: number) => (
             <span key={i} className="text-zinc-400 text-sm">{genre}</span>
           ))}
@@ -504,7 +2016,7 @@ const TMDBSearchResultCard = ({ item, type, onImport, importing }: any) => {
       <div className="p-4">
         <h3 className="text-white font-semibold line-clamp-1 mb-2">{title}</h3>
         <div className="flex items-center gap-3 text-zinc-400 text-sm mb-3">
-          <span className="text-yellow-400 font-bold">★ {item.vote_average?.toFixed(1) || 'N/A'}</span>
+          <span className="text-yellow-400 font-bold">â˜… {item.vote_average?.toFixed(1) || 'N/A'}</span>
           <span>{year}</span>
         </div>
         <p className="text-zinc-500 text-sm line-clamp-3 mb-4">{item.overview || 'No overview available'}</p>
@@ -2738,15 +4250,366 @@ const SourceModal = ({
   )
 }
 
+interface AdminTvChannelsSectionProps {
+  tvChannels: TvChannel[]
+  setTvChannels: React.Dispatch<React.SetStateAction<TvChannel[]>>
+  isTvChannelModalOpen: boolean
+  setIsTvChannelModalOpen: (v: boolean) => void
+  editingTvChannel: TvChannel | null
+  setEditingTvChannel: (c: TvChannel | null) => void
+  tvChannelSearchQuery: string
+  setTvChannelSearchQuery: (v: string) => void
+  tvChannelCategoryFilter: string
+  setTvChannelCategoryFilter: (v: string) => void
+  selectedTvChannelIds: Set<string | number>
+  setSelectedTvChannelIds: React.Dispatch<React.SetStateAction<Set<string | number>>>
+  showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void
+}
+
+function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
+  const {
+    tvChannels, setTvChannels,
+    isTvChannelModalOpen, setIsTvChannelModalOpen,
+    editingTvChannel, setEditingTvChannel,
+    tvChannelSearchQuery, setTvChannelSearchQuery,
+    tvChannelCategoryFilter, setTvChannelCategoryFilter,
+    selectedTvChannelIds, setSelectedTvChannelIds,
+    showToast,
+  } = props
+  const router = useRouter()
+
+  const categories = getTvChannelCategories();
+  const filteredList: TvChannel[] = (() => {
+    let list = tvChannels;
+    if (tvChannelCategoryFilter !== 'All') {
+      list = list.filter((c) => c.category === tvChannelCategoryFilter);
+    }
+    const q = tvChannelSearchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.description || '').toLowerCase().includes(q) ||
+          (c.country || '').toLowerCase().includes(q) ||
+          (c.streamUrl || '').toLowerCase().includes(q) ||
+          (c.nowPlaying || '').toLowerCase().includes(q) ||
+          (c.packageName || '').toLowerCase().includes(q)
+      );
+    }
+    return [...list].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+  })();
+
+  const handleSaveTvChannel = async (data: TvChannel) => {
+    try {
+      if (!data.name.trim()) {
+        showToast('Channel name is required', 'error');
+        return;
+      }
+      if (!isValidStreamUrl(data.streamUrl)) {
+        showToast('Stream URL must be a valid http://, https://, or rtmp:// address', 'error');
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const isNewChannel = !data.id || String(data.id).trim() === '';
+      const existing = tvChannels.find((c) => String(c.id) === String(data.id));
+      const clientId =
+        data.id && String(data.id).trim() !== ''
+          ? String(data.id)
+          : createClientId('ch');
+
+      const payload: TvChannel = {
+        ...data,
+        id: clientId,
+        name: data.name.trim(),
+        streamUrl: data.streamUrl.trim(),
+        order: Number(data.order || 0),
+        viewerCount: Number(data.viewerCount || 0),
+        rating: Math.min(10, Math.max(0, Number(data.rating || 0))),
+        isHD: Boolean(data.isHD),
+        is4K: Boolean(data.is4K),
+        isActive: data.isActive !== false,
+        isFeatured: Boolean(data.isFeatured),
+        isPaid: Boolean(data.isPaid),
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      };
+
+      const next = [...tvChannels];
+      const existingIdx = next.findIndex((c) => String(c.id) === String(clientId));
+      if (existingIdx >= 0) next[existingIdx] = payload;
+      else next.push(payload);
+
+      saveTvChannels(next);
+      setTvChannels(getTvChannels());
+
+      setIsTvChannelModalOpen(false);
+      setEditingTvChannel(null);
+      showToast(
+        isNewChannel ? 'TV Channel added!' : 'TV Channel updated!',
+        'success'
+      );
+    } catch (e) {
+      showToast(`Failed to save: ${(e as Error).message}`, 'error');
+    }
+  };
+
+  const handleDeleteTvChannel = (id: string | number) => {
+    if (!confirm('Delete this TV Channel?')) return;
+    const next = tvChannels.filter((c) => String(c.id) !== String(id));
+    saveTvChannels(next);
+    const fresh = getTvChannels();
+    setTvChannels(fresh);
+    setSelectedTvChannelIds((s) => {
+      const ns = new Set(s);
+      ns.delete(String(id));
+      return ns;
+    });
+    showToast('TV Channel deleted', 'success');
+  };
+
+  const handleBulkDeleteTvChannels = () => {
+    if (selectedTvChannelIds.size === 0) return;
+    if (!confirm(`Delete ${selectedTvChannelIds.size} selected TV channel(s)?`)) return;
+    const next = tvChannels.filter((c) => !selectedTvChannelIds.has(String(c.id)));
+    saveTvChannels(next);
+    setTvChannels(getTvChannels());
+    setSelectedTvChannelIds(new Set());
+    showToast('Bulk delete completed', 'success');
+  };
+
+  const handleSelectTvChannel = (id: string | number) => {
+    const key = String(id);
+    setSelectedTvChannelIds((s) => {
+      const ns = new Set(s);
+      if (ns.has(key)) ns.delete(key);
+      else ns.add(key);
+      return ns;
+    });
+  };
+
+  const handleToggleFeaturedTvChannel = (id: string | number) => {
+    const next = tvChannels.map((c) =>
+      String(c.id) === String(id)
+        ? { ...c, isFeatured: !c.isFeatured, updatedAt: new Date().toISOString() }
+        : c
+    );
+    saveTvChannels(next);
+    setTvChannels(getTvChannels());
+  };
+
+  const handleToggleActiveTvChannel = (id: string | number) => {
+    const next = tvChannels.map((c) =>
+      String(c.id) === String(id)
+        ? { ...c, isActive: !c.isActive, updatedAt: new Date().toISOString() }
+        : c
+    );
+    saveTvChannels(next);
+    setTvChannels(getTvChannels());
+  };
+
+  return (
+    <>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+            <Radio className="w-7 h-7 text-red-400" />
+            TV Channels
+          </h2>
+          <p className="text-zinc-500 mt-1">
+            Manage live TV channels, streams, metadata, and featured picks
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => router.push('/tv-channels')}
+            className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-5 py-2.5 rounded-xl font-medium border border-zinc-700 transition-colors"
+          >
+            <Tv className="w-5 h-5" />
+            View Live
+          </button>
+          <button
+            onClick={() => {
+              setEditingTvChannel(null);
+              setIsTvChannelModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Add Channel
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <StatCard
+          title="Total Channels"
+          value={tvChannels.length}
+          icon={Radio}
+          trend="up"
+          change={`+${tvChannels.filter((c) => c.isActive).length} Active`}
+        />
+        <StatCard
+          title="Featured"
+          value={tvChannels.filter((c) => c.isFeatured).length}
+          icon={Zap}
+          trend="up"
+          change="Curated"
+        />
+        <StatCard
+          title="HD / 4K"
+          value={`${tvChannels.filter((c) => c.isHD).length} / ${tvChannels.filter((c) => c.is4K).length}`}
+          icon={Palette}
+        />
+        <StatCard
+          title="Categories"
+          value={categories.length}
+          icon={Tags}
+          change={`${tvChannels.filter((c) => c.isPaid).length} Premium`}
+        />
+      </div>
+
+      {/* Bulk actions + filters */}
+      <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-4 mb-8 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
+        {selectedTvChannelIds.size > 0 ? (
+          <div className="flex flex-wrap items-center gap-3 flex-1">
+            <span className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-medium">
+              {selectedTvChannelIds.size} selected
+            </span>
+            <button
+              onClick={handleBulkDeleteTvChannels}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-600 text-white text-sm font-medium transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Bulk Delete
+            </button>
+            <button
+              onClick={() => setSelectedTvChannelIds(new Set())}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Clear
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+              <input
+                value={tvChannelSearchQuery}
+                onChange={(e) => setTvChannelSearchQuery(e.target.value)}
+                placeholder="Search channels, streams, countries..."
+                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500/60 focus:ring-2 focus:ring-red-500/20 text-sm"
+              />
+              {tvChannelSearchQuery && (
+                <button
+                  onClick={() => setTvChannelSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-zinc-700 text-zinc-500 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <select
+              value={tvChannelCategoryFilter}
+              onChange={(e) => setTvChannelCategoryFilter(e.target.value)}
+              className="px-4 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:border-red-500/60 focus:ring-2 focus:ring-red-500/20 text-sm min-w-[160px]"
+            >
+              <option value="All">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat} (
+                  {tvChannels.filter((c) => c.category === cat).length})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="text-sm text-zinc-500 whitespace-nowrap">
+          Showing <span className="text-zinc-200 font-semibold">{filteredList.length}</span> of{' '}
+          <span className="text-zinc-200 font-semibold">{tvChannels.length}</span>
+        </div>
+      </div>
+
+      {/* Channel Grid */}
+      {filteredList.length === 0 ? (
+        <div className="py-24 text-center rounded-3xl border-2 border-dashed border-zinc-800 bg-zinc-900/30">
+          <div className="w-20 h-20 mx-auto mb-5 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+            <Radio className="w-10 h-10 text-zinc-600" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">No TV Channels Found</h3>
+          <p className="text-zinc-500 mb-6">
+            {tvChannelSearchQuery || tvChannelCategoryFilter !== 'All'
+              ? 'Try a different search or category filter'
+              : 'Get started by adding your first live TV channel'}
+          </p>
+          <button
+            onClick={() => {
+              setEditingTvChannel(null);
+              setIsTvChannelModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Add First Channel
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredList.map((ch) => (
+            <AdminTvChannelCard
+              key={`admin-ch-${String(ch.id)}`}
+              channel={ch}
+              onEdit={() => {
+                setEditingTvChannel(ch);
+                setIsTvChannelModalOpen(true);
+              }}
+              onDelete={() => handleDeleteTvChannel(ch.id)}
+              onToggleFeatured={() => handleToggleFeaturedTvChannel(ch.id)}
+              onToggleActive={() => handleToggleActiveTvChannel(ch.id)}
+              isSelected={selectedTvChannelIds.has(String(ch.id))}
+              onSelect={() => handleSelectTvChannel(ch.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {isTvChannelModalOpen && (
+          <TvChannelModal
+            channel={editingTvChannel}
+            onClose={() => {
+              setIsTvChannelModalOpen(false);
+              setEditingTvChannel(null);
+            }}
+            onSave={handleSaveTvChannel}
+            categories={categories}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [analyticsData, setAnalyticsData] = useState<any>(null)
+  const [analyticsConnected, setAnalyticsConnected] = useState(false)
   const [mobileHomeDropdownOpen, setMobileHomeDropdownOpen] = useState(false)
   const [mobileSliderDropdownOpen, setMobileSliderDropdownOpen] = useState(false)
   const [mobileImportDropdownOpen, setMobileImportDropdownOpen] = useState(false)
-  const [movies, setMovies] = useState<Movie[]>(() => getMovies())
-  const [tvShows, setTvShows] = useState<any[]>(() => getTVShows())
+  const [mobileHeroDropdownOpen, setMobileHeroDropdownOpen] = useState(false)
+  const [movies, setMovies] = useState<Movie[]>([])
+  const [tvShows, setTvShows] = useState<any[]>([])
+  const [tvChannels, setTvChannels] = useState<TvChannel[]>([])
+  const [isTvChannelModalOpen, setIsTvChannelModalOpen] = useState(false)
+  const [editingTvChannel, setEditingTvChannel] = useState<TvChannel | null>(null)
+  const [tvChannelSearchQuery, setTvChannelSearchQuery] = useState('')
+  const [tvChannelCategoryFilter, setTvChannelCategoryFilter] = useState<string>('All')
+  const [selectedTvChannelIds, setSelectedTvChannelIds] = useState<Set<string | number>>(new Set())
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingMovie, setEditingMovie] = useState<any>(null)
   const [selectedTVShow, setSelectedTVShow] = useState<any>(null)
@@ -2797,31 +4660,110 @@ export default function AdminPage() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
   const [importingId, setImportingId] = useState<number | null>(null)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-  const [adminProfile, setAdminProfile] = useState<UserProfile>(() => getUserProfile())
-  const [registeredUsers, setRegisteredUsers] = useState<AppUser[]>(() => getUsers())
-  const [movieRequests, setMovieRequests] = useState<MovieRequest[]>(() => getMovieRequests())
-  const [adminCredentials, setAdminCredentials] = useState<AdminCredentials>(() => getAdminCredentials())
-  const [appLinks, setAppLinks] = useState<AppLink[]>(() => getAppLinks())
-  const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(() => getGeneralSettings())
-  const [adminParentalSettings, setAdminParentalSettings] = useState<ParentalControlSettings>(() => getParentalControlSettings())
-  const [liveTVChannels, setLiveTVChannels] = useState<LiveTVChannel[]>(() => getLiveTVChannels())
-  const [heroBanners, setHeroBanners] = useState<HeroBanner[]>(() => getHeroBanners())
-  const [kidsHeroBanners, setKidsHeroBanners] = useState<HeroBanner[]>(() => getKidsHeroBanners())
-  const [animeHeroBanners, setAnimeHeroBanners] = useState<HeroBanner[]>(() => getAnimeHeroBanners())
-  const [genres, setGenres] = useState<Genre[]>(() => getGenres())
-  const [countries, setCountries] = useState<Country[]>(() => getCountries())
-  const [languages, setLanguages] = useState<Language[]>(() => getLanguages())
-  const [pushNotifications, setPushNotifications] = useState<PushNotification[]>(() => getPushNotifications())
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>(() => getApiKeys());
-  const [externalApiKeys, setExternalApiKeys] = useState<ExternalApiKeys>(() => getExternalApiKeys());
-  const [xtreamConfigs, setXtreamConfigs] = useState<XtreamConfig[]>(() => getXtreamConfigs());
-  const [sliderSections, setSliderSections] = useState<SliderSection[]>(() => getSliderSections())
-  const [kidsSliderSections, setKidsSliderSections] = useState<SliderSection[]>(() => getKidsSliderSections())
-  const [animeSliderSections, setAnimeSliderSections] = useState<SliderSection[]>(() => getAnimeSliderSections())
-  const [homepageSections, setHomepageSections] = useState<HomepageSection[]>(() => getHomepageSections())
-  const [kidsHomepageSections, setKidsHomepageSections] = useState<HomepageSection[]>(() => getKidsHomepageSections())
-  const [animeHomepageSections, setAnimeHomepageSections] = useState<HomepageSection[]>(() => getAnimeHomepageSections())
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null)
+  const [adminProfile, setAdminProfile] = useState<UserProfile | null>(null)
+  const [registeredUsers, setRegisteredUsers] = useState<AppUser[]>([])
+  const [movieRequests, setMovieRequests] = useState<MovieRequest[]>([])
+  const [adminCredentials, setAdminCredentials] = useState<AdminCredentials | null>(null)
+  const [appLinks, setAppLinks] = useState<AppLink[]>([])
+  const [generalSettings, setGeneralSettings] = useState<GeneralSettings | null>(null)
+  const [adminParentalSettings, setAdminParentalSettings] = useState<ParentalControlSettings | null>(null)
+  const [aiFeatures, setAiFeatures] = useState({
+    trendingPrediction: { enabled: false, lastRun: null },
+    autoCategorization: { enabled: false, lastRun: null },
+    aiSubtitles: { enabled: false, lastRun: null },
+    aiTranslation: { enabled: false, lastRun: null },
+    aiVoiceovers: { enabled: false, lastRun: null },
+    aiPosters: { enabled: false, lastRun: null },
+    smartSearch: { enabled: false, lastRun: null },
+    aiChatAssistant: { enabled: false, lastRun: null },
+    churnPrediction: { enabled: false, lastRun: null },
+    aiRecommendations: { enabled: false, lastRun: null },
+    downloadFeatures: { enabled: false, lastRun: null },
+    androidApp: { enabled: false, lastRun: null },
+    iosApp: { enabled: false, lastRun: null },
+    androidTVApp: { enabled: false, lastRun: null },
+    aiMetadataCleanup: { enabled: false, lastRun: null },
+  })
+  const [isAiFeaturesLoaded, setIsAiFeaturesLoaded] = useState(false)
+  const [isRunning, setIsRunning] = useState<Record<string, boolean>>({})
+
+  // Helper to toggle AI feature
+  const toggleAiFeature = (featureKey: string) => {
+    const newAiFeatures = {
+      ...aiFeatures,
+      [featureKey]: {
+        ...(aiFeatures[featureKey as keyof typeof aiFeatures] || { enabled: false, lastRun: null }),
+        enabled: !(aiFeatures[featureKey as keyof typeof aiFeatures]?.enabled ?? false),
+      },
+    }
+    setAiFeatures(newAiFeatures)
+    localStorage.setItem('playflix_ai_features', JSON.stringify(newAiFeatures))
+  }
+
+  // Helper to run AI feature
+  const runAiFeature = (featureKey: string, featureName: string) => {
+    setIsRunning(prev => ({ ...prev, [featureKey]: true }))
+    setTimeout(() => {
+      const newAiFeatures = {
+        ...aiFeatures,
+        [featureKey]: {
+          ...(aiFeatures[featureKey as keyof typeof aiFeatures] || { enabled: false, lastRun: null }),
+          lastRun: new Date().toISOString(),
+        },
+      }
+      setAiFeatures(newAiFeatures)
+      localStorage.setItem('playflix_ai_features', JSON.stringify(newAiFeatures))
+      setIsRunning(prev => ({ ...prev, [featureKey]: false }))
+      showToast(`${featureName} completed!`, 'success')
+    }, 2000)
+  }
+  
+  // Load aiFeatures from localStorage on client side
+  useEffect(() => {
+    const saved = localStorage.getItem('playflix_ai_features')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        setAiFeatures({
+          trendingPrediction: { enabled: false, lastRun: null, ...parsed.trendingPrediction },
+          autoCategorization: { enabled: false, lastRun: null, ...parsed.autoCategorization },
+          aiSubtitles: { enabled: false, lastRun: null, ...parsed.aiSubtitles },
+          aiTranslation: { enabled: false, lastRun: null, ...parsed.aiTranslation },
+          aiVoiceovers: { enabled: false, lastRun: null, ...parsed.aiVoiceovers },
+          aiPosters: { enabled: false, lastRun: null, ...parsed.aiPosters },
+          smartSearch: { enabled: false, lastRun: null, ...parsed.smartSearch },
+          aiChatAssistant: { enabled: false, lastRun: null, ...parsed.aiChatAssistant },
+          churnPrediction: { enabled: false, lastRun: null, ...parsed.churnPrediction },
+          aiRecommendations: { enabled: false, lastRun: null, ...parsed.aiRecommendations },
+          downloadFeatures: { enabled: false, lastRun: null, ...parsed.downloadFeatures },
+          androidApp: { enabled: false, lastRun: null, ...parsed.androidApp },
+          iosApp: { enabled: false, lastRun: null, ...parsed.iosApp },
+          androidTVApp: { enabled: false, lastRun: null, ...parsed.androidTVApp },
+          aiMetadataCleanup: { enabled: false, lastRun: null, ...parsed.aiMetadataCleanup },
+        })
+      } catch (e) {
+        console.error('Failed to parse aiFeatures:', e)
+      }
+    }
+    setIsAiFeaturesLoaded(true)
+  }, [])
+  const [heroBanners, setHeroBanners] = useState<HeroBanner[]>([])
+  const [kidsHeroBanners, setKidsHeroBanners] = useState<HeroBanner[]>([])
+  const [animeHeroBanners, setAnimeHeroBanners] = useState<HeroBanner[]>([])
+  const [genres, setGenres] = useState<Genre[]>([])
+  const [countries, setCountries] = useState<Country[]>([])
+  const [languages, setLanguages] = useState<Language[]>([])
+  const [pushNotifications, setPushNotifications] = useState<PushNotification[]>([])
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [externalApiKeys, setExternalApiKeys] = useState<ExternalApiKeys | null>(null);
+  const [xtreamConfigs, setXtreamConfigs] = useState<XtreamConfig[]>([]);
+  const [sliderSections, setSliderSections] = useState<SliderSection[]>([])
+  const [kidsSliderSections, setKidsSliderSections] = useState<SliderSection[]>([])
+  const [animeSliderSections, setAnimeSliderSections] = useState<SliderSection[]>([])
+  const [homepageSections, setHomepageSections] = useState<HomepageSection[]>([])
+  const [kidsHomepageSections, setKidsHomepageSections] = useState<HomepageSection[]>([])
+  const [animeHomepageSections, setAnimeHomepageSections] = useState<HomepageSection[]>([])
   const [activeKidsHomepageSectionForMovieSelection, setActiveKidsHomepageSectionForMovieSelection] = useState<string | null>(null)
   const [activeKidsHomepageSectionForTVShowSelection, setActiveKidsHomepageSectionForTVShowSelection] = useState<string | null>(null)
   const [activeAnimeHomepageSectionForMovieSelection, setActiveAnimeHomepageSectionForMovieSelection] = useState<string | null>(null)
@@ -2835,20 +4777,26 @@ export default function AdminPage() {
   const [activeKidsSliderForTVShowSelection, setActiveKidsSliderForTVShowSelection] = useState<string | null>(null)
   const [activeAnimeSliderForMovieSelection, setActiveAnimeSliderForMovieSelection] = useState<string | null>(null)
   const [activeAnimeSliderForTVShowSelection, setActiveAnimeSliderForTVShowSelection] = useState<string | null>(null)
-  const [scrapingConfig, setScrapingConfig] = useState<ScrapingConfig>(() => getScrapingConfig())
+  const [scrapingConfig, setScrapingConfig] = useState<ScrapingConfig | null>(null)
   const [isScraping, setIsScraping] = useState(false);
   const [selectedLocalFiles, setSelectedLocalFiles] = useState<File[]>([]);
   
   // Server Health State
-  const [serverHealth, setServerHealth] = useState({
-    frontend: { status: 'checking', lastChecked: null, responseTime: 0 },
-    backend: { status: 'checking', lastChecked: null, responseTime: 0 },
-    database: { status: 'checking', lastChecked: null, responseTime: 0 },
+  const [serverHealth, setServerHealth] = useState<{
+    frontend: { status: string; lastChecked: Date | null; responseTime: number; message: string };
+    backend: { status: string; lastChecked: Date | null; responseTime: number; message: string; [key: string]: any };
+    database: { status: string; lastChecked: Date | null; responseTime: number; message: string };
+    uptime: number;
+  }>({
+    frontend: { status: 'checking', lastChecked: null, responseTime: 0, message: '' },
+    backend: { status: 'checking', lastChecked: null, responseTime: 0, message: '' },
+    database: { status: 'checking', lastChecked: null, responseTime: 0, message: '' },
     uptime: 0
   });
   const [isProcessingLocalFiles, setIsProcessingLocalFiles] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false)
   const [isAdminAccessReady, setIsAdminAccessReady] = useState(false)
+  const [isDataLoaded, setIsDataLoaded] = useState(false)
   const [showAdminPasswordForm, setShowAdminPasswordForm] = useState(false)
   const [showAdminPassword, setShowAdminPassword] = useState({
     current: false,
@@ -2867,10 +4815,78 @@ export default function AdminPage() {
       router.replace('/admin/login')
       return
     }
+    const bootstrapJwtIfMissing = async () => {
+      if (typeof window === 'undefined') return
+      const existingToken = localStorage.getItem('adminToken')
+      if (existingToken) return
+      try {
+        const creds = getAdminCredentials()
+        const attempts = [
+          { username: creds.username, password: creds.password },
+          { username: 'admin', password: 'admin' },
+        ]
+        for (const attempt of attempts) {
+          try {
+            const res = await fetch(`${API_BASE}/auth/admin-panel-login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify(attempt),
+            })
+            if (!res.ok) continue
+            const json = await res.json()
+            if (json?.access_token) {
+              localStorage.setItem('adminToken', json.access_token)
+              return
+            }
+          } catch (innerErr) {
+            // try next
+          }
+        }
+        showToast('Admin backend auth unavailable. Profile saves may 401 — please log back in.', 'warning')
+      } catch (e) {
+        // non-fatal
+      }
+    }
+    bootstrapJwtIfMissing()
     setIsAdminAccessReady(true)
   }, [router])
 
   useEffect(() => {
+    if (!isHydrated || !isAdminAccessReady) return;
+
+    setMovies(getMovies());
+    setTvShows(getTVShows());
+    setTvChannels(getTvChannels());
+    setAdminProfile(getUserProfile());
+    setRegisteredUsers(getUsers());
+    setMovieRequests(getMovieRequests());
+    setAdminCredentials(getAdminCredentials());
+    setAppLinks(getAppLinks());
+    setGeneralSettings(getGeneralSettings());
+    setAdminParentalSettings(getParentalControlSettings());
+    setHeroBanners(getHeroBanners());
+    setKidsHeroBanners(getKidsHeroBanners());
+    setAnimeHeroBanners(getAnimeHeroBanners());
+    setGenres(getGenres());
+    setCountries(getCountries());
+    setLanguages(getLanguages());
+    setPushNotifications(getPushNotifications());
+    setApiKeys(getApiKeys());
+    setExternalApiKeys(getExternalApiKeys());
+    setXtreamConfigs(getXtreamConfigs());
+    setSliderSections(getSliderSections());
+    setKidsSliderSections(getKidsSliderSections());
+    setAnimeSliderSections(getAnimeSliderSections());
+    setHomepageSections(getHomepageSections());
+    setKidsHomepageSections(getKidsHomepageSections());
+    setAnimeHomepageSections(getAnimeHomepageSections());
+    setScrapingConfig(getScrapingConfig());
+
+    setIsDataLoaded(true);
+  }, [isHydrated, isAdminAccessReady]);
+
+  useEffect(() => {
+    if (!isDataLoaded) return;
     const syncRegisteredUsers = () => {
       setRegisteredUsers(getUsers())
     }
@@ -2885,7 +4901,7 @@ export default function AdminPage() {
       window.removeEventListener('storage', syncRegisteredUsers)
       window.removeEventListener('focus', syncRegisteredUsers)
     }
-  }, [])
+  }, [isDataLoaded])
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -2915,16 +4931,26 @@ export default function AdminPage() {
       subItems: [
         { id: 'import-movies', label: 'Import Movies', icon: Film },
         { id: 'import-tv', label: 'Import TV Shows', icon: Tv },
-        { id: 'import-livetv', label: 'Import Live TV', icon: Radio },
       ],
     },
     { id: 'scraping', label: 'Automated Scraping', icon: RefreshCw },
+    { id: 'transcoding-jobs', label: 'Transcoding Jobs', icon: Cpu },
+    { id: 'transcoding-profiles', label: 'Transcoding Profiles', icon: Zap },
     { id: 'movies', label: 'Movies', icon: Film },
     { id: 'tv', label: 'TV Shows', icon: Tv },
+    { id: 'tv-channels', label: 'TV Channels', icon: Radio },
     { id: 'castcrew', label: 'Cast', icon: Users },
-    { id: 'livetv', label: 'Live TV', icon: Radio },
     { id: 'xtream-api', label: 'Xtream API', icon: Wifi },
-    { id: 'herobanner', label: 'Hero Banner', icon: Image },
+        { 
+      id: 'hero-group', 
+      label: 'Hero Banner', 
+      icon: Image,
+      subItems: [
+        { id: 'default-hero', label: 'Default Hero Banner', icon: Image },
+        { id: 'kids-hero', label: 'Kids Hero Banners', icon: Smile },
+        { id: 'anime-hero', label: 'Anime Hero Banners', icon: Sparkles },
+      ]
+    },
     { id: 'genres', label: 'Genres', icon: Tags },
     { id: 'countries', label: 'Countries', icon: Globe },
     { id: 'languages', label: 'Languages', icon: Languages },
@@ -2946,8 +4972,11 @@ export default function AdminPage() {
     if (['sliders', 'kids-sliders', 'anime-sliders'].includes(activeTab)) {
       setMobileSliderDropdownOpen(true)
     }
-    if (['import-movies', 'import-tv', 'import-livetv'].includes(activeTab)) {
+    if (['import-movies', 'import-tv'].includes(activeTab)) {
       setMobileImportDropdownOpen(true)
+    }
+    if (['default-hero', 'kids-hero', 'anime-hero'].includes(activeTab)) {
+      setMobileHeroDropdownOpen(true)
     }
   }, [activeTab])
 
@@ -2963,71 +4992,138 @@ export default function AdminPage() {
   // Server Health Check Function
   const checkServerHealth = async () => {
     const now = new Date();
+
     // Frontend Health
     const frontendStart = Date.now();
     await new Promise(r => setTimeout(r, 50 + Math.random() * 100));
     const frontendResponseTime = Date.now() - frontendStart;
-    
-    let backendStatus = 'unhealthy';
-    let backendResponseTime = 0;
+
     let backendData: any = null;
+    let backendResponseTime = 0;
+    let backendMessage = '';
     const backendStart = Date.now();
+
     try {
-      const res = await fetch(`${API_BASE}/api/server-health`);
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`${API_BASE}/api/server-health`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeoutId);
       backendResponseTime = Date.now() - backendStart;
-      if (res.ok) {
-        backendStatus = 'healthy';
-        backendData = await res.json();
+
+      if (!res.ok) {
+        backendMessage = `Health endpoint returned ${res.status}`;
+      } else {
+        const data = await res.json();
+        if (data?.status === 'healthy') {
+          backendData = data;
+        } else {
+          backendMessage = data?.message || 'Backend reported an unhealthy state.';
+        }
       }
-    } catch (err) {
-      backendStatus = 'unhealthy';
+    } catch (err: any) {
+      backendResponseTime = Date.now() - backendStart;
+      backendMessage =
+        err?.name === 'AbortError'
+          ? 'Backend health check timed out.'
+          : err?.message || 'Unable to reach backend server.';
     }
-    
-    // Database Health (we'll check via backend response if available)
-    let dbStatus = 'checking';
-    let dbResponseTime = 0;
-    if (backendData) {
-      // If backend is healthy, assume DB is healthy too for now
-      dbStatus = 'healthy';
-      dbResponseTime = 50 + Math.random() * 50;
-    }
-    
+
     setServerHealth({
       frontend: { 
         status: 'healthy', 
         lastChecked: now, 
-        responseTime: frontendResponseTime 
+        responseTime: frontendResponseTime,
+        message: ''
       },
       backend: { 
-        status: backendStatus, 
+        status: backendData ? 'healthy' : 'unhealthy',
         lastChecked: now, 
         responseTime: backendResponseTime,
+        message: backendData ? '' : (backendMessage || `Backend is unavailable at ${API_BASE}/api/server-health`),
         ...backendData
       },
       database: { 
-        status: dbStatus, 
+        status: backendData ? 'healthy' : 'unhealthy',
         lastChecked: now, 
-        responseTime: dbResponseTime 
+        responseTime: backendData ? backendResponseTime : 0,
+        message: backendData ? '' : 'Database status is unavailable because the backend is offline.'
       },
       uptime: backendData?.uptime?.seconds || 0
     });
-  }
+  };
 
   // Periodic Health Check
   useEffect(() => {
-    checkServerHealth();
-    const interval = setInterval(() => {
-      checkServerHealth();
-    }, 5000); // Check every 5 seconds
-    return () => clearInterval(interval);
-  }, []);
+    if (activeTab !== 'server-health' && activeTab !== 'dashboard') {
+      return;
+    }
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+    checkServerHealth();
+    const interval = window.setInterval(() => {
+      checkServerHealth();
+    }, 10000);
+
+    return () => window.clearInterval(interval);
+  }, [activeTab]);
+
+  // Fetch Analytics
+  const fetchAnalytics = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/analytics`);
+      if (res.ok) {
+        const data = await res.json();
+        setAnalyticsData(data);
+        setAnalyticsConnected(true);
+      } else {
+        setAnalyticsConnected(false);
+      }
+    } catch (e) {
+      setAnalyticsConnected(false);
+    }
+  };
+
+  // Periodic Analytics Check
+  useEffect(() => {
+    if (activeTab !== 'analytics') {
+      return;
+    }
+
+    fetchAnalytics();
+    const interval = window.setInterval(() => {
+      fetchAnalytics();
+    }, 5000); // Refresh every 5 seconds
+
+    return () => window.clearInterval(interval);
+  }, [activeTab]);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
   }
+  const handleDeleteRegisteredUser = (userId: string | number, userName: string) => {
+    const shouldDelete = window.confirm(`Delete ${userName} from registered users?`)
 
-  const handleAdminPasswordChange = () => {
+    if (!shouldDelete) return
+
+    try {
+      deleteUser(userId)
+      const updatedUsers = getUsers()
+      setRegisteredUsers(updatedUsers)
+      showToast('User deleted successfully!', 'success')
+    } catch (error) {
+      console.error('Delete user error:', error)
+      showToast((error as Error)?.message || 'Failed to delete user!', 'error')
+    }
+  }
+
+  const handleAdminPasswordChange = async () => {
+    if (!adminCredentials) {
+      showToast('Admin credentials not loaded yet.', 'error')
+      return
+    }
     if (adminPasswordData.current !== adminCredentials.password) {
       showToast('Current admin password is incorrect.', 'error')
       return
@@ -3041,13 +5137,60 @@ export default function AdminPage() {
       return
     }
 
-    const updatedCredentials = {
-      ...adminCredentials,
+    const updatedCredentials: AdminCredentials = {
+      username: adminCredentials.username,
       password: adminPasswordData.next
     }
 
+    try {
+      const liveToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      if (liveToken) {
+        try {
+          await fetch(`${API_BASE}/auth/panel-password`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: `Bearer ${liveToken}`,
+            },
+            body: JSON.stringify({ newPassword: updatedCredentials.password }),
+          });
+        } catch (e) {
+          // non-fatal: at least update localStorage + re-login below
+        }
+      }
+    } catch (e) {}
+
     saveAdminCredentials(updatedCredentials)
     setAdminCredentials(updatedCredentials)
+    let exchanged = false;
+    try {
+      const res = await fetch(`${API_BASE}/auth/admin-panel-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ username: updatedCredentials.username, password: updatedCredentials.password }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        if (json?.access_token) {
+          localStorage.setItem('adminToken', json.access_token)
+          exchanged = true
+        }
+      }
+      if (!res.ok) {
+        const fallback = await fetch(`${API_BASE}/auth/admin-panel-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ username: 'admin', password: 'admin' }),
+        })
+        if (fallback.ok) {
+          const json2 = await fallback.json()
+          if (json2?.access_token) localStorage.setItem('adminToken', json2.access_token)
+        }
+      }
+    } catch (e) {
+      // non-fatal
+    }
     setAdminPasswordData({ current: '', next: '', confirm: '' })
     setShowAdminPassword({
       current: false,
@@ -3055,11 +5198,16 @@ export default function AdminPage() {
       confirm: false
     })
     setShowAdminPasswordForm(false)
-    showToast('Admin password updated successfully!', 'success')
+    if (exchanged) {
+      showToast('Admin password updated successfully!', 'success')
+    } else {
+      showToast('Admin password saved locally. Log out and back in to enable admin APIs.', 'warning')
+    }
   }
 
   const handleAdminLogout = () => {
     logoutAdmin()
+    try { localStorage.removeItem('adminToken') } catch (e) {}
     setIsAdminAccessReady(false)
     setSidebarOpen(false)
     router.replace('/admin/login')
@@ -3078,15 +5226,14 @@ export default function AdminPage() {
   const totalTitles = movies.length + tvShows.length
   const totalMovies = movies.length
   const totalTVShows = tvShows.length
-  const totalLiveChannels = liveTVChannels.length
   const totalGenres = genres.filter((genre) => genre.isActive).length
   const totalCast = movies.reduce((total, movie) => total + (movie.cast?.length || 0), 0)
     + tvShows.reduce((total, show) => total + (show.cast?.length || 0), 0)
   const totalUsers = registeredUsers.length
-  const totalComments = 0
-  const totalViews = 0
-  const totalDownloads = 0
-  const totalShares = 0
+  const totalComments = analyticsData?.totalComments ?? 0
+  const totalViews = analyticsData?.totalViews ?? 0
+  const totalDownloads = analyticsData?.totalDownloads ?? 0
+  const totalShares = analyticsData?.totalShares ?? 0
   const appInstallCounts = {
     android: 0,
     ios: 0,
@@ -3250,7 +5397,7 @@ export default function AdminPage() {
     setEpisodeFormData(getEpisodeFormDefaults(managedTVShowId, managedSeasonId))
   }
 
-  const handleSearch = async (query = searchQuery, e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent, query = searchQuery) => {
     if (e) {
       e.preventDefault()
     }
@@ -3275,7 +5422,7 @@ export default function AdminPage() {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchQuery.trim()) {
-        handleSearch(searchQuery)
+        handleSearch(undefined, searchQuery)
       } else {
         setSearchResults([])
       }
@@ -3290,12 +5437,12 @@ export default function AdminPage() {
       const details = await getTMDBDetails(tmdbId, type)
       
       if (type === 'movie') {
-        const movie = convertTMDBToMovie(details)
+        const movie = await convertTMDBToMovieWithFanart(details)
         const newMovies = [...movies, movie]
         setMovies(newMovies)
         saveMovies(newMovies)
       } else {
-        const show = await convertTMDBToTVShowWithEpisodes(details)
+        const show = await convertTMDBToTVShowWithEpisodesAndFanart(details)
         const newShows = [...tvShows, show]
         setTvShows(newShows)
         saveTVShows(newShows)
@@ -3314,55 +5461,106 @@ export default function AdminPage() {
     setIsScraping(true)
     updateScrapingJob(newJob.id, { status: 'running' })
     
+    const keys = getExternalApiKeys()
+    if (!keys.tmdb || keys.tmdb.trim() === '') {
+      const message = 'TMDB API key is not configured. Go to API Keys and add your TMDB key first.'
+      updateScrapingJob(newJob.id, {
+        status: 'failed',
+        endTime: new Date().toISOString(),
+        errors: [message],
+      })
+      setScrapingConfig(getScrapingConfig())
+      showToast(message, 'error')
+      setIsScraping(false)
+      return
+    }
+    
     try {
-      // Simulate scraping with sample popular content from TMDB
       const sampleQueries = ['Inception', 'The Dark Knight', 'Interstellar', 'The Matrix', 'Forrest Gump']
+      const sampleTVQueries = ['Breaking Bad', 'Game of Thrones', 'Stranger Things', 'The Office', 'Friends']
       let itemsProcessed = 0
       let itemsAdded = 0
       const errors: string[] = []
+
+      const movieQueries = type === 'all' || type === 'movie' ? sampleQueries : []
+      const tvQueries = type === 'all' || type === 'tv' ? sampleTVQueries : []
       
-      for (const query of sampleQueries) {
+      for (const query of movieQueries) {
         try {
           itemsProcessed++
-          if (type === 'all' || type === 'movie') {
-            const movieResults = await searchTMDB(query, 'movie')
-            if (movieResults && movieResults.length > 0) {
-              const details = await getTMDBDetails(movieResults[0].id, 'movie')
-              const movie = convertTMDBToMovie(details)
-              const exists = movies.some(m => m.title === movie.title)
-              if (!exists) {
-                const newMovies = [...movies, movie]
-                setMovies(newMovies)
-                saveMovies(newMovies)
-                itemsAdded++
-              }
-            }
+          const movieResults = await searchTMDB(query, 'movie')
+          if (movieResults && movieResults.length > 0) {
+            const details = await getTMDBDetails(movieResults[0].id, 'movie')
+            const movie = await convertTMDBToMovieWithFanart(details)
+            let added = false
+            setMovies(prev => {
+              const exists = prev.some(m => m.title === movie.title)
+              if (exists) return prev
+              added = true
+              const updated = [...prev, movie]
+              saveMovies(updated)
+              return updated
+            })
+            if (added) itemsAdded++
           }
-          
           updateScrapingJob(newJob.id, { itemsProcessed, itemsAdded, errors })
-          
-          // Add a small delay to simulate scraping
           await new Promise(resolve => setTimeout(resolve, 500))
         } catch (err) {
-          errors.push(`Error scraping query "${query}": ${(err as Error).message}`)
+          errors.push(`Movie query "${query}": ${(err as Error).message}`)
+        }
+      }
+
+      for (const query of tvQueries) {
+        try {
+          itemsProcessed++
+          const tvResults = await searchTMDB(query, 'tv')
+          if (tvResults && tvResults.length > 0) {
+            const details = await getTMDBDetails(tvResults[0].id, 'tv')
+            const tvShow = await convertTMDBToTVShowWithEpisodesAndFanart(details)
+            let added = false
+            setTvShows(prev => {
+              const exists = prev.some(s => s.title === tvShow.title)
+              if (exists) return prev
+              added = true
+              const updated = [...prev, tvShow]
+              saveTVShows(updated)
+              return updated
+            })
+            if (added) itemsAdded++
+          }
+          updateScrapingJob(newJob.id, { itemsProcessed, itemsAdded, errors })
+          await new Promise(resolve => setTimeout(resolve, 500))
+        } catch (err) {
+          errors.push(`TV query "${query}": ${(err as Error).message}`)
         }
       }
       
       updateScrapingJob(newJob.id, { 
-        status: 'completed', 
+        status: errors.length === itemsProcessed && itemsAdded === 0 ? 'failed' : 'completed', 
         endTime: new Date().toISOString(),
         itemsProcessed,
         itemsAdded,
         errors 
       })
+      setScrapingConfig(getScrapingConfig())
       
-      showToast(`Scraping completed successfully! ${itemsAdded} new items added!`, 'success')
+      if (itemsAdded > 0) {
+        showToast(`Scraping completed! ${itemsAdded} new item${itemsAdded === 1 ? '' : 's'} added.${errors.length > 0 ? ` (${errors.length} warning${errors.length === 1 ? '' : 's'})` : ''}`, 'success')
+      } else if (errors.length > 0) {
+        showToast(`Scraping finished with no new items (${errors.length} error${errors.length === 1 ? '' : 's'}). Check the job for details.`, 'error')
+      } else {
+        showToast('Scraping completed — all content already exists in your library.', 'success')
+      }
     } catch (error) {
+      const freshConfig = getScrapingConfig()
+      const existingErrors = freshConfig.scrapingJobs.find((j: ScrapingJob) => j.id === newJob.id)?.errors || []
+      const finalErrors = [...existingErrors, (error as Error).message]
       updateScrapingJob(newJob.id, { 
         status: 'failed', 
         endTime: new Date().toISOString(),
-        errors: [...scrapingConfig.scrapingJobs.find(j => j.id === newJob.id)?.errors || [], (error as Error).message]
+        errors: finalErrors,
       })
+      setScrapingConfig(getScrapingConfig())
       showToast(`Scraping failed: ${(error as Error).message}`, 'error')
     } finally {
       setIsScraping(false)
@@ -3370,12 +5568,16 @@ export default function AdminPage() {
   }
 
   const handleUpdateScrapingConfig = () => {
+    if (!scrapingConfig) {
+      showToast('Scraping configuration not loaded.', 'error')
+      return
+    }
     saveScrapingConfig(scrapingConfig)
     showToast('Scraping configuration saved successfully!', 'success')
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files && e.target.files.length > 0 && scrapingConfig) {
       const files = Array.from(e.target.files);
       const validExtensions = scrapingConfig.supportedExtensions.map(ext => ext.toLowerCase());
       const validFiles = files.filter(file => {
@@ -3403,6 +5605,8 @@ export default function AdminPage() {
     setIsProcessingLocalFiles(true);
     const job = addScrapingJob({ type: 'local' });
     updateScrapingJob(job.id, { status: 'running' });
+
+    const defaultQuality = scrapingConfig?.defaultQuality || '1080p';
     
     let itemsProcessed = 0;
     let itemsAdded = 0;
@@ -3414,281 +5618,235 @@ export default function AdminPage() {
         try {
           const parsed = parseFilename(file.name);
           
-          if (parsed.title) {
-            if (parsed.type === 'movie') {
-              // Try to find movie on TMDB
-              try {
+          if (!parsed.title) {
+            errors.push(`Skipping "${file.name}": Could not parse title from filename`);
+            continue;
+          }
+
+          const mkSource = (): MovieSource => ({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title: file.name,
+            quality: defaultQuality,
+            size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+            type: 'Local Storage',
+            isLocal: true,
+            url: URL.createObjectURL(file),
+          });
+
+          if (parsed.type === 'movie') {
+            let movie: Movie | null = null;
+            try {
+              const keys = getExternalApiKeys();
+              if (keys.tmdb) {
                 const searchResults = await searchTMDB(parsed.title, 'movie');
                 if (searchResults && searchResults.length > 0) {
                   const details = await getTMDBDetails(searchResults[0].id, 'movie');
-                  const movie = convertTMDBToMovie(details);
-                  
-                  // Create a local source
-                  const localSource: MovieSource = {
-                    id: Date.now().toString(),
-                    title: file.name,
-                    quality: scrapingConfig.defaultQuality,
-                    size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-                    type: 'Local Storage',
-                    isLocal: true,
-                    url: URL.createObjectURL(file)
-                  };
-                  
-                  movie.sources = [localSource];
-                  
-                  // Check if movie already exists
-                  const exists = movies.some(m => m.title === movie.title);
-                  if (!exists) {
-                    const newMovies = [...movies, movie];
-                    setMovies(newMovies);
-                    saveMovies(newMovies);
-                    itemsAdded++;
-                  }
-                }
-              } catch (err) {
-                // If TMDB fails, add as basic movie
-                const basicMovie: Movie = {
-                  id: Date.now(),
-                  title: parsed.title,
-                  overview: '',
-                  posterPath: '',
-                  backdropPath: '',
-                  releaseYear: parsed.year || new Date().getFullYear(),
-                  rating: 0,
-                  runtime: '',
-                  genres: [],
-                  country: '',
-                  language: '',
-                  quality: scrapingConfig.defaultQuality,
-                  studio: '',
-                  director: '',
-                  sources: [{
-                    id: Date.now().toString(),
-                    title: file.name,
-                    quality: scrapingConfig.defaultQuality,
-                    size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-                    type: 'Local Storage',
-                    isLocal: true,
-                    url: URL.createObjectURL(file)
-                  }]
-                };
-                
-                const exists = movies.some(m => m.title === basicMovie.title);
-                if (!exists) {
-                  const newMovies = [...movies, basicMovie];
-                  setMovies(newMovies);
-                  saveMovies(newMovies);
-                  itemsAdded++;
+                  movie = await convertTMDBToMovieWithFanart(details);
+                  movie.sources = [mkSource()];
                 }
               }
-            } else if (parsed.type === 'tv') {
-              // Try to find TV show on TMDB
-              try {
+            } catch (_tmdbErr) {
+              movie = null;
+            }
+
+            if (!movie) {
+              movie = {
+                id: Date.now(),
+                title: parsed.title,
+                overview: '',
+                posterPath: '',
+                backdropPath: '',
+                releaseYear: parsed.year || new Date().getFullYear(),
+                rating: 0,
+                runtime: '',
+                genres: [],
+                country: '',
+                language: '',
+                quality: defaultQuality,
+                studio: '',
+                director: '',
+                sources: [mkSource()],
+              };
+            }
+
+            let added = false;
+            setMovies(prev => {
+              const exists = prev.some(m => m.title === (movie as Movie).title);
+              if (exists) return prev;
+              added = true;
+              const updated = [...prev, movie as Movie];
+              saveMovies(updated);
+              return updated;
+            });
+            if (added) itemsAdded++;
+          } else if (parsed.type === 'tv') {
+            let tvShow: TVShow | null = null;
+            try {
+              const keys = getExternalApiKeys();
+              if (keys.tmdb) {
                 const searchResults = await searchTMDB(parsed.title, 'tv');
-                let tvShow: any;
-                
                 if (searchResults && searchResults.length > 0) {
                   const details = await getTMDBDetails(searchResults[0].id, 'tv');
-                  tvShow = await convertTMDBToTVShowWithEpisodes(details);
-                } else {
-                  // If TMDB fails, add as basic TV show
-                  tvShow = {
-                    id: Date.now(),
-                    title: parsed.title,
-                    overview: '',
-                    posterPath: '',
-                    backdropPath: '',
-                    startYear: parsed.year || new Date().getFullYear(),
-                    rating: 0,
-                    numberOfSeasons: 1,
-                    genres: [],
-                    country: '',
-                    language: '',
-                    quality: scrapingConfig.defaultQuality,
-                    studio: '',
-                    tags: [],
-                    trailerUrl: '',
-                    seasons: []
-                  };
-                }
-
-                // Create a local source
-                const localSource: MovieSource = {
-                  id: Date.now().toString(),
-                  title: file.name,
-                  quality: scrapingConfig.defaultQuality,
-                  size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-                  type: 'Local Storage',
-                  isLocal: true,
-                  url: URL.createObjectURL(file)
-                };
-
-                // Find or create the season
-                const targetSeasonNumber = parsed.season || 1;
-                let targetSeason = tvShow.seasons?.find((s: any) => s.seasonNumber === targetSeasonNumber);
-                
-                if (!targetSeason) {
-                  targetSeason = {
-                    id: Date.now(),
-                    seasonNumber: targetSeasonNumber,
-                    title: `Season ${targetSeasonNumber}`,
-                    overview: '',
-                    posterPath: '',
-                    episodes: []
-                  };
-                  tvShow.seasons = [...(tvShow.seasons || []), targetSeason];
-                }
-
-                // Find or create the episode
-                const targetEpisodeNumber = parsed.episode || 1;
-                let targetEpisode = targetSeason.episodes?.find((e: any) => e.episodeNumber === targetEpisodeNumber);
-                
-                if (!targetEpisode) {
-                  targetEpisode = {
-                    id: Date.now(),
-                    title: `Episode ${targetEpisodeNumber}`,
-                    overview: '',
-                    episodeNumber: targetEpisodeNumber,
-                    runtime: '45',
-                    rating: 0,
-                    airDate: '',
-                    thumbnailPath: '',
-                    sources: []
-                  };
-                  targetSeason.episodes = [...(targetSeason.episodes || []), targetEpisode];
-                }
-
-                // Add the local source to the episode
-                targetEpisode.sources = [...(targetEpisode.sources || []), localSource];
-
-                // Check if TV show already exists
-                const exists = tvShows.some(s => s.title === tvShow.title);
-                if (!exists) {
-                  const newShows = [...tvShows, tvShow];
-                  setTvShows(newShows);
-                  saveTVShows(newShows);
-                  itemsAdded++;
-                } else {
-                  // Update existing TV show
-                  const newShows = tvShows.map((s: any) => {
-                    if (s.title !== tvShow.title) return s;
-                    
-                    // Merge seasons
-                    const mergedSeasons = [...(s.seasons || [])];
-                    tvShow.seasons?.forEach((newSeason: any) => {
-                      const existingSeasonIndex = mergedSeasons.findIndex((ms: any) => ms.seasonNumber === newSeason.seasonNumber);
-                      if (existingSeasonIndex === -1) {
-                        mergedSeasons.push(newSeason);
-                      } else {
-                        // Merge episodes
-                        const existingSeason = mergedSeasons[existingSeasonIndex];
-                        newSeason.episodes?.forEach((newEpisode: any) => {
-                          const existingEpisodeIndex = existingSeason.episodes.findIndex((me: any) => me.episodeNumber === newEpisode.episodeNumber);
-                          if (existingEpisodeIndex === -1) {
-                            existingSeason.episodes.push(newEpisode);
-                          } else {
-                            // Add new source to existing episode
-                            existingSeason.episodes[existingEpisodeIndex].sources = [
-                              ...(existingSeason.episodes[existingEpisodeIndex].sources || []),
-                              ...(newEpisode.sources || [])
-                            ];
-                          }
-                        });
-                      }
-                    });
-                    
-                    return { ...s, seasons: mergedSeasons };
-                  });
-                  setTvShows(newShows);
-                  saveTVShows(newShows);
-                }
-              } catch (err) {
-                // If anything fails, add as basic TV show
-                const basicShow: any = {
-                  id: Date.now(),
-                  title: parsed.title,
-                  overview: '',
-                  posterPath: '',
-                  backdropPath: '',
-                  startYear: parsed.year || new Date().getFullYear(),
-                  rating: 0,
-                  numberOfSeasons: 1,
-                  genres: [],
-                  country: '',
-                  language: '',
-                  quality: scrapingConfig.defaultQuality,
-                  studio: '',
-                  tags: [],
-                  trailerUrl: '',
-                  seasons: [
-                    {
-                      id: Date.now(),
-                      seasonNumber: parsed.season || 1,
-                      title: `Season ${parsed.season || 1}`,
-                      overview: '',
-                      posterPath: '',
-                      episodes: [
-                        {
-                          id: Date.now(),
-                          title: `Episode ${parsed.episode || 1}`,
-                          overview: '',
-                          episodeNumber: parsed.episode || 1,
-                          runtime: '45',
-                          rating: 0,
-                          airDate: '',
-                          thumbnailPath: '',
-                          sources: [
-                            {
-                              id: Date.now().toString(),
-                              title: file.name,
-                              quality: scrapingConfig.defaultQuality,
-                              size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-                              type: 'Local Storage',
-                              isLocal: true,
-                              url: URL.createObjectURL(file)
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                };
-                
-                const exists = tvShows.some(s => s.title === basicShow.title);
-                if (!exists) {
-                  const newShows = [...tvShows, basicShow];
-                  setTvShows(newShows);
-                  saveTVShows(newShows);
-                  itemsAdded++;
+                  tvShow = await convertTMDBToTVShowWithEpisodesAndFanart(details);
                 }
               }
+            } catch (_tmdbErr) {
+              tvShow = null;
             }
+
+            if (!tvShow) {
+              tvShow = {
+                id: Date.now(),
+                title: parsed.title,
+                overview: '',
+                posterPath: '',
+                backdropPath: '',
+                startYear: parsed.year || new Date().getFullYear(),
+                rating: 0,
+                numberOfSeasons: 1,
+                genres: [],
+                country: '',
+                language: '',
+                quality: defaultQuality,
+                studio: '',
+                tags: [],
+                trailerUrl: '',
+                seasons: [],
+              };
+            }
+
+            const targetSeasonNumber = parsed.season || 1;
+            const targetEpisodeNumber = parsed.episode || 1;
+            const localSource = mkSource();
+
+            let mergedShow: TVShow = { ...tvShow };
+            mergedShow.seasons = [...(mergedShow.seasons || [])];
+
+            let season = mergedShow.seasons.find(s => s.seasonNumber === targetSeasonNumber);
+            if (!season) {
+              season = {
+                id: Date.now(),
+                seasonNumber: targetSeasonNumber,
+                title: `Season ${targetSeasonNumber}`,
+                overview: '',
+                posterPath: '',
+                episodes: [],
+              };
+              mergedShow.seasons.push(season);
+            } else {
+              const idx = mergedShow.seasons.indexOf(season);
+              mergedShow.seasons[idx] = { ...season, episodes: [...(season.episodes || [])] };
+              season = mergedShow.seasons[idx];
+            }
+
+            let episode = season.episodes.find(e => e.episodeNumber === targetEpisodeNumber);
+            if (!episode) {
+              episode = {
+                id: Date.now(),
+                title: `Episode ${targetEpisodeNumber}`,
+                overview: '',
+                episodeNumber: targetEpisodeNumber,
+                runtime: '45',
+                rating: 0,
+                airDate: '',
+                thumbnailPath: '',
+                sources: [localSource],
+              };
+              season.episodes.push(episode);
+            } else {
+              episode = {
+                ...episode,
+                sources: [...(episode.sources || []), localSource],
+              };
+              const eIdx = season.episodes.indexOf(
+                season.episodes.find(e => e.episodeNumber === targetEpisodeNumber) as Episode,
+              );
+              season.episodes[eIdx] = episode;
+            }
+
+            let added = false;
+            setTvShows(prev => {
+              const existsIdx = prev.findIndex(s => s.title === (mergedShow as TVShow).title);
+              if (existsIdx === -1) {
+                added = true;
+                const updated = [...prev, mergedShow as TVShow];
+                saveTVShows(updated);
+                return updated;
+              }
+              const existing = { ...prev[existsIdx], seasons: [...(prev[existsIdx].seasons || [])] };
+              for (const newSeason of (mergedShow as TVShow).seasons || []) {
+                const sIdx = existing.seasons.findIndex(
+                  (ms: Season) => ms.seasonNumber === newSeason.seasonNumber,
+                );
+                if (sIdx === -1) {
+                  existing.seasons.push(newSeason);
+                } else {
+                  const seasonCopy = {
+                    ...existing.seasons[sIdx],
+                    episodes: [...(existing.seasons[sIdx].episodes || [])],
+                  };
+                  for (const newEpisode of newSeason.episodes || []) {
+                    const eIdx = seasonCopy.episodes.findIndex(
+                      (me: Episode) => me.episodeNumber === newEpisode.episodeNumber,
+                    );
+                    if (eIdx === -1) {
+                      seasonCopy.episodes.push(newEpisode);
+                    } else {
+                      const mergedSources = [
+                        ...(seasonCopy.episodes[eIdx].sources || []),
+                        ...(newEpisode.sources || []),
+                      ];
+                      seasonCopy.episodes[eIdx] = {
+                        ...seasonCopy.episodes[eIdx],
+                        sources: mergedSources,
+                      };
+                    }
+                  }
+                  existing.seasons[sIdx] = seasonCopy;
+                }
+              }
+              const updated = [...prev];
+              updated[existsIdx] = existing;
+              saveTVShows(updated);
+              return updated;
+            });
+            if (added) itemsAdded++;
           }
           
           updateScrapingJob(job.id, { itemsProcessed, itemsAdded, errors });
-          await new Promise(resolve => setTimeout(resolve, 300)); // Small delay
+          await new Promise(resolve => setTimeout(resolve, 300));
         } catch (err) {
           errors.push(`Error processing ${file.name}: ${(err as Error).message}`);
         }
       }
       
       updateScrapingJob(job.id, { 
-        status: 'completed', 
+        status: errors.length === itemsProcessed && itemsAdded === 0 ? 'failed' : 'completed', 
         endTime: new Date().toISOString(),
         itemsProcessed,
         itemsAdded,
-        errors 
+        errors,
       });
+      setScrapingConfig(getScrapingConfig());
       
       setSelectedLocalFiles([]);
-      showToast(`Successfully imported ${itemsAdded} items!`, 'success');
+      if (itemsAdded > 0) {
+        showToast(`Successfully imported ${itemsAdded} item${itemsAdded === 1 ? '' : 's'}!${errors.length > 0 ? ` (${errors.length} warning${errors.length === 1 ? '' : 's'})` : ''}`, 'success');
+      } else if (errors.length > 0) {
+        showToast(`Import finished with no new items (${errors.length} error${errors.length === 1 ? '' : 's'}). Check the job for details.`, 'error');
+      } else {
+        showToast('Import completed — all items matched existing entries (updated where applicable).', 'success');
+      }
     } catch (err) {
+      const freshConfig = getScrapingConfig();
+      const existingErrors = freshConfig.scrapingJobs.find((j: ScrapingJob) => j.id === job.id)?.errors || [];
       updateScrapingJob(job.id, { 
         status: 'failed', 
         endTime: new Date().toISOString(),
-        errors: [...errors, (err as Error).message] 
+        errors: [...existingErrors, ...errors, (err as Error).message],
       });
-      showToast('Failed to import files', 'error');
+      setScrapingConfig(getScrapingConfig());
+      showToast('Failed to import files: ' + (err as Error).message, 'error');
     } finally {
       setIsProcessingLocalFiles(false);
     }
@@ -3978,48 +6136,6 @@ export default function AdminPage() {
     })
     setTvShows(newShows)
     saveTVShows(newShows)
-  }
-
-  const handleAddChannel = () => {
-    const newChannel: LiveTVChannel = {
-      id: Date.now().toString(),
-      name: 'New Channel',
-      genre: 'General',
-      streamUrl: 'https://example.com/stream',
-      streamType: 'HLS',
-      posterPath: '',
-      accentColor: '#ef4444',
-      order: liveTVChannels.length + 1,
-    };
-    setLiveTVChannels([...liveTVChannels, newChannel]);
-  }
-
-  const handleEditChannel = (id: string, field: keyof LiveTVChannel, value: any) => {
-    setLiveTVChannels(liveTVChannels.map((c: LiveTVChannel) => 
-      c.id === id ? { ...c, [field]: value } : c
-    ));
-  }
-
-  const handleDeleteChannel = (id: string) => {
-    setLiveTVChannels(liveTVChannels.filter((c: LiveTVChannel) => c.id !== id));
-  }
-
-  const handleMoveChannel = (id: string, direction: 'up' | 'down') => {
-    const index = liveTVChannels.findIndex((c: LiveTVChannel) => c.id === id);
-    if (index === -1) return;
-
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= liveTVChannels.length) return;
-
-    const newChannels = [...liveTVChannels];
-    [newChannels[index], newChannels[newIndex]] = [newChannels[newIndex], newChannels[index]];
-
-    setLiveTVChannels(newChannels.map((c, i) => ({ ...c, order: i + 1 })));
-  }
-
-  const handleSaveLiveTV = () => {
-    saveLiveTVChannels(liveTVChannels);
-    showToast('Live TV channels saved successfully!', 'success');
   }
 
   // Xtream API Handlers
@@ -4837,6 +6953,7 @@ export default function AdminPage() {
       tvShowId: show.id,
       isActive: true,
       order: (mode === 'kids' ? kidsHeroBanners.length : animeHeroBanners.length) + index + 1,
+      autoScrollInterval: 10000,
     }));
 
     if (mode === 'kids') {
@@ -4896,6 +7013,7 @@ export default function AdminPage() {
       movieId: movie.id,
       isActive: true,
       order: heroBanners.length + index + 1,
+      autoScrollInterval: 10000,
     }));
 
     setHeroBanners([...heroBanners, ...newBanners]);
@@ -4919,6 +7037,7 @@ export default function AdminPage() {
       movieId: movie.id,
       isActive: true,
       order: kidsHeroBanners.length + index + 1,
+      autoScrollInterval: 10000,
     }));
 
     setKidsHeroBanners([...kidsHeroBanners, ...newBanners]);
@@ -4942,6 +7061,7 @@ export default function AdminPage() {
       movieId: movie.id,
       isActive: true,
       order: animeHeroBanners.length + index + 1,
+      autoScrollInterval: 10000,
     }));
 
     setAnimeHeroBanners([...animeHeroBanners, ...newBanners]);
@@ -5022,7 +7142,7 @@ export default function AdminPage() {
     );
   };
 
-  if (!isHydrated || !isAdminAccessReady) {
+  if (!isHydrated || !isAdminAccessReady || !isDataLoaded || !adminCredentials || !generalSettings || !adminParentalSettings || !scrapingConfig || !externalApiKeys || !adminProfile) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-6">
         <div className="text-center">
@@ -5043,15 +7163,23 @@ export default function AdminPage() {
             exit={{ opacity: 0, y: -50 }}
             className={cn(
               "fixed top-6 right-6 z-50 px-6 py-4 rounded-xl border flex items-center gap-3",
-              toast.type === 'success' 
+              toast.type === 'success'
                 ? "bg-emerald-900/90 border-emerald-700 text-emerald-100"
-                : "bg-rose-900/90 border-rose-700 text-rose-100"
+                : toast.type === 'warning'
+                  ? "bg-amber-900/90 border-amber-700 text-amber-100"
+                  : toast.type === 'info'
+                    ? "bg-sky-900/90 border-sky-700 text-sky-100"
+                    : "bg-rose-900/90 border-rose-700 text-rose-100"
             )}
           >
             {toast.type === 'success' ? (
-              <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">✓</div>
+              <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">âœ“</div>
+            ) : toast.type === 'warning' ? (
+              <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">!</div>
+            ) : toast.type === 'info' ? (
+              <div className="w-6 h-6 rounded-full bg-sky-500/20 flex items-center justify-center">i</div>
             ) : (
-              <div className="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center">✕</div>
+              <div className="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center">âœ•</div>
             )}
             <span className="font-medium">{toast.message}</span>
           </motion.div>
@@ -5089,16 +7217,21 @@ export default function AdminPage() {
                         const isAnySubItemActive = item.subItems.some((sub: any) => activeTab === sub.id)
                         const isHomeGroup = item.id === 'home-group'
                         const isSliderGroup = item.id === 'sliders-group'
+                        const isHeroGroup = item.id === 'hero-group'
                         const dropdownOpen = isHomeGroup
                           ? mobileHomeDropdownOpen
                           : isSliderGroup
                             ? mobileSliderDropdownOpen
-                            : mobileImportDropdownOpen
+                            : isHeroGroup
+                              ? mobileHeroDropdownOpen
+                              : mobileImportDropdownOpen
                         const setDropdownOpen = isHomeGroup
                           ? setMobileHomeDropdownOpen
                           : isSliderGroup
                             ? setMobileSliderDropdownOpen
-                            : setMobileImportDropdownOpen
+                            : isHeroGroup
+                              ? setMobileHeroDropdownOpen
+                              : setMobileImportDropdownOpen
                         
                         return (
                           <div key={item.id}>
@@ -5252,13 +7385,6 @@ export default function AdminPage() {
                     <h2 className="text-3xl font-bold text-white">Dashboard</h2>
                     <p className="text-zinc-500 mt-1">Welcome back! Here's what's happening today.</p>
                   </div>
-                  <button 
-                    onClick={() => setActiveTab('import')}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
-                  >
-                    <Download className="w-5 h-5" />
-                    Import Content
-                  </button>
                 </div>
 
                 {/* Server Stats Section (Moved to Top) */}
@@ -5266,8 +7392,17 @@ export default function AdminPage() {
                   <div className="flex items-center gap-4 mb-6">
                     <h3 className="text-xl font-semibold text-white">Server Health</h3>
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      <span className="text-emerald-400 font-medium">Online</span>
+                      {serverHealth.backend.status === 'healthy' ? (
+                        <>
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          <span className="text-emerald-400 font-medium">Online</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-5 h-5 text-red-400" />
+                          <span className="text-red-400 font-medium">Offline</span>
+                        </>
+                      )}
                     </div>
                   </div>
                   
@@ -5279,12 +7414,18 @@ export default function AdminPage() {
                           <Activity className="w-5 h-5 text-red-400" />
                           <span className="text-sm text-zinc-400 font-medium">CPU Usage</span>
                         </div>
-                        <span className="text-lg font-bold text-white">35%</span>
+                        <span className="text-lg font-bold text-white">
+                          {serverHealth.backend.cpu ? `${serverHealth.backend.cpu.load1min.toFixed(0)}%` : '0%'}
+                        </span>
                       </div>
                       <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-500" 
-                          style={{ width: '35%' }}
+                          style={{ 
+                            width: `${serverHealth.backend.cpu 
+                              ? Math.min(100, serverHealth.backend.cpu.load1min / serverHealth.backend.cpu.cores * 100) 
+                              : 0}%` 
+                          }}
                         />
                       </div>
                     </div>
@@ -5296,12 +7437,14 @@ export default function AdminPage() {
                           <Database className="w-5 h-5 text-blue-400" />
                           <span className="text-sm text-zinc-400 font-medium">RAM Usage</span>
                         </div>
-                        <span className="text-lg font-bold text-white">64%</span>
+                        <span className="text-lg font-bold text-white">
+                          {serverHealth.backend.memory?.usagePercentage || '0%'}
+                        </span>
                       </div>
                       <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500" 
-                          style={{ width: '64%' }}
+                          style={{ width: `${serverHealth.backend.memory?.usagePercentage || 0}%` }}
                         />
                       </div>
                     </div>
@@ -5313,12 +7456,15 @@ export default function AdminPage() {
                           <Wifi className="w-5 h-5 text-yellow-400" />
                           <span className="text-sm text-zinc-400 font-medium">Bandwidth</span>
                         </div>
-                        <span className="text-lg font-bold text-white">2.4 Mbps</span>
+                        <div className="flex flex-col items-end text-xs">
+                          <span className="text-emerald-400">â†‘ {serverHealth.backend.bandwidth?.sentFormatted || '0 B'}</span>
+                          <span className="text-blue-400">â†“ {serverHealth.backend.bandwidth?.receivedFormatted || '0 B'}</span>
+                        </div>
                       </div>
                       <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 transition-all duration-500" 
-                          style={{ width: '45%' }}
+                          style={{ width: '60%' }}
                         />
                       </div>
                     </div>
@@ -5330,12 +7476,14 @@ export default function AdminPage() {
                           <HardDrive className="w-5 h-5 text-purple-400" />
                           <span className="text-sm text-zinc-400 font-medium">Storage</span>
                         </div>
-                        <span className="text-lg font-bold text-white">52%</span>
+                        <span className="text-lg font-bold text-white">
+                          {serverHealth.backend.storage?.usagePercentage || '0%'}
+                        </span>
                       </div>
                       <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500" 
-                          style={{ width: '52%' }}
+                          style={{ width: `${serverHealth.backend.storage?.usagePercentage || 0}%` }}
                         />
                       </div>
                     </div>
@@ -5344,13 +7492,19 @@ export default function AdminPage() {
                     <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          {serverHealth.backend.status === 'healthy' ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-400" />
+                          )}
                           <span className="text-sm text-zinc-400 font-medium">Server Status</span>
                         </div>
-                        <span className="text-lg font-bold text-emerald-400">Healthy</span>
+                        <span className={`text-lg font-bold ${serverHealth.backend.status === 'healthy' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {serverHealth.backend.status === 'healthy' ? 'Healthy' : 'Unhealthy'}
+                        </span>
                       </div>
                       <div className="text-sm text-zinc-500">
-                        Uptime: 14 days 2 hours
+                        Uptime: {serverHealth.backend.uptime?.formatted || '0d 0h 0m'}
                       </div>
                     </div>
                   </div>
@@ -5371,11 +7525,6 @@ export default function AdminPage() {
                     title="TV Shows"
                     value={totalTVShows.toLocaleString()}
                     icon={Tv}
-                  />
-                  <StatCard
-                    title="Live Channels"
-                    value={totalLiveChannels.toLocaleString()}
-                    icon={Radio}
                   />
                   <StatCard
                     title="Genres"
@@ -5493,10 +7642,6 @@ export default function AdminPage() {
                             <div className="flex items-center justify-between">
                               <span className="text-zinc-400">Configured App Links</span>
                               <span className="text-white font-medium">{configuredAppPlatforms.toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-zinc-400">Live Channels</span>
-                              <span className="text-white font-medium">{totalLiveChannels.toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
@@ -5819,7 +7964,6 @@ export default function AdminPage() {
                                 >
                                   <option value="continue-watching">Continue Watching</option>
                                   <option value="recommended">Recommended</option>
-                                  <option value="live-tv">Live TV</option>
                                   <option value="trending">Trending</option>
                                   <option value="news">News</option>
                                   <option value="popular">Popular</option>
@@ -7143,7 +9287,7 @@ export default function AdminPage() {
               </motion.div>
             )}
 
-            {['import-movies', 'import-tv', 'import-livetv'].includes(activeTab) && (
+            {['import-movies', 'import-tv'].includes(activeTab) && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -7153,30 +9297,15 @@ export default function AdminPage() {
                   <h2 className="text-3xl font-bold text-white">
                     {activeTab === 'import-movies'
                       ? 'Import Movies'
-                      : activeTab === 'import-tv'
-                        ? 'Import TV Shows'
-                        : 'Import Live TV'}
+                      : 'Import TV Shows'}
                   </h2>
                   <p className="text-zinc-500 mt-1">
-                    {activeTab === 'import-livetv'
-                      ? 'Choose how you want to add live TV content.'
-                      : `Search and import ${activeTab === 'import-movies' ? 'movies' : 'TV shows'} from TMDB`}
+                    {`Search and import ${activeTab === 'import-movies' ? 'movies' : 'TV shows'} from TMDB`}
                   </p>
                 </div>
 
-                {activeTab === 'import-livetv' ? (
-                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
-                    <div className="text-center py-12">
-                      <Radio className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                      <h3 className="text-2xl font-bold text-white mb-2">Live TV Import</h3>
-                      <p className="text-zinc-500 max-w-2xl mx-auto">
-                        Use this section for live TV import sources. You can continue managing channels from the Live TV and Xtream API areas.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 mb-8">
+                <>
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 mb-8">
                       <form onSubmit={handleSearch} className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-4">
                           <div className="flex-1">
@@ -7255,7 +9384,6 @@ export default function AdminPage() {
                       </div>
                     )}
                   </>
-                )}
               </motion.div>
             )}
 
@@ -7269,6 +9397,81 @@ export default function AdminPage() {
                   <h2 className="text-3xl font-bold text-white">Automated Scraping</h2>
                   <p className="text-zinc-500 mt-1">Configure and run automated content scraping</p>
                 </div>
+
+                {(!externalApiKeys?.tmdb || externalApiKeys.tmdb.trim() === '') && (
+                  <div className="mb-8 rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-xl p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                      <div className="shrink-0 p-3 rounded-xl bg-amber-500/20 border border-amber-500/30">
+                        <AlertTriangle className="w-6 h-6 text-amber-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-amber-200 mb-2">
+                          TMDB API Key Required
+                        </h3>
+                        <p className="text-amber-200/80 text-sm mb-4">
+                          Automated Scraping uses The Movie Database (TMDB) to fetch metadata, posters and cast info.
+                          Without a valid TMDB API key, scraping will fail to add any new content.
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            onClick={() => setActiveTab('apikeys')}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-black rounded-xl font-medium transition-colors"
+                          >
+                            <Key className="w-4 h-4" />
+                            Add Your TMDB API Key
+                          </button>
+                          <a
+                            href="https://www.themoviedb.org/settings/api"
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-medium transition-colors border border-zinc-700"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Get a Free TMDB Key
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(!externalApiKeys?.fanartTv || externalApiKeys.fanartTv.trim() === '') && (
+                  <div className="mb-8 rounded-2xl border border-sky-500/30 bg-sky-500/10 backdrop-blur-xl p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                      <div className="shrink-0 p-3 rounded-xl bg-sky-500/20 border border-sky-500/30">
+                        <Palette className="w-6 h-6 text-sky-300" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-sky-200 mb-2">
+                          Fanart.tv API Key Missing
+                        </h3>
+                        <p className="text-sky-200/80 text-sm mb-4">
+                          Adding a Fanart.tv key enriches imported movies &amp; TV shows with HD logos,
+                          cleararts, banners, character art, season posters and disc art.
+                          Without it, you'll only get basic TMDB posters and backdrops.
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            onClick={() => setActiveTab('apikeys')}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-medium transition-colors"
+                          >
+                            <Key className="w-4 h-4" />
+                            Add Your Fanart.tv API Key
+                          </button>
+                          <a
+                            href="https://fanart.tv/get-an-api-key/"
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-medium transition-colors border border-zinc-700"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Get a Free Fanart.tv Key
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   {/* Left Column: Configuration */}
@@ -7996,7 +10199,7 @@ export default function AdminPage() {
                                           <div>
                                             <p className="text-white font-medium">{source.title}</p>
                                             <p className="text-zinc-500 text-sm mt-1">
-                                              {source.type} • {source.quality || 'N/A'} • {source.size || 'N/A'}
+                                              {source.type} â€¢ {source.quality || 'N/A'} â€¢ {source.size || 'N/A'}
                                             </p>
                                           </div>
 
@@ -8213,6 +10416,30 @@ export default function AdminPage() {
               </motion.div>
             )}
 
+            {activeTab === 'tv-channels' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AdminTvChannelsSection
+                  tvChannels={tvChannels}
+                  setTvChannels={setTvChannels}
+                  isTvChannelModalOpen={isTvChannelModalOpen}
+                  setIsTvChannelModalOpen={setIsTvChannelModalOpen}
+                  editingTvChannel={editingTvChannel}
+                  setEditingTvChannel={setEditingTvChannel}
+                  tvChannelSearchQuery={tvChannelSearchQuery}
+                  setTvChannelSearchQuery={setTvChannelSearchQuery}
+                  tvChannelCategoryFilter={tvChannelCategoryFilter}
+                  setTvChannelCategoryFilter={setTvChannelCategoryFilter}
+                  selectedTvChannelIds={selectedTvChannelIds}
+                  setSelectedTvChannelIds={setSelectedTvChannelIds}
+                  showToast={showToast}
+                />
+              </motion.div>
+            )}
+
             {activeTab === 'castcrew' && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -8275,7 +10502,7 @@ export default function AdminPage() {
                                   {castMember.role && <p className="text-zinc-400 text-sm">{castMember.role}</p>}
                                   {castMember.character && <p className="text-zinc-500 text-xs italic">as {castMember.character}</p>}
                                   <p className="text-zinc-500 text-xs mt-1">
-                                    {castMember.sourceType === 'movie' ? '🎬' : '📺'} {castMember.sourceTitle}
+                                    {castMember.sourceType === 'movie' ? 'ðŸŽ¬' : 'ðŸ“º'} {castMember.sourceTitle}
                                   </p>
                                 </div>
                               </div>
@@ -8291,214 +10518,6 @@ export default function AdminPage() {
                     </div>
                   )
                 })()}
-              </motion.div>
-            )}
-
-            {activeTab === 'livetv' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h2 className="text-3xl font-bold text-white">Live TV</h2>
-                    <p className="text-zinc-500 mt-1">Manage your Live TV channels</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={handleAddChannel}
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
-                    >
-                      <Plus className="w-5 h-5" />
-                      Add Channel
-                    </button>
-                    <button 
-                      onClick={handleSaveLiveTV}
-                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
-                    >
-                      <Save className="w-5 h-5" />
-                      Save Changes
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
-                  <div className="space-y-6">
-                    {liveTVChannels.map((channel, index) => (
-                      <div key={channel.id} className="bg-zinc-800/50 rounded-xl p-6 border border-zinc-700">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
-                          <div className="lg:col-span-2 flex items-center gap-4">
-                            {channel.posterPath ? (
-                              <img 
-                                src={channel.posterPath} 
-                                alt={channel.name} 
-                                className="w-16 h-16 rounded-xl object-cover"
-                              />
-                            ) : (
-                              <div 
-                                className="w-16 h-16 rounded-xl flex items-center justify-center"
-                                style={{ backgroundColor: channel.accentColor }}
-                              >
-                                <Radio className="w-8 h-8 text-white" />
-                              </div>
-                            )}
-                            <div>
-                              <h4 className="text-white font-semibold">{channel.name}</h4>
-                              <p className="text-zinc-500 text-sm">Order: {channel.order}</p>
-                            </div>
-                            <div className="ml-auto flex items-center gap-2">
-                              <button
-                                onClick={() => handleMoveChannel(channel.id, 'up')}
-                                disabled={index === 0}
-                                className="p-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 rounded-lg transition-colors"
-                              >
-                                <ChevronUp className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() => handleMoveChannel(channel.id, 'down')}
-                                disabled={index === liveTVChannels.length - 1}
-                                className="p-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 rounded-lg transition-colors"
-                              >
-                                <ChevronDown className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteChannel(channel.id)}
-                                className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                            </div>
-                          </div>
-                          
-                          {/* Channel Name */}
-                          <div>
-                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Channel Name</label>
-                            <input
-                              type="text"
-                              value={channel.name}
-                              onChange={(e) => handleEditChannel(channel.id, 'name', e.target.value)}
-                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                            />
-                          </div>
-                          
-                          {/* Genre */}
-                          <div>
-                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Genre</label>
-                            <input
-                              type="text"
-                              value={channel.genre}
-                              onChange={(e) => handleEditChannel(channel.id, 'genre', e.target.value)}
-                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                            />
-                          </div>
-                          
-                          {/* Stream Type */}
-                          <div>
-                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Stream Type</label>
-                            <select
-                              value={channel.streamType || 'HLS'}
-                              onChange={(e) => handleEditChannel(channel.id, 'streamType', e.target.value)}
-                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                            >
-                              <option value="HLS">HLS</option>
-                              <option value="M3U8">M3U8</option>
-                              <option value="TS">TS</option>
-                              <option value="RTMP">RTMP</option>
-                              <option value="Embed URL">Embed URL</option>
-                              <option value="YouTube URL">YouTube URL</option>
-                            </select>
-                          </div>
-                          
-                          {/* Accent Color */}
-                          <div>
-                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Accent Color</label>
-                            <div className="flex gap-3">
-                              <input
-                                type="color"
-                                value={channel.accentColor}
-                                onChange={(e) => handleEditChannel(channel.id, 'accentColor', e.target.value)}
-                                className="w-12 h-12 rounded-lg border-0 cursor-pointer"
-                              />
-                              <input
-                                type="text"
-                                value={channel.accentColor}
-                                onChange={(e) => handleEditChannel(channel.id, 'accentColor', e.target.value)}
-                                className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                              />
-                            </div>
-                          </div>
-                          
-                          {/* Stream URL */}
-                          <div className="lg:col-span-2">
-                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Stream URL</label>
-                            <input
-                              type="url"
-                              value={channel.streamUrl}
-                              onChange={(e) => handleEditChannel(channel.id, 'streamUrl', e.target.value)}
-                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
-                            />
-                          </div>
-                          
-                          {/* Poster Upload */}
-                          <div className="lg:col-span-2">
-                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Channel Poster</label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Image Preview */}
-                              {channel.posterPath && (
-                                <div className="relative">
-                                  <img 
-                                    src={channel.posterPath} 
-                                    alt={channel.name} 
-                                    className="w-full h-40 object-cover rounded-lg"
-                                  />
-                                  <button
-                                    onClick={() => handleEditChannel(channel.id, 'posterPath', '')}
-                                    className="absolute top-2 right-2 p-1 bg-red-600 hover:bg-red-700 rounded-full"
-                                  >
-                                    <X className="w-4 h-4 text-white" />
-                                  </button>
-                                </div>
-                              )}
-                              
-                              {/* File Input */}
-                              <label className={cn(
-                                "flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-zinc-700 rounded-xl cursor-pointer hover:border-red-500 transition-colors",
-                                channel.posterPath ? "md:col-span-1" : "md:col-span-2"
-                              )}>
-                                <Upload className="w-8 h-8 text-zinc-400" />
-                                <span className="text-white font-medium">Upload Poster</span>
-                                <span className="text-zinc-500 text-xs">PNG, JPG, GIF up to 5MB</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (event) => {
-                                        handleEditChannel(channel.id, 'posterPath', event.target?.result as string);
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                  }}
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {liveTVChannels.length === 0 && (
-                      <div className="text-center py-12">
-                        <Radio className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-white mb-2">No Channels Yet</h3>
-                        <p className="text-zinc-500">Add your first channel to get started</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
               </motion.div>
             )}
 
@@ -8696,6 +10715,9 @@ export default function AdminPage() {
                     {serverHealth.backend.lastChecked && (
                       <p className="text-zinc-600 text-xs mt-1">Last check: {serverHealth.backend.lastChecked.toLocaleTimeString()}</p>
                     )}
+                    {serverHealth.backend.message && (
+                      <p className="text-yellow-400 text-xs mt-2">{serverHealth.backend.message}</p>
+                    )}
                   </div>
 
                   {/* Database Status */}
@@ -8719,6 +10741,9 @@ export default function AdminPage() {
                     {serverHealth.database.lastChecked && (
                       <p className="text-zinc-600 text-xs mt-1">Last check: {serverHealth.database.lastChecked.toLocaleTimeString()}</p>
                     )}
+                    {serverHealth.database.message && (
+                      <p className="text-yellow-400 text-xs mt-2">{serverHealth.database.message}</p>
+                    )}
                   </div>
 
                   {/* Uptime */}
@@ -8735,6 +10760,42 @@ export default function AdminPage() {
                     <p className="text-2xl font-bold text-white">
                       {serverHealth.backend.uptime?.formatted || `${Math.floor(serverHealth.uptime / 86400)}d ${Math.floor((serverHealth.uptime % 86400) / 3600)}h ${Math.floor((serverHealth.uptime % 3600) / 60)}m`}
                     </p>
+                  </div>
+
+                  {/* Storage */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-500/20">
+                        <HardDrive className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Storage</h3>
+                        <p className="text-zinc-500 text-xs">Disk Usage</p>
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-white">
+                      {serverHealth.backend.storage?.usagePercentage || '0.00'}%
+                    </p>
+                    {serverHealth.backend.lastChecked && (
+                      <p className="text-zinc-600 text-xs mt-1">Last check: {serverHealth.backend.lastChecked.toLocaleTimeString()}</p>
+                    )}
+                  </div>
+
+                  {/* Bandwidth */}
+                  <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-orange-500/20">
+                        <Wifi className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Bandwidth</h3>
+                        <p className="text-zinc-500 text-xs">Data Transferred</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-medium text-emerald-400">â†‘ {serverHealth.backend.bandwidth?.sentFormatted || '0 B'}</p>
+                      <p className="text-sm font-medium text-blue-400">â†“ {serverHealth.backend.bandwidth?.receivedFormatted || '0 B'}</p>
+                    </div>
                   </div>
                 </div>
 
@@ -8785,6 +10846,47 @@ export default function AdminPage() {
                         </div>
                       )}
 
+                      {/* Storage Usage */}
+                      {serverHealth.backend.storage && (
+                        <div>
+                          <div className="flex justify-between items-center mb-3">
+                            <label className="text-zinc-400 text-sm font-medium">Storage Usage</label>
+                            <span className="text-white font-semibold">{serverHealth.backend.storage.usagePercentage}%</span>
+                          </div>
+                          <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                              style={{ width: `${serverHealth.backend.storage.usagePercentage}%` }}
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 mt-3 text-xs text-zinc-500">
+                            <div>Used: {serverHealth.backend.storage.usedFormatted}</div>
+                            <div>Free: {serverHealth.backend.storage.freeFormatted}</div>
+                            <div>Total: {serverHealth.backend.storage.totalFormatted}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bandwidth Usage */}
+                      {serverHealth.backend.bandwidth && (
+                        <div>
+                          <div className="flex justify-between items-center mb-3">
+                            <label className="text-zinc-400 text-sm font-medium">Bandwidth</label>
+                            <span className="text-white font-semibold">Total Transferred</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-zinc-800/50 rounded-xl p-4">
+                              <p className="text-zinc-500 text-xs mb-1">Sent</p>
+                              <p className="text-emerald-400 font-semibold text-lg">{serverHealth.backend.bandwidth.sentFormatted}</p>
+                            </div>
+                            <div className="bg-zinc-800/50 rounded-xl p-4">
+                              <p className="text-zinc-500 text-xs mb-1">Received</p>
+                              <p className="text-blue-400 font-semibold text-lg">{serverHealth.backend.bandwidth.receivedFormatted}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Platform Info */}
                       {serverHealth.backend.platform && (
                         <div className="md:col-span-2">
@@ -8827,142 +10929,457 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   {/* Trending Prediction */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Trending Prediction</h3>
+                          <p className="text-zinc-500 text-xs">Predict upcoming content</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Trending Prediction</h3>
-                        <p className="text-zinc-500 text-xs">Predict upcoming content</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('trendingPrediction')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.trendingPrediction?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.trendingPrediction?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Predict trending movies and shows using ML models</p>
+                    <p className="text-zinc-400 text-sm mb-4">Predict trending movies and shows using ML models</p>
+                    {aiFeatures.trendingPrediction?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.trendingPrediction.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('trendingPrediction', 'Trending prediction')}
+                      disabled={isRunning.trendingPrediction || !aiFeatures.trendingPrediction?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.trendingPrediction || !aiFeatures.trendingPrediction?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                      )}
+                    >
+                      {isRunning.trendingPrediction ? (
+                        <span>Running Prediction...</span>
+                      ) : (
+                        <span>Run Prediction</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* Auto Categorization */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                        <Tags className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                          <Tags className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Auto Categorization</h3>
+                          <p className="text-zinc-500 text-xs">Smart content tagging</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Auto Categorization</h3>
-                        <p className="text-zinc-500 text-xs">Smart content tagging</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('autoCategorization')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.autoCategorization?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.autoCategorization?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Automatically categorize and tag movies/shows</p>
+                    <p className="text-zinc-400 text-sm mb-4">Automatically categorize and tag movies/shows</p>
+                    {aiFeatures.autoCategorization?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.autoCategorization.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('autoCategorization', 'Auto categorization')}
+                      disabled={isRunning.autoCategorization || !aiFeatures.autoCategorization?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.autoCategorization || !aiFeatures.autoCategorization?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                      )}
+                    >
+                      {isRunning.autoCategorization ? (
+                        <span>Running Categorization...</span>
+                      ) : (
+                        <span>Run Categorization</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* AI Subtitles */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center">
-                        <Languages className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center">
+                          <Languages className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">AI Subtitles</h3>
+                          <p className="text-zinc-500 text-xs">Auto generate subtitles</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">AI Subtitles</h3>
-                        <p className="text-zinc-500 text-xs">Auto generate subtitles</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('aiSubtitles')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.aiSubtitles?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.aiSubtitles?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Automatically generate and translate subtitles</p>
+                    <p className="text-zinc-400 text-sm mb-4">Automatically generate and translate subtitles</p>
+                    {aiFeatures.aiSubtitles?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.aiSubtitles.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('aiSubtitles', 'AI subtitles')}
+                      disabled={isRunning.aiSubtitles || !aiFeatures.aiSubtitles?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.aiSubtitles || !aiFeatures.aiSubtitles?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white"
+                      )}
+                    >
+                      {isRunning.aiSubtitles ? (
+                        <span>Running Subtitles...</span>
+                      ) : (
+                        <span>Run Subtitles</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* AI Translation */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                        <Globe className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                          <Globe className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">AI Translation</h3>
+                          <p className="text-zinc-500 text-xs">Multilingual support</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">AI Translation</h3>
-                        <p className="text-zinc-500 text-xs">Multilingual support</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('aiTranslation')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.aiTranslation?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.aiTranslation?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Translate content to 100+ languages</p>
+                    <p className="text-zinc-400 text-sm mb-4">Translate content to 100+ languages</p>
+                    {aiFeatures.aiTranslation?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.aiTranslation.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('aiTranslation', 'AI translation')}
+                      disabled={isRunning.aiTranslation || !aiFeatures.aiTranslation?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.aiTranslation || !aiFeatures.aiTranslation?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white"
+                      )}
+                    >
+                      {isRunning.aiTranslation ? (
+                        <span>Running Translation...</span>
+                      ) : (
+                        <span>Run Translation</span>
+                      )}
+                    </button>
                   </div>
 
-                  {/* AI Voiceover */}
+                  {/* AI Voiceovers */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-red-600 flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-red-600 flex items-center justify-center">
+                          <MessageSquare className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">AI Voiceovers</h3>
+                          <p className="text-zinc-500 text-xs">Voice narration</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">AI Voiceover</h3>
-                        <p className="text-zinc-500 text-xs">Voice narration</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('aiVoiceovers')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.aiVoiceovers?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.aiVoiceovers?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Generate natural voiceovers in multiple languages</p>
+                    <p className="text-zinc-400 text-sm mb-4">Generate natural voiceovers in multiple languages</p>
+                    {aiFeatures.aiVoiceovers?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.aiVoiceovers.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('aiVoiceovers', 'AI voiceovers')}
+                      disabled={isRunning.aiVoiceovers || !aiFeatures.aiVoiceovers?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.aiVoiceovers || !aiFeatures.aiVoiceovers?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 text-white"
+                      )}
+                    >
+                      {isRunning.aiVoiceovers ? (
+                        <span>Running Voiceovers...</span>
+                      ) : (
+                        <span>Run Voiceovers</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* AI Posters */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center">
-                        <Image className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center">
+                          <Image className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">AI Posters</h3>
+                          <p className="text-zinc-500 text-xs">Generate posters</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">AI Posters</h3>
-                        <p className="text-zinc-500 text-xs">Generate posters</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('aiPosters')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.aiPosters?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.aiPosters?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Generate and enhance movie posters with AI</p>
+                    <p className="text-zinc-400 text-sm mb-4">Generate and enhance movie posters with AI</p>
+                    {aiFeatures.aiPosters?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.aiPosters.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('aiPosters', 'AI posters')}
+                      disabled={isRunning.aiPosters || !aiFeatures.aiPosters?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.aiPosters || !aiFeatures.aiPosters?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white"
+                      )}
+                    >
+                      {isRunning.aiPosters ? (
+                        <span>Running Posters...</span>
+                      ) : (
+                        <span>Run Posters</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* Smart Search */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
-                        <Search className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+                          <Search className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Smart Search</h3>
+                          <p className="text-zinc-500 text-xs">AI-powered search</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Smart Search</h3>
-                        <p className="text-zinc-500 text-xs">AI-powered search</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('smartSearch')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.smartSearch?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.smartSearch?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Natural language search and discovery</p>
+                    <p className="text-zinc-400 text-sm mb-4">Natural language search and discovery</p>
+                    {aiFeatures.smartSearch?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.smartSearch.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('smartSearch', 'Smart search')}
+                      disabled={isRunning.smartSearch || !aiFeatures.smartSearch?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.smartSearch || !aiFeatures.smartSearch?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white"
+                      )}
+                    >
+                      {isRunning.smartSearch ? (
+                        <span>Running Search...</span>
+                      ) : (
+                        <span>Run Search</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* AI Chat Assistant */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                          <MessageSquare className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">AI Chat Assistant</h3>
+                          <p className="text-zinc-500 text-xs">Personal assistant</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">AI Chat Assistant</h3>
-                        <p className="text-zinc-500 text-xs">Personal assistant</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('aiChatAssistant')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.aiChatAssistant?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.aiChatAssistant?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Chat with AI for recommendations and help</p>
+                    <p className="text-zinc-400 text-sm mb-4">Chat with AI for recommendations and help</p>
+                    {aiFeatures.aiChatAssistant?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.aiChatAssistant.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('aiChatAssistant', 'AI chat assistant')}
+                      disabled={isRunning.aiChatAssistant || !aiFeatures.aiChatAssistant?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.aiChatAssistant || !aiFeatures.aiChatAssistant?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white"
+                      )}
+                    >
+                      {isRunning.aiChatAssistant ? (
+                        <span>Running Assistant...</span>
+                      ) : (
+                        <span>Run Assistant</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* Churn Prediction */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Churn Prediction</h3>
+                          <p className="text-zinc-500 text-xs">User retention</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Churn Prediction</h3>
-                        <p className="text-zinc-500 text-xs">User retention</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('churnPrediction')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.churnPrediction?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.churnPrediction?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Predict user churn and suggest retention actions</p>
+                    <p className="text-zinc-400 text-sm mb-4">Predict user churn and suggest retention actions</p>
+                    {aiFeatures.churnPrediction?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.churnPrediction.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('churnPrediction', 'Churn prediction')}
+                      disabled={isRunning.churnPrediction || !aiFeatures.churnPrediction?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.churnPrediction || !aiFeatures.churnPrediction?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white"
+                      )}
+                    >
+                      {isRunning.churnPrediction ? (
+                        <span>Running Prediction...</span>
+                      ) : (
+                        <span>Run Prediction</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* AI Recommendations */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 md:col-span-2 lg:col-span-3">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center">
-                        <Star className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center">
+                          <Star className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">AI Recommendations</h3>
+                          <p className="text-zinc-500 text-xs">Personalized suggestions</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">AI Recommendations</h3>
-                        <p className="text-zinc-500 text-xs">Personalized suggestions</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('aiRecommendations')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.aiRecommendations?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.aiRecommendations?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
+                    <p className="text-zinc-400 text-sm mb-4">Personalized suggestions for your users</p>
+                    {aiFeatures.aiRecommendations?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.aiRecommendations.lastRun).toLocaleString()}</p>
+                    )}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                       <div className="bg-zinc-800/50 rounded-xl p-3">
                         <p className="text-zinc-300 text-sm font-medium">Trending</p>
                       </div>
@@ -8982,87 +11399,270 @@ export default function AdminPage() {
                         <p className="text-zinc-300 text-sm font-medium">Top Rated</p>
                       </div>
                     </div>
+                    <button
+                      onClick={() => runAiFeature('aiRecommendations', 'AI recommendations')}
+                      disabled={isRunning.aiRecommendations || !aiFeatures.aiRecommendations?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.aiRecommendations || !aiFeatures.aiRecommendations?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-lime-600 to-green-600 hover:from-lime-700 hover:to-green-700 text-white"
+                      )}
+                    >
+                      {isRunning.aiRecommendations ? (
+                        <span>Running Recommendations...</span>
+                      ) : (
+                        <span>Run Recommendations</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* Download Features */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center">
-                        <Download className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center">
+                          <Download className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Download Features</h3>
+                          <p className="text-zinc-500 text-xs">Offline viewing</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Download Features</h3>
-                        <p className="text-zinc-500 text-xs">Offline viewing</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('downloadFeatures')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.downloadFeatures?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.downloadFeatures?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Offline download, encrypted, smart downloads and more</p>
+                    <p className="text-zinc-400 text-sm mb-4">Offline download, encrypted, smart downloads and more</p>
+                    {aiFeatures.downloadFeatures?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.downloadFeatures.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('downloadFeatures', 'Download features')}
+                      disabled={isRunning.downloadFeatures || !aiFeatures.downloadFeatures?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.downloadFeatures || !aiFeatures.downloadFeatures?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white"
+                      )}
+                    >
+                      {isRunning.downloadFeatures ? (
+                        <span>Running Download Setup...</span>
+                      ) : (
+                        <span>Run Setup</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* Android App */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                        <Smartphone className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                          <Smartphone className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Android App</h3>
+                          <p className="text-zinc-500 text-xs">Material You + Jetpack Compose</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Android App</h3>
-                        <p className="text-zinc-500 text-xs">Material You + Jetpack Compose</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('androidApp')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.androidApp?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.androidApp?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Modern Android app with tablet, foldable, Chromecast support</p>
+                    <p className="text-zinc-400 text-sm mb-4">Modern Android app with tablet, foldable, Chromecast support</p>
+                    {aiFeatures.androidApp?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.androidApp.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('androidApp', 'Android app')}
+                      disabled={isRunning.androidApp || !aiFeatures.androidApp?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.androidApp || !aiFeatures.androidApp?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                      )}
+                    >
+                      {isRunning.androidApp ? (
+                        <span>Running Setup...</span>
+                      ) : (
+                        <span>Run Setup</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* iOS App */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center">
-                        <Monitor className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center">
+                          <Monitor className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">iOS App</h3>
+                          <p className="text-zinc-500 text-xs">SwiftUI + Apple Design</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">iOS App</h3>
-                        <p className="text-zinc-500 text-xs">SwiftUI + Apple Design</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('iosApp')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.iosApp?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.iosApp?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">iOS app with SwiftUI, Dynamic Island, Widgets, Live Activities</p>
+                    <p className="text-zinc-400 text-sm mb-4">iOS app with SwiftUI, Dynamic Island, Widgets, Live Activities</p>
+                    {aiFeatures.iosApp?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.iosApp.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('iosApp', 'iOS app')}
+                      disabled={isRunning.iosApp || !aiFeatures.iosApp?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.iosApp || !aiFeatures.iosApp?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-slate-600 to-gray-600 hover:from-slate-700 hover:to-gray-700 text-white"
+                      )}
+                    >
+                      {isRunning.iosApp ? (
+                        <span>Running Setup...</span>
+                      ) : (
+                        <span>Run Setup</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* Android TV App */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
-                        <AppWindow className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+                          <AppWindow className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Android TV App</h3>
+                          <p className="text-zinc-500 text-xs">TV Optimized</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Android TV App</h3>
-                        <p className="text-zinc-500 text-xs">TV Optimized</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('androidTVApp')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.androidTVApp?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.androidTVApp?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Android TV app with remote-friendly UI and voice search</p>
+                    <p className="text-zinc-400 text-sm mb-4">Android TV app with remote-friendly UI and voice search</p>
+                    {aiFeatures.androidTVApp?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.androidTVApp.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('androidTVApp', 'Android TV app')}
+                      disabled={isRunning.androidTVApp || !aiFeatures.androidTVApp?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.androidTVApp || !aiFeatures.androidTVApp?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white"
+                      )}
+                    >
+                      {isRunning.androidTVApp ? (
+                        <span>Running Setup...</span>
+                      ) : (
+                        <span>Run Setup</span>
+                      )}
+                    </button>
                   </div>
 
                   {/* AI Metadata Cleanup */}
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
-                        <RefreshCw className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
+                          <RefreshCw className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">AI Metadata Cleanup</h3>
+                          <p className="text-zinc-500 text-xs">Metadata management</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">AI Metadata Cleanup</h3>
-                        <p className="text-zinc-500 text-xs">Metadata management</p>
-                      </div>
+                      <button
+                        onClick={() => toggleAiFeature('aiMetadataCleanup')}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
+                          aiFeatures.aiMetadataCleanup?.enabled ? 'bg-red-600' : 'bg-zinc-700'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
+                            aiFeatures.aiMetadataCleanup?.enabled ? 'right-1' : 'left-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <p className="text-zinc-400 text-sm">Clean and standardize content metadata</p>
+                    <p className="text-zinc-400 text-sm mb-4">Clean and standardize content metadata</p>
+                    {aiFeatures.aiMetadataCleanup?.lastRun && (
+                      <p className="text-zinc-500 text-xs mb-4">Last run: {new Date(aiFeatures.aiMetadataCleanup.lastRun).toLocaleString()}</p>
+                    )}
+                    <button
+                      onClick={() => runAiFeature('aiMetadataCleanup', 'AI metadata cleanup')}
+                      disabled={isRunning.aiMetadataCleanup || !aiFeatures.aiMetadataCleanup?.enabled}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors",
+                        isRunning.aiMetadataCleanup || !aiFeatures.aiMetadataCleanup?.enabled
+                          ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white"
+                      )}
+                    >
+                      {isRunning.aiMetadataCleanup ? (
+                        <span>Running Cleanup...</span>
+                      ) : (
+                        <span>Run Cleanup</span>
+                      )}
+                    </button>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {activeTab === 'herobanner' && (
+            {['default-hero', 'kids-hero', 'anime-hero'].includes(activeTab) && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
               >
+                {activeTab === 'default-hero' && (
+                  <>
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h2 className="text-3xl font-bold text-white">Hero Banner</h2>
@@ -9190,7 +11790,11 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+                  </>
+                )}
 
+                {activeTab === 'kids-hero' && (
+                  <>
                 <div className="flex items-center justify-between mt-10 mb-8">
                   <div>
                     <h3 className="text-2xl font-bold text-white">Kids Hero Banners</h3>
@@ -9308,7 +11912,11 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+                  </>
+                )}
 
+                {activeTab === 'anime-hero' && (
+                  <>
                 <div className="flex items-center justify-between mt-10 mb-8">
                   <div>
                     <h3 className="text-2xl font-bold text-white">Anime Hero Banners</h3>
@@ -9426,6 +12034,8 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+                  </>
+                )}
               </motion.div>
             )}
 
@@ -9862,6 +12472,47 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
+                    {/* Fanart.tv API Key */}
+                    <div className="bg-zinc-800/50 rounded-xl p-6 border border-zinc-700">
+                      <h4 className="text-white font-semibold mb-2">Fanart.tv API Key</h4>
+                      <p className="text-zinc-500 text-sm mb-4">
+                        Community-contributed HD logos, clearart, banners, posters, character art and disc art for movies and TV shows. Enriches scraping with HD logo and clearart assets.
+                      </p>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-zinc-400 mb-2 font-medium text-sm">Project / Personal API Key</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={externalApiKeys.fanartTv}
+                              onChange={(e) => setExternalApiKeys({ ...externalApiKeys, fanartTv: e.target.value })}
+                              placeholder="Get a Fanart.tv API key from https://fanart.tv/get-an-api-key/"
+                              className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                            />
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(externalApiKeys.fanartTv);
+                                showToast('Fanart.tv API key copied to clipboard!', 'success');
+                              }}
+                              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
+                            >
+                              <Copy className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex gap-3 flex-wrap">
+                          <a
+                            href="https://fanart.tv/get-an-api-key/"
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-medium transition-colors border border-zinc-700 text-sm"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Get Free Fanart.tv Key
+                          </a>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div className="mt-6">
                     <button
@@ -10048,6 +12699,15 @@ export default function AdminPage() {
                           </div>
                         </div>
                       </div>
+                      <div className="mt-5 flex justify-end">
+                        <button
+                          onClick={() => handleDeleteRegisteredUser(user.id, user.fullName)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete User
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -10168,8 +12828,15 @@ export default function AdminPage() {
                     <p className="text-zinc-500 mt-1">Monitor library coverage, publishing health, and content insights</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="px-4 py-2 rounded-xl border border-zinc-800 bg-zinc-900/60 text-zinc-400 text-sm">
-                      Live tracking data is not connected yet
+                    <div className={cn(
+                      "px-4 py-2 rounded-xl border text-sm",
+                      analyticsConnected 
+                        ? "border-emerald-800 bg-emerald-900/40 text-emerald-400" 
+                        : "border-zinc-800 bg-zinc-900/60 text-zinc-400"
+                    )}>
+                      {analyticsConnected 
+                        ? "Live tracking data connected" 
+                        : "Live tracking data is not connected yet"}
                     </div>
                   </div>
                 </div>
@@ -10179,6 +12846,13 @@ export default function AdminPage() {
                   <StatCard title="TV Footprint" value={totalEpisodes.toString()} change={`${totalSeasons} seasons`} icon={Tv} trend="up" />
                   <StatCard title="Genres Active" value={totalGenres.toString()} change={`${genreInsights.length} top clusters`} icon={Tags} trend="up" />
                   <StatCard title="Cast Indexed" value={totalCast.toString()} change={`${totalUsers} registered users`} icon={Users} trend="up" />
+                  {analyticsConnected && analyticsData?.activeUsers && (
+                    <>
+                      <StatCard title="Active Now" value={analyticsData.activeUsers.now.toString()} change="Real-time" icon={Activity} trend="up" />
+                      <StatCard title="Active Last Hour" value={analyticsData.activeUsers.lastHour.toString()} change="Recent activity" icon={Users} trend="up" />
+                      <StatCard title="Active Today" value={analyticsData.activeUsers.today.toString()} change="Daily active" icon={Users} trend="up" />
+                    </>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
@@ -10251,12 +12925,12 @@ export default function AdminPage() {
                             <div className="min-w-0">
                               <p className="text-white font-semibold truncate">{item.title}</p>
                               <p className="text-zinc-500 text-sm">
-                                {item.contentType} • {item.releaseYear || item.startYear || 'N/A'}
+                                {item.contentType} â€¢ {item.releaseYear || item.startYear || 'N/A'}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-yellow-400 font-semibold">★ {item.rating || 'N/A'}</p>
+                            <p className="text-yellow-400 font-semibold">â˜… {item.rating || 'N/A'}</p>
                             <p className="text-zinc-500 text-sm">{(item.genres || []).slice(0, 2).join(', ') || 'Uncategorized'}</p>
                           </div>
                         </div>
@@ -10358,6 +13032,14 @@ export default function AdminPage() {
                   </div>
                 </div>
               </motion.div>
+            )}
+
+            {activeTab === 'transcoding-jobs' && (
+              <TranscodingJobsPanel />
+            )}
+
+            {activeTab === 'transcoding-profiles' && (
+              <TranscodingProfilesPanel />
             )}
 
             {activeTab === 'subscriptions' && (
@@ -10493,131 +13175,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Parental Controls Section */}
-                <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8 mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-6">Parental Controls</h3>
-                  <div className="space-y-6">
-                    <div className="bg-zinc-800/50 rounded-xl p-6 border border-zinc-700">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="text-white font-medium">PIN Protection</h4>
-                          <p className="text-zinc-500 text-sm">Require PIN for restricted content</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            const newSettings = { ...adminParentalSettings, pinEnabled: !adminParentalSettings.pinEnabled };
-                            setAdminParentalSettings(newSettings);
-                          }}
-                          className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
-                            adminParentalSettings.pinEnabled ? 'bg-red-600' : 'bg-zinc-700'
-                          }`}
-                        >
-                          <div
-                            className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
-                              adminParentalSettings.pinEnabled ? 'right-1' : 'left-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="block text-zinc-400 mb-3 font-medium text-sm">
-                          Maximum Allowed Rating
-                        </label>
-                        <div className="flex flex-wrap gap-3">
-                          {['G', 'PG', 'PG-13', 'R', 'NC-17'].map((rating) => (
-                            <button
-                              key={rating}
-                              onClick={() => {
-                                setAdminParentalSettings({
-                                  ...adminParentalSettings,
-                                  maxAllowedRating: rating as any
-                                });
-                              }}
-                              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                                adminParentalSettings.maxAllowedRating === rating
-                                  ? 'bg-red-600 text-white'
-                                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                              }`}
-                            >
-                              {rating}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-zinc-800/50 rounded-xl p-6 border border-zinc-700">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="text-white font-medium">Kids Mode</h4>
-                          <p className="text-zinc-500 text-sm">Restrict to age-appropriate content only</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            const nextKidsMode = !adminParentalSettings.kidsModeEnabled;
-                            setAdminParentalSettings({
-                              ...adminParentalSettings,
-                              kidsModeEnabled: nextKidsMode,
-                              animeModeEnabled: nextKidsMode ? false : adminParentalSettings.animeModeEnabled
-                            });
-                          }}
-                          className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
-                            adminParentalSettings.kidsModeEnabled ? 'bg-red-600' : 'bg-zinc-700'
-                          }`}
-                        >
-                          <div
-                            className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
-                              adminParentalSettings.kidsModeEnabled ? 'right-1' : 'left-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="bg-zinc-800/50 rounded-xl p-6 border border-zinc-700">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="text-white font-medium">Anime Mode</h4>
-                          <p className="text-zinc-500 text-sm">Switch the app header and home experience to Anime mode</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            const nextAnimeMode = !adminParentalSettings.animeModeEnabled;
-                            setAdminParentalSettings({
-                              ...adminParentalSettings,
-                              animeModeEnabled: nextAnimeMode,
-                              kidsModeEnabled: nextAnimeMode ? false : adminParentalSettings.kidsModeEnabled
-                            });
-                          }}
-                          className={`w-14 h-8 rounded-full relative cursor-pointer transition-all ${
-                            adminParentalSettings.animeModeEnabled ? 'bg-fuchsia-600' : 'bg-zinc-700'
-                          }`}
-                        >
-                          <div
-                            className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${
-                              adminParentalSettings.animeModeEnabled ? 'right-1' : 'left-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <button
-                      onClick={() => {
-                        saveParentalControlSettings(adminParentalSettings);
-                        showToast('Parental control settings saved successfully!', 'success');
-                      }}
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
-                    >
-                      <Save className="w-5 h-5" />
-                      Save Parental Settings
-                    </button>
-                  </div>
-                </div>
-
                 {/* General Settings */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                   <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
@@ -10685,7 +13242,6 @@ export default function AdminPage() {
                             <option value="home">Home</option>
                             <option value="movies">Movies</option>
                             <option value="tv">TV Shows</option>
-                            <option value="livetv">Live TV</option>
                           </select>
                         </div>
                       </div>

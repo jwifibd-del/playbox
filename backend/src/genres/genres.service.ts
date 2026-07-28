@@ -27,10 +27,12 @@ export class GenresService {
     return this.genresRepository.findOneBy({ name });
   }
 
-  async create(createGenreDto: CreateGenreDto & { tmdbId: number }): Promise<Genre> {
-    const existingGenre = await this.genresRepository.findOneBy({ tmdbId: createGenreDto.tmdbId });
-    if (existingGenre) {
-      return existingGenre;
+  async create(createGenreDto: CreateGenreDto): Promise<Genre> {
+    if (createGenreDto.tmdbId !== undefined && createGenreDto.tmdbId !== null) {
+      const existingGenre = await this.genresRepository.findOneBy({ tmdbId: createGenreDto.tmdbId });
+      if (existingGenre) {
+        return existingGenre;
+      }
     }
 
     const genre = this.genresRepository.create(createGenreDto);
@@ -43,8 +45,9 @@ export class GenresService {
       throw new NotFoundException('Genre not found');
     }
 
-    if (updateGenreDto.name) genre.name = updateGenreDto.name;
-    if (updateGenreDto.description) genre.description = updateGenreDto.description;
+    if (updateGenreDto.name !== undefined) genre.name = updateGenreDto.name;
+    if (updateGenreDto.description !== undefined) genre.description = updateGenreDto.description;
+    if (updateGenreDto.tmdbId !== undefined) genre.tmdbId = updateGenreDto.tmdbId;
 
     return this.genresRepository.save(genre);
   }

@@ -70,38 +70,83 @@ type VideoWithOptionalAudioTracks = HTMLVideoElement & {
   audioTracks?: ArrayLike<NativeAudioTrack>;
 };
 
-function getYouTubeEmbedUrl(url: string): string | null {
+function isHlsStreamUrl(src: string, sourceType?: MediaSourceType): boolean {
+  if (sourceType === 'HLS' || sourceType === 'M3U8') return true;
+  try {
+    const url = new URL(src);
+    if (url.pathname.toLowerCase().endsWith('.m3u8')) return true;
+    return url.searchParams.toString().toLowerCase().includes('.m3u8');
+  } catch {
+    return src.toLowerCase().includes('.m3u8');
+  }
+}
+
+function buildHlsProxyUrl(src: string): string {
+  return `/api/hls-proxy?u=${encodeURIComponent(src)}`;
+}
+
+function getYouTubeEmbedUrl(url: string, options?: { lang?: string | null }): string | null {
   try {
     const parsedUrl = new URL(url);
     const hostname = parsedUrl.hostname.toLowerCase();
-
-    if (hostname.includes('youtu.be')) {
-      const videoId = parsedUrl.pathname.replace('/', '');
-      return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` : null;
+    const params = new URLSearchParams({
+      autoplay: '1',
+      rel: '0',
+      playsinline: '1',
+      mute: '0',
+      enablejsapi: '1',
+      modestbranding: '1',
+      fs: '1',
+      controls: '1',
+    });
+    if (options?.lang && options.lang !== 'und') {
+      const iso = String(options.lang).toLowerCase();
+      params.set('hl', iso);            // YouTube interface language
+      params.set('cc_lang_pref', iso);  // Preferred subtitle/audio language
+      params.set('cc_load_policy', '1');
     }
-
-    if (hostname.includes('youtube.com')) {
-      if (parsedUrl.pathname.startsWith('/embed/')) {
-        return `${parsedUrl.origin}${parsedUrl.pathname}${parsedUrl.search || '?autoplay=1&rel=0'}`;
+    try {
+      if (typeof window !== 'undefined' && window.location?.origin) {
+        params.set('origin', window.location.origin);
       }
-
-      const videoId = parsedUrl.searchParams.get('v');
-      return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` : null;
+    } catch {
+      // ignore window errors in non-browser environments
     }
+
+    let videoId: string | null = null;
+    if (hostname.includes('youtu.be')) {
+      videoId = parsedUrl.pathname.replace('/', '');
+    } else if (hostname.includes('youtube.com')) {
+      if (parsedUrl.pathname.startsWith('/embed/')) {
+        const parts = parsedUrl.pathname.replace('/embed/', '').split('/');
+        videoId = parts[0];
+      } else {
+        videoId = parsedUrl.searchParams.get('v');
+      }
+    }
+
+    if (!videoId) {
+      // If it's already an embed URL, just reapply params
+      if (hostname.includes('youtube.com') && parsedUrl.pathname.startsWith('/embed/')) {
+        return `${parsedUrl.origin}${parsedUrl.pathname}?${params.toString()}`;
+      }
+      return null;
+    }
+
+    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
   } catch {
     return null;
   }
-
-  return null;
 }
 
 function getExternalSource(
   url: string,
   sourceType?: VideoPlayerProps['sourceType'],
+  options?: { lang?: string | null },
 ): { type: ExternalPlayerType; url: string } | null {
   if (!url) return null;
 
-  const youtubeUrl = getYouTubeEmbedUrl(url);
+  const youtubeUrl = getYouTubeEmbedUrl(url, options);
   if (sourceType === 'YouTube URL' || youtubeUrl) {
     return { type: 'youtube', url: youtubeUrl || url };
   }
@@ -167,12 +212,15 @@ export default function VideoPlayer({
   autoRefreshInterval = 300, // 5 minutes default
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const dashRef = useRef<any | null>(null);
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
   const miniTransferTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioToastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const resumeTimeRef = useRef(0);
+  const hlsRecoveryAttemptsRef = useRef(0);
   const isMiniPlayer = mode === 'mini';
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -198,12 +246,152 @@ export default function VideoPlayer({
   const [showAudioTrackMenu, setShowAudioTrackMenu] = useState(false);
   const [currentAudioTrack, setCurrentAudioTrack] = useState<string>('default');
   const [availableAudioTracks, setAvailableAudioTracks] = useState<MediaAudioTrack[]>([]);
+  const [hasNativeAudioSwitching, setHasNativeAudioSwitching] = useState(false);
+  const [audioToast, setAudioToast] = useState<{ label: string; lang: string; mode: 'youtube' | 'native' | 'metadata' } | null>(null);
   const [showCastMenu, setShowCastMenu] = useState(false);
   const [isAirPlayAvailable, setIsAirPlayAvailable] = useState(false);
   const [isCasting, setIsCasting] = useState(false);
   const [castTo, setCastTo] = useState<'airplay' | 'chromecast' | null>(null);
   const [showMiniTransferNotice, setShowMiniTransferNotice] = useState(false);
-  const externalSource = useMemo(() => getExternalSource(src, sourceType), [src, sourceType]);
+  const [hlsError, setHlsError] = useState<string | null>(null);
+  const [playbackAttempt, setPlaybackAttempt] = useState(0);
+  const [useHlsProxy, setUseHlsProxy] = useState(false);
+  const [isMetadataLoaded, setIsMetadataLoaded] = useState(false);
+  const [isInPictureInPicture, setIsInPictureInPicture] = useState(false);
+  const currentSelectedAudioTrack = useMemo<MediaAudioTrack | null>(
+    () => availableAudioTracks.find((t) => t.id === currentAudioTrack) ?? null,
+    [availableAudioTracks, currentAudioTrack],
+  );
+  const externalSource = useMemo(
+    () => getExternalSource(src, sourceType, { lang: currentSelectedAudioTrack?.lang ?? null }),
+    [src, sourceType, currentSelectedAudioTrack],
+  );
+  const isYouTubePlayback = Boolean(externalSource?.type === 'youtube' || sourceType === 'YouTube URL');
+
+  const isVideoMetadataReady = (video: HTMLVideoElement): boolean => {
+    return video.readyState >= 1 || Number.isFinite(video.duration) && video.duration > 0;
+  };
+
+  const waitForMetadata = (video: HTMLVideoElement): Promise<void> => {
+    if (isVideoMetadataReady(video)) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('Timeout waiting for video metadata'));
+      }, 10000);
+
+      const onLoadedMetadata = () => {
+        cleanup();
+        resolve();
+      };
+
+      const onError = () => {
+        cleanup();
+        reject(new Error('Video error while waiting for metadata'));
+      };
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+        video.removeEventListener('error', onError);
+      };
+
+      video.addEventListener('loadedmetadata', onLoadedMetadata);
+      video.addEventListener('error', onError);
+    });
+  };
+
+  const getHlsErrorMessage = (data: { type?: string; details?: string }): string => {
+    switch (data.details) {
+      case 'manifestLoadError':
+      case 'manifestLoadTimeOut':
+        return 'This live channel is unavailable right now.';
+      case 'levelLoadError':
+      case 'levelLoadTimeOut':
+      case 'audioTrackLoadError':
+      case 'audioTrackLoadTimeOut':
+      case 'fragLoadError':
+      case 'fragLoadTimeOut':
+        return 'The stream stopped responding while loading.';
+      default:
+        break;
+    }
+
+    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+      return 'Network error: Could not connect to stream.';
+    }
+
+    if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+      return 'Media error: Could not decode stream.';
+    }
+
+    return 'Failed to load stream.';
+  };
+
+  const handleHlsError = (player: Hls, data: { fatal: boolean; type: string; details?: string }) => {
+    console.error('HLS error:', data);
+
+    const isBufferStall =
+      data.details === 'bufferStalledError' ||
+      data.details === 'bufferFullError' ||
+      data.details === 'bufferSeekOverHole' ||
+      data.details === 'bufferNudgeOnStall';
+
+    const isRecoverableNetworkError =
+      (data.fatal || isBufferStall) &&
+      (data.type === Hls.ErrorTypes.NETWORK_ERROR ||
+        data.details?.includes('LoadError') ||
+        data.details?.includes('LoadTimeOut'));
+
+    if (isRecoverableNetworkError && !useHlsProxy && isHlsStreamUrl(src, sourceType)) {
+      setHlsError(null);
+      setUseHlsProxy(true);
+      setPlaybackAttempt((currentAttempt) => currentAttempt + 1);
+      return;
+    }
+
+    if (isBufferStall && useHlsProxy && isHlsStreamUrl(src, sourceType)) {
+      if (hlsRecoveryAttemptsRef.current < 1) {
+        hlsRecoveryAttemptsRef.current += 1;
+        setPlaybackAttempt((currentAttempt) => currentAttempt + 1);
+        return;
+      }
+    }
+
+    const errorMessage = getHlsErrorMessage(data);
+
+    if (data.type === Hls.ErrorTypes.MEDIA_ERROR && data.fatal) {
+      if (hlsRecoveryAttemptsRef.current < 1) {
+        hlsRecoveryAttemptsRef.current += 1;
+        player.recoverMediaError();
+        return;
+      }
+    }
+
+    if (data.fatal) {
+      player.stopLoad();
+    }
+
+    setHlsError(errorMessage);
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isHlsStreamUrl(src, sourceType)) {
+      setUseHlsProxy(false);
+      return;
+    }
+    try {
+      const target = new URL(src);
+      const isMixedContent = window.location.protocol === 'https:' && target.protocol === 'http:';
+      const isCrossOrigin = target.origin !== window.location.origin;
+      setUseHlsProxy(isMixedContent || isCrossOrigin);
+    } catch {
+      setUseHlsProxy(false);
+    }
+  }, [src, sourceType]);
 
   // Load bookmarks from localStorage
   useEffect(() => {
@@ -250,16 +438,78 @@ export default function VideoPlayer({
     return () => clearInterval(interval);
   }, [videoId]);
 
-  // Load audio tracks
+  // Load audio tracks from prop (declared metadata for current source).
+  // If native audio tracks are also present, cross-reference and carry hlsIndex through.
   useEffect(() => {
+    const nativeTracks =
+      (videoRef.current as VideoWithOptionalAudioTracks | null)?.audioTracks ?? null;
+    const nativeCount = nativeTracks ? nativeTracks.length : 0;
+
+    if (nativeCount > 1) {
+      setHasNativeAudioSwitching(true);
+    }
+
     if (audioTracks.length === 0) {
+      if (nativeTracks && nativeTracks.length > 0 && availableAudioTracks.length === 0) {
+        const mapped = mapNativeAudioTracks(videoRef.current as HTMLVideoElement);
+        setAvailableAudioTracks(mapped);
+        if (mapped.length > 0) {
+          const firstEnabled =
+            mapped.find((t) => {
+              const idx = typeof t.hlsIndex === 'number' ? t.hlsIndex : -1;
+              return idx >= 0 && nativeTracks[idx]?.enabled;
+            }) ?? mapped[0];
+          setCurrentAudioTrack(firstEnabled.id);
+        }
+      }
       return;
     }
 
-    setAvailableAudioTracks(audioTracks);
-    const defaultTrack = audioTracks.find((track) => track.isDefault) || audioTracks[0];
+    const mergedTracks = audioTracks.map((track, idx) => {
+      if (typeof track.hlsIndex === 'number') {
+        return track;
+      }
+      let nativeIndex: number | undefined;
+      if (nativeTracks && nativeTracks.length > 0) {
+        for (let n = 0; n < nativeTracks.length; n += 1) {
+          const nt = nativeTracks[n];
+          if (!nt) continue;
+          const sameLang = track.lang && nt.language && track.lang.toLowerCase() === nt.language.toLowerCase();
+          const sameLabel = nt.label && track.label.toLowerCase() === String(nt.label).toLowerCase();
+          const fallbackSameIdx = idx === n;
+          if (sameLang || sameLabel || fallbackSameIdx) {
+            nativeIndex = n;
+            break;
+          }
+        }
+      }
+      return { ...track, hlsIndex: nativeIndex };
+    });
+
+    setAvailableAudioTracks(mergedTracks);
+    const defaultTrack =
+      mergedTracks.find((track) => track.isDefault && track.id === currentAudioTrack) ||
+      mergedTracks.find((track) => track.isDefault) ||
+      mergedTracks[0];
     if (defaultTrack) {
-      setCurrentAudioTrack(defaultTrack.id);
+      setCurrentAudioTrack((prev) => {
+        const alreadySelected =
+          prev && mergedTracks.some((t) => t.id === prev);
+        return alreadySelected ? prev : defaultTrack.id;
+      });
+      // Try to immediately switch the native audio track to the default
+      // so the video element selection reflects the declared metadata.
+      if (typeof defaultTrack.hlsIndex === 'number' && videoRef.current) {
+        const vTracks = (videoRef.current as VideoWithOptionalAudioTracks).audioTracks;
+        if (vTracks && vTracks.length > defaultTrack.hlsIndex) {
+          for (let i = 0; i < vTracks.length; i += 1) {
+            const vt = vTracks[i];
+            if (vt) vt.enabled = i === defaultTrack.hlsIndex;
+          }
+        }
+      } else if (hlsRef.current && typeof defaultTrack.hlsIndex === 'number') {
+        hlsRef.current.audioTrack = defaultTrack.hlsIndex;
+      }
     }
   }, [audioTracks]);
 
@@ -291,6 +541,14 @@ export default function VideoPlayer({
   }, [showMiniTransferNotice]);
 
   useEffect(() => {
+    return () => {
+      if (audioToastTimeoutRef.current) {
+        clearTimeout(audioToastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video || externalSource) return;
 
@@ -319,6 +577,12 @@ export default function VideoPlayer({
       video.removeEventListener('canplay', applyResumeTime);
     };
   }, [externalSource, src]);
+
+  useEffect(() => {
+    setHlsError(null);
+    hlsRecoveryAttemptsRef.current = 0;
+    setIsMetadataLoaded(false);
+  }, [src, sourceType, playbackAttempt]);
 
   // Skip Intro/Credits logic
   useEffect(() => {
@@ -364,14 +628,23 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video || externalSource) return;
 
-    if (Hls.isSupported() && src.endsWith('.m3u8')) {
+    const isHlsStream = isHlsStreamUrl(src, sourceType);
+    const resolvedSrc = isHlsStream && useHlsProxy ? buildHlsProxyUrl(src) : src;
+
+    if (Hls.isSupported() && isHlsStream) {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 60 * 1000 * 1000,
+        startLevel: -1,
+        debug: false,
       });
       hlsRef.current = hls;
+      hlsRecoveryAttemptsRef.current = 0;
       
-      hls.loadSource(src);
+      hls.loadSource(resolvedSrc);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -382,6 +655,8 @@ export default function VideoPlayer({
           name: level.name,
           level: index
         })));
+        setHlsError(null);
+        hlsRecoveryAttemptsRef.current = 0;
         if (autoplay) {
           video.play().catch(() => { /* Autoplay may be blocked */ });
         }
@@ -394,6 +669,7 @@ export default function VideoPlayer({
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
         const nextTracks = mapHlsAudioTracks(data.audioTracks);
         if (nextTracks.length > 0) {
+          setHasNativeAudioSwitching(nextTracks.length > 1);
           setAvailableAudioTracks(nextTracks);
           const selectedTrack = nextTracks[hls.audioTrack] || nextTracks.find((track) => track.isDefault) || nextTracks[0];
           if (selectedTrack) {
@@ -410,19 +686,14 @@ export default function VideoPlayer({
       });
 
       hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              console.error('HLS network error, trying to recover');
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              console.error('HLS media error, trying to recover');
-              hls.recoverMediaError();
-              break;
-          }
-        }
+        handleHlsError(hls, data);
       });
+    } else if (isHlsStream) {
+      // Native HLS support (Safari, iOS, etc.)
+      video.src = resolvedSrc;
+      if (autoplay) {
+        video.play().catch(() => { /* Autoplay may be blocked */ });
+      }
     } else if (src.endsWith('.mpd')) {
       (async () => {
         const dashjs = await import('dashjs');
@@ -433,46 +704,59 @@ export default function VideoPlayer({
     } else {
       const nativeTracks = mapNativeAudioTracks(video);
       if (nativeTracks.length > 0) {
-        setAvailableAudioTracks(nativeTracks);
-        const selectedTrack = nativeTracks.find((track) => track.isDefault) || nativeTracks[0];
-        if (selectedTrack) {
-          setCurrentAudioTrack(selectedTrack.id);
+        setHasNativeAudioSwitching(nativeTracks.length > 1);
+        // Merge with prop-declared tracks (declared metadata wins for labels)
+        if (audioTracks && audioTracks.length > 0) {
+          const merged = audioTracks.map((declared, i) => {
+            const native = nativeTracks.find((t) => {
+              const idx = typeof t.hlsIndex === 'number' ? t.hlsIndex : -1;
+              return idx === i || (t.lang && declared.lang && t.lang.toLowerCase() === declared.lang.toLowerCase());
+            });
+            return { ...declared, hlsIndex: native?.hlsIndex ?? (i < nativeTracks.length ? i : declared.hlsIndex) };
+          });
+          setAvailableAudioTracks(merged);
+          const defaultTrack = merged.find((t) => t.isDefault) ?? merged[0];
+          if (defaultTrack) setCurrentAudioTrack(defaultTrack.id);
+        } else {
+          setAvailableAudioTracks(nativeTracks);
+          const selectedTrack = nativeTracks.find((track) => track.isDefault) || nativeTracks[0];
+          if (selectedTrack) {
+            setCurrentAudioTrack(selectedTrack.id);
+          }
         }
       }
     }
 
     // Event listeners
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
-    const handleLoadedMetadata = () => setDuration(video.duration);
+    // Note: play/pause/timeupdate/loadedmetadata/ended are handled via JSX props on the video element
+    // to avoid duplicate handler invocations. Only attach addEventListener for events without JSX equivalents.
     const handleVolumeChange = () => {
       setVolume(video.volume);
       setIsMuted(video.muted);
     };
     const handleRateChange = () => setPlaybackRate(video.playbackRate);
+    const handleEnterPiP = () => setIsInPictureInPicture(true);
+    const handleLeavePiP = () => setIsInPictureInPicture(false);
 
-    video.addEventListener('play', handlePlay);
-    video.addEventListener('pause', handlePause);
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('volumechange', handleVolumeChange);
     video.addEventListener('ratechange', handleRateChange);
+    video.addEventListener('enterpictureinpicture', handleEnterPiP);
+    video.addEventListener('leavepictureinpicture', handleLeavePiP);
 
     return () => {
-      video.removeEventListener('play', handlePlay);
-      video.removeEventListener('pause', handlePause);
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('volumechange', handleVolumeChange);
       video.removeEventListener('ratechange', handleRateChange);
+      video.removeEventListener('enterpictureinpicture', handleEnterPiP);
+      video.removeEventListener('leavepictureinpicture', handleLeavePiP);
       hlsRef.current?.destroy();
+      hlsRef.current = null;
       dashRef.current?.reset();
+      dashRef.current = null;
       if (autoRefreshTimerRef.current) {
         clearInterval(autoRefreshTimerRef.current);
       }
     };
-  }, [audioTracks, externalSource, src, autoplay, drmConfig, enableAutoRefresh, autoRefreshInterval]);
+  }, [audioTracks, externalSource, src, autoplay, drmConfig, enableAutoRefresh, autoRefreshInterval, sourceType, playbackAttempt, useHlsProxy]);
 
   // Auto-refresh for streams
   useEffect(() => {
@@ -484,14 +768,16 @@ export default function VideoPlayer({
 
       const currentTime = video.currentTime;
       const wasPlaying = !video.paused;
+      const isHlsStream = isHlsStreamUrl(src, sourceType);
+      const resolvedSrc = isHlsStream && useHlsProxy ? buildHlsProxyUrl(src) : src;
 
       if (hlsRef.current) {
-        hlsRef.current.loadSource(src);
+        hlsRef.current.loadSource(resolvedSrc);
         hlsRef.current.attachMedia(video);
       } else if (dashRef.current) {
         dashRef.current.attachSource(src);
       } else {
-        video.src = src;
+        video.src = resolvedSrc;
       }
 
       if (!isNaN(currentTime)) {
@@ -510,7 +796,7 @@ export default function VideoPlayer({
         clearInterval(autoRefreshTimerRef.current);
       }
     };
-  }, [enableAutoRefresh, autoRefreshInterval, src]);
+  }, [enableAutoRefresh, autoRefreshInterval, src, sourceType, useHlsProxy]);
 
   // Play/Pause
   const togglePlay = () => {
@@ -555,11 +841,31 @@ export default function VideoPlayer({
   // Picture in Picture
   const togglePiP = async () => {
     try {
-      if (document.pictureInPictureElement) {
+      if (isInPictureInPicture || document.pictureInPictureElement) {
         await document.exitPictureInPicture();
-      } else if (videoRef.current) {
-        await videoRef.current.requestPictureInPicture();
+        return;
       }
+
+      const video = videoRef.current;
+      if (!video) {
+        return;
+      }
+
+      if (!isVideoMetadataReady(video)) {
+        try {
+          await waitForMetadata(video);
+        } catch (waitError) {
+          console.error('PiP: Video metadata not ready in time:', waitError);
+          return;
+        }
+      }
+
+      if (video.disablePictureInPicture) {
+        console.error('PiP: Picture in Picture is disabled for this video');
+        return;
+      }
+
+      await video.requestPictureInPicture();
     } catch (error) {
       console.error('PiP error:', error);
     }
@@ -732,28 +1038,71 @@ export default function VideoPlayer({
   // Audio track selection
   const selectAudioTrack = (trackId: string) => {
     const selectedTrack = availableAudioTracks.find((track) => track.id === trackId);
-    if (!selectedTrack) {
-      setCurrentAudioTrack(trackId);
-      setShowAudioTrackMenu(false);
-      return;
-    }
 
-    if (hlsRef.current && typeof selectedTrack.hlsIndex === 'number') {
-      hlsRef.current.audioTrack = selectedTrack.hlsIndex;
-    } else if (videoRef.current) {
-      const nativeTracks = (videoRef.current as VideoWithOptionalAudioTracks).audioTracks;
-      if (nativeTracks && typeof selectedTrack.hlsIndex === 'number') {
-        for (let index = 0; index < nativeTracks.length; index += 1) {
-          const nativeTrack = nativeTracks[index];
-          if (nativeTrack) {
-            nativeTrack.enabled = index === selectedTrack.hlsIndex;
+    if (selectedTrack) {
+      const effectiveIndex: number | undefined =
+        typeof selectedTrack.hlsIndex === 'number' ? selectedTrack.hlsIndex : undefined;
+      if (hlsRef.current && typeof effectiveIndex === 'number') {
+        hlsRef.current.audioTrack = effectiveIndex;
+      } else if (videoRef.current) {
+        const nativeTracks = (videoRef.current as VideoWithOptionalAudioTracks).audioTracks;
+        if (nativeTracks && nativeTracks.length > 0) {
+          const declaredIdx =
+            typeof effectiveIndex === 'number'
+              ? effectiveIndex
+              : availableAudioTracks.findIndex((t) => t.id === trackId);
+          const idxToUse =
+            declaredIdx >= 0 && declaredIdx < nativeTracks.length ? declaredIdx : 0;
+          for (let index = 0; index < nativeTracks.length; index += 1) {
+            const nativeTrack = nativeTracks[index];
+            if (nativeTrack) {
+              nativeTrack.enabled = index === idxToUse;
+            }
           }
+        }
+      }
+
+      // YouTube iframe: send postMessage commands to the embed (captions/language)
+      if (isYouTubePlayback && iframeRef.current?.contentWindow) {
+        const langCode = String(selectedTrack.lang || 'en').toLowerCase();
+        try {
+          const commands: Array<[string, unknown[]]> = [
+            ['setOption', ['captions', 'track', { languageCode: langCode }]],
+            ['setOption', ['captions', 'module', { language: langCode }]],
+          ];
+          commands.forEach(([func, args]) => {
+            try {
+              iframeRef.current?.contentWindow?.postMessage(
+                JSON.stringify({ event: 'command', func, args: args ?? [] }),
+                'https://www.youtube.com',
+              );
+            } catch {
+              // ignore cross-origin posting failures
+            }
+          });
+        } catch {
+          // ignore postMessage errors
         }
       }
     }
 
     setCurrentAudioTrack(trackId);
     setShowAudioTrackMenu(false);
+
+    // Show a visible on-screen confirmation toast so user KNOWS the switch happened
+    const label = selectedTrack?.label || trackId;
+    const lang = selectedTrack?.lang || 'und';
+    const mode: 'youtube' | 'native' | 'metadata' = isYouTubePlayback
+      ? 'youtube'
+      : hasNativeAudioSwitching
+      ? 'native'
+      : 'metadata';
+    setAudioToast({ label, lang, mode });
+
+    if (audioToastTimeoutRef.current) {
+      clearTimeout(audioToastTimeoutRef.current);
+    }
+    audioToastTimeoutRef.current = setTimeout(() => setAudioToast(null), 2500);
   };
 
   const sendToMiniPlayer = () => {
@@ -806,12 +1155,17 @@ export default function VideoPlayer({
     setCastTo('chromecast');
     setShowCastMenu(false);
     // In a real implementation, we'd initialize the Cast SDK here
-    console.log('Chromecast selected');
   };
 
   const stopCasting = () => {
     setIsCasting(false);
     setCastTo(null);
+  };
+
+  const retryHlsStream = () => {
+    setHlsError(null);
+    hlsRecoveryAttemptsRef.current = 0;
+    setPlaybackAttempt((currentAttempt) => currentAttempt + 1);
   };
 
   const formatTime = (seconds: number): string => {
@@ -836,14 +1190,36 @@ export default function VideoPlayer({
   const handleLoadedMetadata = () => {
     if (!videoRef.current) return;
     setDuration(videoRef.current.duration);
+    setIsMetadataLoaded(true);
 
     if (!hlsRef.current) {
       const nativeTracks = mapNativeAudioTracks(videoRef.current);
+      const nativeHasSwitching = nativeTracks.length > 1;
       if (nativeTracks.length > 0) {
-        setAvailableAudioTracks(nativeTracks);
-        const selectedTrack = nativeTracks.find((track) => track.isDefault) || nativeTracks[0];
-        if (selectedTrack) {
-          setCurrentAudioTrack(selectedTrack.id);
+        setHasNativeAudioSwitching(nativeHasSwitching || hasNativeAudioSwitching);
+        // Merge with prop-declared tracks (declared metadata wins for labels)
+        if (audioTracks && audioTracks.length > 0) {
+          const merged = audioTracks.map((declared, i) => {
+            const native = nativeTracks.find((t) => {
+              const idx = typeof t.hlsIndex === 'number' ? t.hlsIndex : -1;
+              return idx === i || (t.lang && declared.lang && t.lang.toLowerCase() === declared.lang.toLowerCase());
+            });
+            return { ...declared, hlsIndex: native?.hlsIndex ?? (i < nativeTracks.length ? i : declared.hlsIndex) };
+          });
+          setAvailableAudioTracks(merged);
+          setCurrentAudioTrack((prev) => {
+            if (prev && merged.some((t) => t.id === prev)) return prev;
+            return (merged.find((t) => t.isDefault) ?? merged[0])?.id ?? prev;
+          });
+        } else {
+          setAvailableAudioTracks(nativeTracks);
+          const selectedTrack = nativeTracks.find((track) => track.isDefault) || nativeTracks[0];
+          if (selectedTrack) {
+            setCurrentAudioTrack((prev) => {
+              const alreadyOk = prev && nativeTracks.some((t) => t.id === prev);
+              return alreadyOk ? prev : selectedTrack.id;
+            });
+          }
         }
       }
     }
@@ -902,12 +1278,76 @@ export default function VideoPlayer({
 
         <div className="relative aspect-video w-full bg-black">
           <iframe
+            key={`${externalSource.url}::${currentSelectedAudioTrack?.lang ?? 'und'}`}
+            ref={(el) => {
+              iframeRef.current = el;
+            }}
             src={externalSource.url}
             title={title || 'PlayFlix Video Player'}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
+            onLoad={() => {
+              // Re-fire postMessage commands when iframe finishes reloading
+              // with new language params so the YT embed picks them up immediately.
+              if (isYouTubePlayback && iframeRef.current?.contentWindow) {
+                const lang = currentSelectedAudioTrack?.lang || 'en';
+                const langCode = String(lang).toLowerCase();
+                try {
+                  const commands: Array<[string, unknown[]]> = [
+                    ['setOption', ['captions', 'track', { languageCode: langCode }]],
+                    ['setOption', ['captions', 'module', { language: langCode }]],
+                  ];
+                  commands.forEach(([func, args]) => {
+                    try {
+                      iframeRef.current?.contentWindow?.postMessage(
+                        JSON.stringify({ event: 'command', func, args: args ?? [] }),
+                        'https://www.youtube.com',
+                      );
+                    } catch {
+                      // ignore
+                    }
+                  });
+                } catch {
+                  // ignore
+                }
+              }
+            }}
             className="absolute inset-0 h-full w-full"
           />
+          {audioToast && (
+            <div
+              className="pointer-events-none absolute top-4 left-1/2 z-20 -translate-x-1/2 animate-[slideDownFade_0.3s_ease-out]"
+              role="status"
+            >
+              <div className="flex items-center gap-2 rounded-full border border-red-500/30 bg-zinc-900/85 px-4 py-2 shadow-2xl backdrop-blur-xl">
+                <svg className="h-4 w-4 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V6H13c-.26 2.07-.93 4.04-1.99 5.72L8.2 8.96l-1.46 1.46L11.45 15l1.42.07zm8.29-3.95l2.86-2.86-1.43-1.43-2.86 2.86-2.86-2.86-1.43 1.43 2.86 2.86-2.86 2.86 1.43 1.43 2.86-2.86 2.86 2.86 1.43-1.43-2.86-2.86zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                </svg>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-semibold text-white">Audio</p>
+                  <p className="text-sm text-zinc-100">{audioToast.label}</p>
+                  <span className="rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
+                    {audioToast.lang}
+                  </span>
+                  {audioToast.mode === 'youtube' && (
+                    <span className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-300/90">
+                      YouTube
+                    </span>
+                  )}
+                  {audioToast.mode === 'native' && (
+                    <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300/90">
+                      Live
+                    </span>
+                  )}
+                  {audioToast.mode === 'metadata' && (
+                    <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300/90">
+                      Metadata
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -919,35 +1359,64 @@ export default function VideoPlayer({
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
-      <video
-        ref={videoRef}
-        src={src}
-        poster={poster}
-        className="w-full h-full object-contain"
-        onClick={togglePlay}
-        autoPlay={autoplay}
-        playsInline
-        onLoadedMetadata={handleLoadedMetadata}
-        onTimeUpdate={handleVideoTimeUpdate}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => setIsPlaying(false)}
-        onError={(e) => console.error('Video error:', e)}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {subtitles.map((sub, i) => (
-          <track
-            key={i}
-            label={sub.label}
-            kind="subtitles"
-            srcLang={sub.lang}
-            src={sub.src}
-            default={i === 0}
-          />
-        ))}
-      </video>
+      {hlsError ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-black/90">
+          <div className="text-center max-w-md">
+            <svg className="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h3 className="text-white text-xl font-semibold mb-2">Stream Error</h3>
+            <p className="text-zinc-400 mb-6">{hlsError}</p>
+            <button
+              onClick={retryHlsStream}
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Retry Stream
+            </button>
+          </div>
+        </div>
+      ) : (
+        (() => {
+          const isHlsStream = isHlsStreamUrl(src, sourceType);
+          const resolvedSrc = isHlsStream && useHlsProxy ? buildHlsProxyUrl(src) : src;
+          const shouldSetSrc = !isHlsStream || !Hls.isSupported();
+          return (
+            <video
+              key={`video-${videoId}-${playbackAttempt}`}
+              ref={videoRef}
+              {...(shouldSetSrc ? { src: resolvedSrc } : {})}
+              poster={poster}
+              className="w-full h-full object-contain"
+              onClick={togglePlay}
+              autoPlay={autoplay}
+              playsInline
+              onLoadedMetadata={handleLoadedMetadata}
+              onTimeUpdate={handleVideoTimeUpdate}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
+              onError={(e) => {
+                console.error('Video element error:', e);
+                setHlsError('Video error: Could not load or play the stream');
+              }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {subtitles.map((sub, i) => (
+                <track
+                  key={i}
+                  label={sub.label}
+                  kind="subtitles"
+                  srcLang={sub.lang}
+                  src={sub.src}
+                  default={i === 0}
+                />
+              ))}
+            </video>
+          );
+        })()
+      )}
 
       {/* Quality & HDR/Dolby Indicators */}
       {showControls && !isMiniPlayer && (
@@ -1017,6 +1486,36 @@ export default function VideoPlayer({
         >
           Skip Credits
         </motion.button>
+      )}
+
+      {audioToast && (
+        <div
+          className="pointer-events-none absolute top-4 left-1/2 z-40 -translate-x-1/2 animate-[slideDownFade_0.3s_ease-out]"
+          role="status"
+        >
+          <div className="flex items-center gap-2 rounded-full border border-red-500/30 bg-zinc-900/85 px-4 py-2 shadow-2xl backdrop-blur-xl">
+            <svg className="h-4 w-4 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V6H13c-.26 2.07-.93 4.04-1.99 5.72L8.2 8.96l-1.46 1.46L11.45 15l1.42.07zm8.29-3.95l2.86-2.86-1.43-1.43-2.86 2.86-2.86-2.86-1.43 1.43 2.86 2.86-2.86 2.86 1.43 1.43 2.86-2.86 2.86 2.86 1.43-1.43-2.86-2.86zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+            </svg>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-white">Audio</p>
+              <p className="text-sm text-zinc-100">{audioToast.label}</p>
+              <span className="rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
+                {audioToast.lang}
+              </span>
+              {audioToast.mode === 'native' && (
+                <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300/90">
+                  Live
+                </span>
+              )}
+              {audioToast.mode === 'metadata' && (
+                <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300/90">
+                  Metadata
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {showMiniTransferNotice && !isMiniPlayer && (
@@ -1231,33 +1730,107 @@ export default function VideoPlayer({
             )}
 
             {/* Audio Tracks */}
-            {availableAudioTracks.length > 0 && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowAudioTrackMenu(!showAudioTrackMenu)}
-                  className="text-white hover:text-red-500 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                  </svg>
-                </button>
-                {showAudioTrackMenu && (
-                  <div className="absolute bottom-12 right-0 bg-zinc-900 border border-zinc-700 rounded-lg p-2 shadow-2xl z-50 min-w-[160px]">
-                    {availableAudioTracks.map(track => (
-                      <button
-                        key={track.id}
-                        onClick={() => selectAudioTrack(track.id)}
-                        className={`block w-full text-left px-3 py-1.5 rounded-md text-sm ${
-                          currentAudioTrack === track.id ? 'text-red-500 font-medium' : 'text-white hover:bg-zinc-800'
-                        }`}
-                      >
-                        {track.label}
-                      </button>
-                    ))}
-                  </div>
+            <div className="relative">
+              <button
+                onClick={() => setShowAudioTrackMenu(!showAudioTrackMenu)}
+                className={`flex items-center gap-1.5 transition-colors ${
+                  availableAudioTracks.length > 0
+                    ? 'text-white hover:text-red-500'
+                    : 'text-zinc-500 hover:text-zinc-300 cursor-not-allowed'
+                }`}
+                aria-label={`Audio tracks${availableAudioTracks.length > 0 ? `: ${availableAudioTracks.length} available` : ': none available'}`}
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V6H13c-.26 2.07-.93 4.04-1.99 5.72L8.2 8.96l-1.46 1.46L11.45 15l1.42.07zm8.29-3.95l2.86-2.86-1.43-1.43-2.86 2.86-2.86-2.86-1.43 1.43 2.86 2.86-2.86 2.86 1.43 1.43 2.86-2.86 2.86 2.86 1.43-1.43-2.86-2.86zM11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+                </svg>
+                {availableAudioTracks.length > 0 && (
+                  <span className="hidden sm:inline text-xs font-medium tabular-nums">
+                    {availableAudioTracks.length}
+                  </span>
                 )}
-              </div>
-            )}
+              </button>
+              {showAudioTrackMenu && (
+                <div className="absolute bottom-12 right-0 bg-zinc-900/95 backdrop-blur-xl border border-zinc-700 rounded-2xl p-2 shadow-2xl z-50 min-w-[240px]">
+                  <div className="px-3 py-2 mb-1 border-b border-zinc-800 flex items-center justify-between gap-2">
+                    <p className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Audio Languages</p>
+                    {isYouTubePlayback && (
+                      <span className="text-[10px] font-medium text-white/70 bg-red-500/15 px-2 py-0.5 rounded-full border border-red-500/20">
+                        YouTube
+                      </span>
+                    )}
+                    {!isYouTubePlayback && !hasNativeAudioSwitching && availableAudioTracks.length > 0 && (
+                      <span className="text-[10px] font-medium text-amber-300/90 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                        Metadata
+                      </span>
+                    )}
+                    {!isYouTubePlayback && hasNativeAudioSwitching && availableAudioTracks.length > 0 && (
+                      <span className="text-[10px] font-medium text-emerald-300/90 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        Live Switching
+                      </span>
+                    )}
+                  </div>
+                  {availableAudioTracks.length > 0 ? (
+                    <>
+                      <div className="max-h-72 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        {availableAudioTracks.map(track => (
+                          <button
+                            key={track.id}
+                            onClick={() => selectAudioTrack(track.id)}
+                            className={`flex w-full items-center justify-between gap-3 text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                              currentAudioTrack === track.id
+                                ? 'text-red-500 font-semibold bg-red-500/10'
+                                : 'text-zinc-200 hover:bg-zinc-800/80'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2 min-w-0">
+                              {currentAudioTrack === track.id && (
+                                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                </svg>
+                              )}
+                              <span className="truncate">{track.label}</span>
+                            </span>
+                            <span className="flex items-center gap-1.5 flex-shrink-0">
+                              {track.lang && track.lang !== 'und' && (
+                                <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                                  {track.lang}
+                                </span>
+                              )}
+                              {track.isDefault && (
+                                <span className="text-[9px] uppercase tracking-wider text-red-400/90 font-semibold border border-red-500/30 rounded px-1.5 py-0.5 bg-red-500/10">
+                                  Default
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-zinc-800 px-3 pb-1">
+                        {isYouTubePlayback ? (
+                          <p className="text-[11px] text-zinc-500 leading-relaxed">
+                            Language preference is sent to the YouTube player. Switching happens inside the YouTube iframe.
+                          </p>
+                        ) : hasNativeAudioSwitching ? (
+                          <p className="text-[11px] text-emerald-400/80 leading-relaxed">
+                            Stream has real alternate audio tracks. Selections switch audio instantly.
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                            Current file contains a single audio stream. These languages are declared in the source metadata.
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="px-3 py-4">
+                      <p className="text-sm text-zinc-500 text-center">
+                        No alternate audio tracks detected. Loaded streams with multiple language tracks will appear here.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Speed */}
             {!isMiniPlayer && (
@@ -1400,7 +1973,13 @@ export default function VideoPlayer({
             {/* Picture in Picture */}
             <button
               onClick={togglePiP}
-              className="text-white hover:text-red-500 transition-colors"
+              disabled={!isMetadataLoaded && !isInPictureInPicture}
+              className={`transition-colors ${
+                !isMetadataLoaded && !isInPictureInPicture
+                  ? 'text-zinc-600 cursor-not-allowed'
+                  : 'text-white hover:text-red-500'
+              }`}
+              title={!isMetadataLoaded && !isInPictureInPicture ? 'Waiting for video to load...' : 'Picture in Picture'}
             >
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z" />

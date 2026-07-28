@@ -59,6 +59,18 @@ export function getTrailerBackgroundSource(
     embedUrl.searchParams.set('modestbranding', '1');
     embedUrl.searchParams.set('playsinline', '1');
     embedUrl.searchParams.set('iv_load_policy', '3');
+    embedUrl.searchParams.set('disablekb', '1');
+    embedUrl.searchParams.set('fs', '0');
+    embedUrl.searchParams.set('color', 'white');
+    embedUrl.searchParams.set('start', '0');
+    try {
+      if (typeof window !== 'undefined' && window.location?.origin) {
+        embedUrl.searchParams.set('origin', window.location.origin);
+        embedUrl.searchParams.set('widget_referrer', window.location.href);
+      }
+    } catch {
+      // ignore non-browser environments
+    }
 
     return {
       kind: 'youtube',

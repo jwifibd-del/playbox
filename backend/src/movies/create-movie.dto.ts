@@ -50,6 +50,38 @@ export class CreateMovieDto {
   @IsInt()
   tmdbId?: number;
 
+  @IsOptional()
+  @IsString()
+  imdbId?: string;
+
+  @IsOptional()
+  @IsString()
+  logoPath?: string;
+
+  @IsOptional()
+  @IsString()
+  hdLogoPath?: string;
+
+  @IsOptional()
+  @IsString()
+  clearArtPath?: string;
+
+  @IsOptional()
+  @IsString()
+  hdClearArtPath?: string;
+
+  @IsOptional()
+  @IsString()
+  bannerPath?: string;
+
+  @IsOptional()
+  @IsString()
+  thumbPath?: string;
+
+  @IsOptional()
+  @IsString()
+  discArtPath?: string;
+
   @IsArray()
   @IsString({ each: true })
   genres: string[];

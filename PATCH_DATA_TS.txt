@@ -1,0 +1,37 @@
+
+--- lib/data.ts (Original)
++++ lib/data.ts (Modified)
+@@ -1723,7 +1723,7 @@
+   const saved = localStorage.getItem(USER_LIST_STORAGE_KEY);
+   if (saved) {
+     try {
+       const parsed = JSON.parse(saved);
+-      if (Array.isArray(parsed) && parsed.length > 0) {
++      if (Array.isArray(parsed)) {
+         return parsed.map((user, index) => normalizeUserRecord(user, index));
+       }
+     } catch {
+@@ -1739,3 +1739,24 @@
+   if (typeof window !== 'undefined') {
+     persistUsers(users);
+   }
+ }
++
++export function deleteUser(userId: string | number): void {
++  if (typeof window === 'undefined') {
++    return;
++  }
++
++  const currentUserId = getCurrentUserId();
++  const updatedUsers = getUsers().filter((user) => String(user.id) !== String(userId));
++
++  saveUsers(updatedUsers);
++
++  if (currentUserId && String(currentUserId) === String(userId)) {
++    localStorage.removeItem(USER_AUTH_STORAGE_KEY);
++    localStorage.removeItem(USER_SESSION_STORAGE_KEY);
++    localStorage.removeItem('playflix_token');
++    localStorage.removeItem('playflix_user');
++  }
++}
++

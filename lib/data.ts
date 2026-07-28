@@ -65,6 +65,13 @@ export interface Movie {
   imdbId?: string;
   isKids?: boolean;
   isAnime?: boolean;
+  logoPath?: string;
+  hdLogoPath?: string;
+  clearArtPath?: string;
+  hdClearArtPath?: string;
+  bannerPath?: string;
+  thumbPath?: string;
+  discArtPath?: string;
 }
 
 export const sampleMovies: Movie[] = [
@@ -107,6 +114,12 @@ export const sampleMovies: Movie[] = [
         ]
       },
     ],
+    cast: [
+      { id: 1, name: "Matthew McConaughey", role: "Actor", character: "Cooper", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20matthew%20mcconaughey%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Anne Hathaway", role: "Actress", character: "Brand", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20anne%20hathaway%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 3, name: "Jessica Chastain", role: "Actress", character: "Murph", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20jessica%20chastain%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 4, name: "Michael Caine", role: "Actor", character: "Professor Brand", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20michael%20caine%20portrait%2C%20professional%20headshot&image_size=square" }
+    ],
     imdbId: "tt0816692"
   },
   {
@@ -145,6 +158,14 @@ export const sampleMovies: Movie[] = [
         ]
       }
     ],
+    cast: [
+      { id: 1, name: "Christian Bale", role: "Actor", character: "Bruce Wayne / Batman", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20christian%20bale%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Heath Ledger", role: "Actor", character: "The Joker", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20heath%20ledger%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 3, name: "Aaron Eckhart", role: "Actor", character: "Harvey Dent", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20aaron%20eckhart%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 4, name: "Maggie Gyllenhaal", role: "Actress", character: "Rachel Dawes", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20maggie%20gyllenhaal%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 5, name: "Michael Caine", role: "Actor", character: "Alfred Pennyworth", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20michael%20caine%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 6, name: "Gary Oldman", role: "Actor", character: "Commissioner Gordon", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20gary%20oldman%20portrait%2C%20professional%20headshot&image_size=square" }
+    ],
     imdbId: "tt0468569"
   },
   {
@@ -166,6 +187,13 @@ export const sampleMovies: Movie[] = [
     tags: ["Dreams", "Mind", "Heist"],
     trailerUrl: "https://www.youtube.com/watch?v=8hP9D6kZseM",
     sources: [],
+    cast: [
+      { id: 1, name: "Leonardo DiCaprio", role: "Actor", character: "Dom Cobb", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20leonardo%20dicaprio%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Joseph Gordon-Levitt", role: "Actor", character: "Arthur", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20joseph%20gordon-levitt%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 3, name: "Ellen Page", role: "Actress", character: "Ariadne", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20ellen%20page%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 4, name: "Tom Hardy", role: "Actor", character: "Eames", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20tom%20hardy%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 5, name: "Marion Cotillard", role: "Actress", character: "Mal", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20marion%20cotillard%20portrait%2C%20professional%20headshot&image_size=square" }
+    ],
     imdbId: "tt1375666"
   },
   {
@@ -187,6 +215,11 @@ export const sampleMovies: Movie[] = [
     tags: ["Prison", "Hope", "Friendship"],
     trailerUrl: "https://www.youtube.com/watch?v=NmzuHjWmXOc",
     sources: [],
+    cast: [
+      { id: 1, name: "Tim Robbins", role: "Actor", character: "Andy Dufresne", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20tim%20robbins%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Morgan Freeman", role: "Actor", character: "Ellis Redding", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20morgan%20freeman%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 3, name: "Bob Gunton", role: "Actor", character: "Warden Norton", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20bob%20gunton%20portrait%2C%20professional%20headshot&image_size=square" }
+    ],
     imdbId: "tt0111161"
   },
   {
@@ -208,6 +241,12 @@ export const sampleMovies: Movie[] = [
     tags: ["Crime", "Tarantino", "Non-Linear"],
     trailerUrl: "https://www.youtube.com/watch?v=s7EdQ4FqbhY",
     sources: [],
+    cast: [
+      { id: 1, name: "John Travolta", role: "Actor", character: "Vincent Vega", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20john%20travolta%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Samuel L. Jackson", role: "Actor", character: "Jules Winnfield", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20samuel%20l.%20jackson%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 3, name: "Uma Thurman", role: "Actress", character: "Mia Wallace", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20uma%20thurman%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 4, name: "Bruce Willis", role: "Actor", character: "Butch Coolidge", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20bruce%20willis%20portrait%2C%20professional%20headshot&image_size=square" }
+    ],
     imdbId: "tt0110912"
   },
   {
@@ -228,7 +267,13 @@ export const sampleMovies: Movie[] = [
     director: "The Wachowskis",
     tags: ["Cyberpunk", "Reality", "Matrix"],
     trailerUrl: "https://www.youtube.com/watch?v=vKQi3bBA1y8",
-    sources: []
+    sources: [],
+    cast: [
+      { id: 1, name: "Keanu Reeves", role: "Actor", character: "Neo", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20keanu%20reeves%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Laurence Fishburne", role: "Actor", character: "Morpheus", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20laurence%20fishburne%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 3, name: "Carrie-Anne Moss", role: "Actress", character: "Trinity", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20carrie-anne%20moss%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 4, name: "Hugo Weaving", role: "Actor", character: "Agent Smith", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20hugo%20weaving%20portrait%2C%20professional%20headshot&image_size=square" }
+    ]
   },
   {
     id: 7,
@@ -248,7 +293,12 @@ export const sampleMovies: Movie[] = [
     director: "Robert Zemeckis",
     tags: ["Life", "Love", "History"],
     trailerUrl: "https://www.youtube.com/watch?v=bLvqoHBptjg",
-    sources: []
+    sources: [],
+    cast: [
+      { id: 1, name: "Tom Hanks", role: "Actor", character: "Forrest Gump", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20tom%20hanks%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Robin Wright", role: "Actress", character: "Jenny Curran", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20robin%20wright%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 3, name: "Gary Sinise", role: "Actor", character: "Lt. Dan Taylor", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20gary%20sinise%20portrait%2C%20professional%20headshot&image_size=square" }
+    ]
   },
   {
     id: 8,
@@ -268,7 +318,12 @@ export const sampleMovies: Movie[] = [
     director: "David Fincher",
     tags: ["Fight", "Identity", "Consumerism"],
     trailerUrl: "https://www.youtube.com/watch?v=SUXWAEX2jlg",
-    sources: []
+    sources: [],
+    cast: [
+      { id: 1, name: "Brad Pitt", role: "Actor", character: "Tyler Durden", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20brad%20pitt%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Edward Norton", role: "Actor", character: "The Narrator", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20edward%20norton%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 3, name: "Helena Bonham Carter", role: "Actress", character: "Marla Singer", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20helena%20bonham%20carter%20portrait%2C%20professional%20headshot&image_size=square" }
+    ]
   },
   {
     id: 9,
@@ -289,6 +344,10 @@ export const sampleMovies: Movie[] = [
     tags: ["Anime", "Fantasy", "Studio Ghibli"],
     trailerUrl: "https://www.youtube.com/watch?v=ByXuk9QqQkk",
     sources: [],
+    cast: [
+      { id: 1, name: "Rumi Hiiragi", role: "Voice Actress", character: "Chihiro", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actress%20rumi%20hiiragi%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Miyu Irino", role: "Voice Actor", character: "Haku", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actor%20miyu%20irino%20portrait%2C%20professional%20headshot&image_size=square" }
+    ],
     isAnime: true
   },
   {
@@ -310,6 +369,10 @@ export const sampleMovies: Movie[] = [
     tags: ["Anime", "Romance", "Fantasy"],
     trailerUrl: "https://www.youtube.com/watch?v=o4-URMnBOPU",
     sources: [],
+    cast: [
+      { id: 1, name: "Ryunosuke Kamiki", role: "Voice Actor", character: "Taki Tachibana", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actor%20ryunosuke%20kamiki%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Mone Kamishiraishi", role: "Voice Actress", character: "Mitsuha Miyamizu", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actress%20mone%20kamishiraishi%20portrait%2C%20professional%20headshot&image_size=square" }
+    ],
     isAnime: true
   },
   {
@@ -331,6 +394,10 @@ export const sampleMovies: Movie[] = [
     tags: ["Anime", "Cyberpunk", "Sci-Fi"],
     trailerUrl: "https://www.youtube.com/watch?v=GAM2g3yS5V8",
     sources: [],
+    cast: [
+      { id: 1, name: "Mitsuo Iwata", role: "Voice Actor", character: "Kaneda", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actor%20mitsuo%20iwata%20portrait%2C%20professional%20headshot&image_size=square" },
+      { id: 2, name: "Nozomu Sasaki", role: "Voice Actor", character: "Tetsuo", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actor%20nozomu%20sasaki%20portrait%2C%20professional%20headshot&image_size=square" }
+    ],
     isAnime: true
   }
 ];
@@ -952,51 +1019,6 @@ export const continueWatching: ContinueWatchingItem[] = [
   }
 ];
 
-// Live TV Data
-export interface LiveChannel {
-  id: number | string;
-  name: string;
-  logo: string;
-  currentShow: string;
-  nextShow: string;
-  isPlaying: boolean;
-}
-
-export const liveChannels: LiveChannel[] = [
-  {
-    id: 1,
-    name: "PlayFlix Live",
-    logo: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=modern%20tv%20channel%20logo%2C%20playflix%20live%2C%20simple%20and%20clean&image_size=square",
-    currentShow: "Interstellar Odyssey",
-    nextShow: "The Matrix",
-    isPlaying: true
-  },
-  {
-    id: 2,
-    name: "ActionMax",
-    logo: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=action%20tv%20channel%20logo%2C%20red%20and%20black%2C%20bold&image_size=square",
-    currentShow: "The Dark Knight",
-    nextShow: "Inception",
-    isPlaying: false
-  },
-  {
-    id: 3,
-    name: "Drama Hub",
-    logo: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=drama%20tv%20channel%20logo%2C%20elegant%20blue%20tones&image_size=square",
-    currentShow: "The Shawshank Redemption",
-    nextShow: "Forrest Gump",
-    isPlaying: false
-  },
-  {
-    id: 4,
-    name: "Sci-Fi Central",
-    logo: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=sci-fi%20channel%20logo%2C%20neon%20green%20and%20blue&image_size=square",
-    currentShow: "Inception",
-    nextShow: "Interstellar",
-    isPlaying: false
-  }
-];
-
 // News Section Data
 export interface NewsItem {
   id: number | string;
@@ -1363,6 +1385,28 @@ export function logoutAdmin(): void {
   }
 }
 
+// Profile Interface
+export interface Profile {
+  id: number | string;
+  name: string;
+  avatar: string;
+  isKids: boolean;
+  pin: string;
+  preferences: {
+    language: string;
+    subtitlesEnabled: boolean;
+    defaultQuality: string;
+  };
+}
+
+// Subscription Interface
+export interface Subscription {
+  plan: 'Free' | 'Premium' | 'VIP' | 'Family';
+  startDate: string;
+  endDate: string;
+  autoRenew: boolean;
+}
+
 // User Profile
 export interface UserProfile {
   id: number | string;
@@ -1372,12 +1416,42 @@ export interface UserProfile {
   joinDate: string;
   lastLogin: string;
   avatar: string;
-  subscription: 'Free' | 'Premium' | 'VIP' | 'Family';
+  subscription: Subscription;
+  profiles: Profile[];
+  activeProfileId: number | string;
 }
 
 export interface AppUser extends UserProfile {
   password: string;
 }
+
+// Default Profiles
+const defaultProfiles: Profile[] = [
+  {
+    id: 'profile-1',
+    name: 'John',
+    avatar: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=friendly%20user%20avatar%20portrait%2C%20simple%2C%20clean%20design&image_size=square',
+    isKids: false,
+    pin: '',
+    preferences: {
+      language: 'English',
+      subtitlesEnabled: false,
+      defaultQuality: 'Auto'
+    }
+  },
+  {
+    id: 'profile-2',
+    name: 'Kids',
+    avatar: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=cute%20cartoon%20profile%20avatar%2C%20kids%2C%20colorful&image_size=square',
+    isKids: true,
+    pin: '1234',
+    preferences: {
+      language: 'English',
+      subtitlesEnabled: true,
+      defaultQuality: '720p'
+    }
+  }
+];
 
 export const currentUserProfile: UserProfile = {
   id: 1,
@@ -1387,7 +1461,14 @@ export const currentUserProfile: UserProfile = {
   joinDate: 'January 15, 2024',
   lastLogin: 'Today, 2:30 PM',
   avatar: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=friendly%20user%20avatar%20portrait%2C%20simple%2C%20clean%20design&image_size=square',
-  subscription: 'Premium',
+  subscription: {
+    plan: 'Premium',
+    startDate: 'January 15, 2024',
+    endDate: 'January 15, 2025',
+    autoRenew: true
+  },
+  profiles: defaultProfiles,
+  activeProfileId: 'profile-1'
 };
 
 const defaultUsers: AppUser[] = [
@@ -1475,19 +1556,144 @@ function persistUsers(users: AppUser[]): void {
 }
 
 function normalizeUserRecord(user: Partial<AppUser>, index: number): AppUser {
+  const defaultUser = getDefaultUser();
+  
   return {
-    ...getDefaultUser(),
+    ...defaultUser,
     ...user,
     id: user.id ?? `${Date.now()}-${index}`,
-    fullName: user.fullName || getDefaultUser().fullName,
+    fullName: user.fullName || defaultUser.fullName,
     email: user.email || `${Date.now()}@playflix.app`,
     gender: normalizeUserGender(user.gender),
     joinDate: user.joinDate || formatReadableDate(new Date()),
     lastLogin: user.lastLogin || 'Never',
-    avatar: user.avatar || createAvatarUrl(user.fullName || getDefaultUser().fullName),
-    subscription: user.subscription || getDefaultUser().subscription,
+    avatar: user.avatar || createAvatarUrl(user.fullName || defaultUser.fullName),
+    subscription: user.subscription || defaultUser.subscription,
+    profiles: user.profiles || defaultUser.profiles,
+    activeProfileId: user.activeProfileId || defaultUser.activeProfileId,
     password: user.password || defaultUserAuthCredentials.password
   };
+}
+
+// OTP Functions
+const OTP_STORAGE_KEY = 'playflix_otp';
+const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+export interface OTPEntry {
+  email: string;
+  otp: string;
+  expiresAt: number;
+}
+
+export function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export function sendOTP(email: string): { success: boolean; message: string; otp?: string } {
+  if (typeof window === 'undefined') {
+    return { success: false, message: 'OTP is only available in browser.' };
+  }
+  
+  const otp = generateOTP();
+  const otpEntry: OTPEntry = {
+    email,
+    otp,
+    expiresAt: Date.now() + OTP_EXPIRY_MS
+  };
+  
+  localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otpEntry));
+  
+  return { success: true, message: 'OTP sent successfully!', otp };
+}
+
+export function verifyOTP(email: string, otp: string): { success: boolean; message: string } {
+  if (typeof window === 'undefined') {
+    return { success: false, message: 'OTP verification is only available in browser.' };
+  }
+  
+  const trimmedOTP = otp.trim();
+  const otpEntryRaw = localStorage.getItem(OTP_STORAGE_KEY);
+  if (!otpEntryRaw) {
+    return { success: false, message: 'No OTP found. Please request a new one.' };
+  }
+  
+  try {
+    const otpEntry: OTPEntry = JSON.parse(otpEntryRaw);
+    
+    if (Date.now() > otpEntry.expiresAt) {
+      return { success: false, message: 'OTP has expired. Please request a new one.' };
+    }
+    
+    if (otpEntry.email.toLowerCase() !== email.toLowerCase()) {
+      return { success: false, message: 'OTP is for a different email address.' };
+    }
+    
+    if (otpEntry.otp !== trimmedOTP) {
+      return { success: false, message: 'Invalid OTP.' };
+    }
+    
+    localStorage.removeItem(OTP_STORAGE_KEY);
+    return { success: true, message: 'OTP verified successfully!' };
+  } catch {
+    return { success: false, message: 'Invalid OTP data.' };
+  }
+}
+
+// Profile Management Functions
+export function getActiveProfile(): Profile | null {
+  const user = getCurrentUserRecord();
+  return user.profiles.find(p => String(p.id) === String(user.activeProfileId)) || user.profiles[0] || null;
+}
+
+export function switchProfile(profileId: string | number): void {
+  if (typeof window === 'undefined') return;
+  
+  const currentUser = getCurrentUserRecord();
+  const profileExists = currentUser.profiles.some(p => String(p.id) === String(profileId));
+  
+  if (!profileExists) return;
+  
+  const updatedUsers = getUsers().map(user => {
+    if (String(user.id) === String(currentUser.id)) {
+      return { ...user, activeProfileId: profileId };
+    }
+    return user;
+  });
+  
+  persistUsers(updatedUsers);
+}
+
+export function addProfile(profile: Omit<Profile, 'id'>): Profile {
+  const newProfile: Profile = {
+    ...profile,
+    id: `profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  };
+  
+  const currentUser = getCurrentUserRecord();
+  const updatedUsers = getUsers().map(user => {
+    if (String(user.id) === String(currentUser.id)) {
+      return { ...user, profiles: [...user.profiles, newProfile] };
+    }
+    return user;
+  });
+  
+  persistUsers(updatedUsers);
+  return newProfile;
+}
+
+export function updateProfile(profileId: string | number, updatedProfile: Partial<Profile>): void {
+  const currentUser = getCurrentUserRecord();
+  const updatedUsers = getUsers().map(user => {
+    if (String(user.id) === String(currentUser.id)) {
+      const updatedProfiles = user.profiles.map(p => 
+        String(p.id) === String(profileId) ? { ...p, ...updatedProfile } : p
+      );
+      return { ...user, profiles: updatedProfiles };
+    }
+    return user;
+  });
+  
+  persistUsers(updatedUsers);
 }
 
 function migrateLegacyUsers(): AppUser[] {
@@ -1536,7 +1742,7 @@ export function getUsers(): AppUser[] {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed.map((user, index) => normalizeUserRecord(user, index));
       }
     } catch {
@@ -1550,6 +1756,24 @@ export function getUsers(): AppUser[] {
 export function saveUsers(users: AppUser[]): void {
   if (typeof window !== 'undefined') {
     persistUsers(users);
+  }
+}
+
+export function deleteUser(userId: string | number): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const currentUserId = getCurrentUserId();
+  const updatedUsers = getUsers().filter((user) => String(user.id) !== String(userId));
+
+  saveUsers(updatedUsers);
+
+  if (currentUserId && String(currentUserId) === String(userId)) {
+    localStorage.removeItem(USER_AUTH_STORAGE_KEY);
+    localStorage.removeItem(USER_SESSION_STORAGE_KEY);
+    localStorage.removeItem('playflix_token');
+    localStorage.removeItem('playflix_user');
   }
 }
 
@@ -1567,6 +1791,21 @@ function setCurrentUserId(userId: string | number): void {
 }
 
 function getCurrentUserRecord(): AppUser {
+  // First check for playflix_user from backend auth
+  if (typeof window !== 'undefined') {
+    const storedUserRaw = localStorage.getItem('playflix_user');
+    if (storedUserRaw) {
+      try {
+        const storedUser = JSON.parse(storedUserRaw);
+        // Convert stored user to AppUser format
+        return normalizeUserRecord(storedUser, 0);
+      } catch {
+        // ignore invalid JSON
+      }
+    }
+  }
+  
+  // Fall back to original method
   const users = getUsers();
   const currentUserId = getCurrentUserId();
 
@@ -1609,6 +1848,9 @@ export function registerUser(input: {
   }
 
   const now = new Date();
+  const endDate = new Date(now);
+  endDate.setFullYear(endDate.getFullYear() + 1);
+
   const newUser: AppUser = {
     id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     fullName,
@@ -1618,7 +1860,14 @@ export function registerUser(input: {
     joinDate: formatReadableDate(now),
     lastLogin: formatReadableDateTime(now),
     avatar: createAvatarUrl(fullName),
-    subscription: 'Free'
+    subscription: {
+      plan: 'Free',
+      startDate: formatReadableDate(now),
+      endDate: formatReadableDate(endDate),
+      autoRenew: true
+    },
+    profiles: defaultProfiles,
+    activeProfileId: defaultProfiles[0].id
   };
 
   const nextUsers = [newUser, ...users];
@@ -1700,6 +1949,8 @@ export function logoutUser(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(USER_AUTH_STORAGE_KEY);
     localStorage.removeItem(USER_SESSION_STORAGE_KEY);
+    localStorage.removeItem('playflix_token');
+    localStorage.removeItem('playflix_user');
   }
 }
 
@@ -2144,80 +2395,15 @@ export function getMiniPlayerEventName(): string {
   return MINI_PLAYER_EVENT;
 }
 
-// Live TV Channels
-export interface LiveTVChannel {
-  id: string;
-  name: string;
-  genre: string;
-  streamUrl: string;
-  streamType: 'Embed URL' | 'YouTube URL' | 'HLS' | 'RTMP' | 'M3U8' | 'TS';
-  posterPath: string;
-  accentColor: string;
-  order: number;
-}
-
-export const defaultLiveTVChannels: LiveTVChannel[] = [
-  {
-    id: '1',
-    name: 'PlayFlix News',
-    genre: 'News',
-    streamUrl: 'https://example.com/news',
-    streamType: 'HLS',
-    posterPath: '',
-    accentColor: '#ef4444',
-    order: 1,
-  },
-  {
-    id: '2',
-    name: 'PlayFlix Movies',
-    genre: 'Movies',
-    streamUrl: 'https://example.com/movies',
-    streamType: 'HLS',
-    posterPath: '',
-    accentColor: '#8b5cf6',
-    order: 2,
-  },
-  {
-    id: '3',
-    name: 'PlayFlix Sports',
-    genre: 'Sports',
-    streamUrl: 'https://example.com/sports',
-    streamType: 'HLS',
-    posterPath: '',
-    accentColor: '#10b981',
-    order: 3,
-  },
-  {
-    id: '4',
-    name: 'PlayFlix Music',
-    genre: 'Music',
-    streamUrl: 'https://example.com/music',
-    streamType: 'HLS',
-    posterPath: '',
-    accentColor: '#f59e0b',
-    order: 4,
-  },
-];
-
-export function getLiveTVChannels(): LiveTVChannel[] {
-  if (typeof window === 'undefined') {
-    return defaultLiveTVChannels;
+export function normalizeRating(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return fallback;
+    const parsed = Number(trimmed);
+    if (Number.isFinite(parsed)) return parsed;
   }
-  const saved = localStorage.getItem('playflix_live_tv_channels');
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch {
-      return defaultLiveTVChannels;
-    }
-  }
-  return defaultLiveTVChannels;
-}
-
-export function saveLiveTVChannels(channels: LiveTVChannel[]): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_live_tv_channels', JSON.stringify(channels));
-  }
+  return fallback;
 }
 
 export type CuratedContentType = 'movie' | 'tv';
@@ -2541,12 +2727,14 @@ export interface ExternalApiKeys {
   tmdb: string;
   imdb: string;
   firebaseLegacyServerKey: string;
+  fanartTv: string;
 }
 
 const defaultExternalApiKeys: ExternalApiKeys = {
   tmdb: '',
   imdb: '',
   firebaseLegacyServerKey: '',
+  fanartTv: '',
 };
 
 export function getExternalApiKeys(): ExternalApiKeys {
@@ -2755,7 +2943,6 @@ export function getSliderSectionContentIds(section: SliderSection): (string | nu
 export type HomepageSectionType = 
   | 'continue-watching' 
   | 'recommended' 
-  | 'live-tv' 
   | 'trending' 
   | 'news' 
   | 'popular' 
@@ -2783,12 +2970,11 @@ export interface HomepageSection {
 const defaultHomepageSections: HomepageSection[] = [
   { id: '1', type: 'continue-watching', title: 'Continue Watching', isActive: true, order: 1, animationDuration: 15 },
   { id: '2', type: 'recommended', title: 'Recommended for You', isActive: true, order: 2, animationDuration: 15 },
-  { id: '3', type: 'live-tv', title: 'Live TV', isActive: true, order: 3, animationDuration: 15 },
-  { id: '4', type: 'trending', title: 'Trending Now', isActive: true, order: 4, animationDuration: 15 },
-  { id: '5', type: 'news', title: 'Latest News', isActive: true, order: 5, animationDuration: 15 },
-  { id: '6', type: 'popular', title: 'Popular Movies', isActive: true, order: 6, animationDuration: 15 },
-  { id: '7', type: 'kids', title: 'Just For Kids', isActive: true, order: 7, animationDuration: 15 },
-  { id: '8', type: 'top-rated', title: 'Top Rated', isActive: true, order: 8, animationDuration: 15 },
+  { id: '3', type: 'trending', title: 'Trending Now', isActive: true, order: 3, animationDuration: 15 },
+  { id: '4', type: 'news', title: 'Latest News', isActive: true, order: 4, animationDuration: 15 },
+  { id: '5', type: 'popular', title: 'Popular Movies', isActive: true, order: 5, animationDuration: 15 },
+  { id: '6', type: 'kids', title: 'Just For Kids', isActive: true, order: 6, animationDuration: 15 },
+  { id: '7', type: 'top-rated', title: 'Top Rated', isActive: true, order: 7, animationDuration: 15 },
 ];
 
 export function getHomepageSections(): HomepageSection[] {
@@ -2940,6 +3126,306 @@ export async function getTMDBSeasonDetails(tvId: number, seasonNumber: number): 
   }
   
   return await response.json();
+}
+
+// ============== Fanart.tv ==============
+const FANART_BASE_URL = 'https://webservice.fanart.tv/v3';
+
+export interface FanartMovieArt {
+  name: string;
+  tmdb_id?: string;
+  imdb_id?: string;
+  tvdb_id?: string;
+  moviethumb?: { url: string; lang: string; likes: string; id: string }[];
+  moviebackground?: { url: string; lang: string; likes: string; id: string }[];
+  movieposter?: { url: string; lang: string; likes: string; id: string }[];
+  movielogo?: { url: string; lang: string; likes: string; id: string }[];
+  moviebanner?: { url: string; lang: string; likes: string; id: string }[];
+  hdmovielogo?: { url: string; lang: string; likes: string; id: string }[];
+  hdmovieclearart?: { url: string; lang: string; likes: string; id: string }[];
+  moviedisc?: { url: string; lang: string; likes: string; id: string; disc: string }[];
+  movieart?: { url: string; lang: string; likes: string; id: string }[];
+}
+
+export interface FanartTvArt {
+  name: string;
+  thetvdb_id: string;
+  tmdb_id?: string;
+  imdb_id?: string;
+  clearlogo?: { url: string; lang: string; likes: string; id: string }[];
+  hdtvlogo?: { url: string; lang: string; likes: string; id: string }[];
+  clearart?: { url: string; lang: string; likes: string; id: string }[];
+  showbackground?: { url: string; lang: string; likes: string; id: string }[];
+  tvthumb?: { url: string; lang: string; likes: string; id: string }[];
+  seasonposter?: { url: string; lang: string; likes: string; id: string; season: string }[];
+  seasonthumb?: { url: string; lang: string; likes: string; id: string; season: string }[];
+  hdclearart?: { url: string; lang: string; likes: string; id: string }[];
+  tvbanner?: { url: string; lang: string; likes: string; id: string }[];
+  characterart?: { url: string; lang: string; likes: string; id: string }[];
+  tvposter?: { url: string; lang: string; likes: string; id: string }[];
+  seasonbanner?: { url: string; lang: string; likes: string; id: string; season: string }[];
+}
+
+export async function getFanartMovieArt(tmdbOrImdbId: string): Promise<FanartMovieArt | null> {
+  const keys = getExternalApiKeys();
+  if (!keys.fanartTv) return null;
+  const id = String(tmdbOrImdbId).trim();
+  if (!id) return null;
+  try {
+    const res = await fetch(`${FANART_BASE_URL}/movies/${encodeURIComponent(id)}?api_key=${keys.fanartTv}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function getFanartTvArt(tvdbId: string): Promise<FanartTvArt | null> {
+  const keys = getExternalApiKeys();
+  if (!keys.fanartTv) return null;
+  const id = String(tvdbId).trim();
+  if (!id) return null;
+  try {
+    const res = await fetch(`${FANART_BASE_URL}/tv/${encodeURIComponent(id)}?api_key=${keys.fanartTv}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+export function pickBestFanartImage(
+  list: { url: string; lang?: string; likes?: string }[] | undefined,
+  preferLang = 'en',
+): string | null {
+  if (!list || list.length === 0) return null;
+  const withScore = list.map(img => {
+    const score =
+      (img.lang === preferLang ? 10000 : 0) +
+      Number((img as any).likes || 0);
+    return { ...img, score };
+  });
+  withScore.sort((a, b) => b.score - a.score);
+  return withScore[0].url || null;
+}
+
+function getAdminAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('adminToken');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export interface PickedFanartMovieResult {
+  logo?: string;
+  hdlogo?: string;
+  clearart?: string;
+  hdclearart?: string;
+  poster?: string;
+  background?: string;
+  banner?: string;
+  thumb?: string;
+  disc?: string;
+  basic?: { name: string; tmdb_id?: string; imdb_id?: string; tvdb_id?: string };
+}
+
+export interface PickedFanartTVResult {
+  logo?: string;
+  hdlogo?: string;
+  clearart?: string;
+  hdclearart?: string;
+  poster?: string;
+  background?: string;
+  banner?: string;
+  thumb?: string;
+  basic?: { name: string; thetvdb_id: string; tmdb_id?: string; imdb_id?: string };
+  seasonPosters?: Record<string, string>;
+  seasonThumbs?: Record<string, string>;
+}
+
+const BACKEND_API_BASE =
+  (typeof window !== 'undefined' && (window as any).__PLAYFLIX_API_BASE__) ||
+  'http://localhost:3002';
+
+export async function getFanartMovieByTMDBBackend(tmdbId: number): Promise<PickedFanartMovieResult | null> {
+  try {
+    const userKeys = getExternalApiKeys();
+    const params = new URLSearchParams({ pick: 'best' });
+    if (userKeys.fanartTv && userKeys.fanartTv.trim()) {
+      params.append('fanartKey', userKeys.fanartTv.trim());
+    }
+    const res = await fetch(`${BACKEND_API_BASE}/fanart/tmdb/movies/${tmdbId}?${params.toString()}`, {
+      headers: getAdminAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function getFanartTVByTMDBBackend(tmdbId: number): Promise<PickedFanartTVResult | null> {
+  try {
+    const userKeys = getExternalApiKeys();
+    const params = new URLSearchParams({ pick: 'best' });
+    if (userKeys.fanartTv && userKeys.fanartTv.trim()) {
+      params.append('fanartKey', userKeys.fanartTv.trim());
+    }
+    const res = await fetch(`${BACKEND_API_BASE}/fanart/tmdb/tv/${tmdbId}?${params.toString()}`, {
+      headers: getAdminAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function enrichMovieWithFanart(movie: Movie, tmdbId?: number): Promise<Movie> {
+  const fanartId = (tmdbId != null)
+    ? tmdbId
+    : (typeof (movie as any).tmdbId === 'number' ? (movie as any).tmdbId : undefined);
+  let fanart: PickedFanartMovieResult | null = null;
+  if (fanartId != null) {
+    fanart = await getFanartMovieByTMDBBackend(fanartId);
+  }
+  if (!fanart) {
+    const directId = (movie.imdbId && movie.imdbId.trim()) || String(fanartId || '');
+    if (directId) {
+      const raw = await getFanartMovieArt(directId);
+      if (raw) {
+        fanart = {
+          logo: pickBestFanartImage(raw.movielogo) || undefined,
+          hdlogo: pickBestFanartImage(raw.hdmovielogo) || undefined,
+          clearart: pickBestFanartImage(raw.hdmovieclearart) || pickBestFanartImage(raw.movieart) || undefined,
+          poster: pickBestFanartImage(raw.movieposter) || undefined,
+          background: pickBestFanartImage(raw.moviebackground) || undefined,
+          banner: pickBestFanartImage(raw.moviebanner) || undefined,
+          thumb: pickBestFanartImage(raw.moviethumb) || undefined,
+          disc: pickBestFanartImage(raw.moviedisc) || undefined,
+        };
+      }
+    }
+  }
+  const result: Movie = { ...movie };
+  if (fanart) {
+    if (fanart.logo) result.logoPath = fanart.logo;
+    if (fanart.hdlogo) result.hdLogoPath = fanart.hdlogo;
+    if (fanart.clearart) result.clearArtPath = fanart.clearart;
+    if (fanart.hdclearart) result.hdClearArtPath = fanart.hdclearart;
+    if (fanart.banner) result.bannerPath = fanart.banner;
+    if (fanart.thumb) result.thumbPath = fanart.thumb;
+    if (fanart.disc) result.discArtPath = fanart.disc;
+    if (fanart.poster && !result.posterPath) result.posterPath = fanart.poster;
+    if (fanart.background && !result.backdropPath) result.backdropPath = fanart.background;
+    if (fanart.basic?.tvdb_id && !(result as any).tvdbId) {
+      (result as any).tvdbId = fanart.basic.tvdb_id;
+    }
+  }
+  return result;
+}
+
+export async function enrichTVShowWithFanart(show: TVShow, tmdbId?: number): Promise<TVShow> {
+  const fanartTmdbId = (tmdbId != null)
+    ? tmdbId
+    : (show.tmdbId && typeof show.tmdbId === 'number' ? show.tmdbId : undefined);
+  let fanart: PickedFanartTVResult | null = null;
+  if (fanartTmdbId != null) {
+    fanart = await getFanartTVByTMDBBackend(fanartTmdbId);
+  }
+  if (!fanart) {
+    const tvdbId = (show as any).tvdbId ? String((show as any).tvdbId) : '';
+    if (tvdbId) {
+      const raw = await getFanartTvArt(tvdbId);
+      if (raw) {
+        const seasonPosters: Record<string, string> = {};
+        for (const s of raw.seasonposter || []) {
+          if (!s.season) continue;
+          if (!seasonPosters[s.season]) {
+            const url = pickBestFanartImage(raw.seasonposter!.filter(x => x.season === s.season));
+            if (url) seasonPosters[s.season] = url;
+          }
+        }
+        const seasonThumbs: Record<string, string> = {};
+        for (const s of raw.seasonthumb || []) {
+          if (!s.season) continue;
+          if (!seasonThumbs[s.season]) {
+            const url = pickBestFanartImage(raw.seasonthumb!.filter(x => x.season === s.season));
+            if (url) seasonThumbs[s.season] = url;
+          }
+        }
+        fanart = {
+          logo: pickBestFanartImage(raw.clearlogo) || undefined,
+          hdlogo: pickBestFanartImage(raw.hdtvlogo) || undefined,
+          clearart: pickBestFanartImage(raw.clearart) || undefined,
+          hdclearart: pickBestFanartImage(raw.hdclearart) || undefined,
+          poster: pickBestFanartImage(raw.tvposter) || undefined,
+          background: pickBestFanartImage(raw.showbackground) || undefined,
+          banner: pickBestFanartImage(raw.tvbanner) || undefined,
+          thumb: pickBestFanartImage(raw.tvthumb) || undefined,
+          seasonPosters,
+          seasonThumbs,
+          basic: {
+            name: raw.name,
+            thetvdb_id: raw.thetvdb_id,
+            tmdb_id: raw.tmdb_id,
+            imdb_id: raw.imdb_id,
+          },
+        };
+      }
+    }
+  }
+  const result: TVShow = { ...show };
+  if (fanart) {
+    if (fanart.logo) result.logoPath = fanart.logo;
+    if (fanart.hdlogo) result.hdLogoPath = fanart.hdlogo;
+    if (fanart.clearart) result.clearArtPath = fanart.clearart;
+    if (fanart.hdclearart) result.hdClearArtPath = fanart.hdclearart;
+    if (fanart.banner) result.bannerPath = fanart.banner;
+    if (fanart.thumb) result.thumbPath = fanart.thumb;
+    if (fanart.poster && !result.posterPath) result.posterPath = fanart.poster;
+    if (fanart.background && !result.backdropPath) result.backdropPath = fanart.background;
+    if (fanart.basic?.thetvdb_id && !result.tvdbId) {
+      result.tvdbId = fanart.basic.thetvdb_id;
+    }
+    const hasSeasonData = !!(fanart.seasonPosters || fanart.seasonThumbs);
+    if (hasSeasonData && result.seasons && result.seasons.length > 0) {
+      result.seasons = result.seasons.map(season => {
+        const seasonKey = String(season.seasonNumber);
+        const updated: Season = { ...season };
+        if (fanart?.seasonPosters?.[seasonKey] && !updated.posterPath) {
+          updated.posterPath = fanart.seasonPosters[seasonKey];
+        }
+        if (fanart?.seasonThumbs?.[seasonKey]) {
+          updated.fanartThumb = fanart.seasonThumbs[seasonKey];
+        }
+        return updated;
+      });
+    }
+  }
+  return result;
+}
+
+export async function convertTMDBToMovieWithFanart(tmdbMovie: any): Promise<Movie> {
+  const base = convertTMDBToMovie(tmdbMovie);
+  const tmdbId = tmdbMovie?.id ? Number(tmdbMovie.id) : undefined;
+  return enrichMovieWithFanart(base, tmdbId);
+}
+
+export async function convertTMDBToTVShowWithFanart(tmdbShow: any): Promise<TVShow> {
+  const base = convertTMDBToTVShow(tmdbShow);
+  const tmdbId = tmdbShow?.id ? Number(tmdbShow.id) : undefined;
+  return enrichTVShowWithFanart(base, tmdbId);
+}
+
+export async function convertTMDBToTVShowWithEpisodesAndFanart(tmdbShow: any): Promise<TVShow> {
+  const base = await convertTMDBToTVShowWithEpisodes(tmdbShow);
+  const tmdbId = tmdbShow?.id ? Number(tmdbShow.id) : undefined;
+  return enrichTVShowWithFanart(base, tmdbId);
 }
 
 export function convertTMDBToMovie(tmdbMovie: any): Movie {
@@ -3180,8 +3666,9 @@ export interface Episode {
   tmdbId?: number;
   title: string;
   overview: string;
+  seasonNumber?: number;
   episodeNumber: number;
-  runtime: string;
+  runtime: string | number;
   rating: number;
   airDate: string;
   thumbnailPath: string;
@@ -3196,6 +3683,7 @@ export interface Season {
   overview: string;
   posterPath: string;
   episodes: Episode[];
+  fanartThumb?: string;
 }
 
 export interface TVShow {
@@ -3224,6 +3712,13 @@ export interface TVShow {
   imdbId?: string;
   isAnime?: boolean;
   isKids?: boolean;
+  logoPath?: string;
+  hdLogoPath?: string;
+  clearArtPath?: string;
+  hdClearArtPath?: string;
+  bannerPath?: string;
+  thumbPath?: string;
+  tvdbId?: string;
 }
 
 export function getMovies(): Movie[] {
@@ -3231,7 +3726,10 @@ export function getMovies(): Movie[] {
   const saved = localStorage.getItem('playflix_movies');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const raw = JSON.parse(saved);
+      if (Array.isArray(raw)) {
+        return raw.map((m: any) => m ? { ...m, rating: normalizeRating((m as any).rating, 8.0) } : m);
+      }
     } catch {
       return sampleMovies;
     }
@@ -3241,7 +3739,38 @@ export function getMovies(): Movie[] {
 
 export function saveMovies(movies: Movie[]): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_movies', JSON.stringify(movies));
+    const normalized = Array.isArray(movies)
+      ? movies.map((m: any) => (m ? { ...m, rating: normalizeRating(m?.rating, 8.0) } : m))
+      : movies;
+    localStorage.setItem('playflix_movies', JSON.stringify(normalized));
+    (async () => {
+      try {
+        const { syncMovieToBackend, deleteMovieFromBackend } = await import('./api');
+        const local = new Set(normalized.map(m => String(m.id)));
+        const prevRaw = localStorage.getItem('playflix_movies_prev_ids');
+        const prevIds: string[] = prevRaw ? JSON.parse(prevRaw) : [];
+        for (const pid of prevIds) {
+          if (!local.has(pid)) {
+            await deleteMovieFromBackend(pid);
+          }
+        }
+        const results = await Promise.allSettled(normalized.map(m => syncMovieToBackend(m)));
+        const backendIds = new Set<string>();
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled' && r.value?.id !== undefined) {
+            const bid = String(r.value.id);
+            backendIds.add(bid);
+            if (String(normalized[i].id) !== bid) {
+              normalized[i] = { ...normalized[i], id: r.value.id };
+            }
+          }
+        });
+        localStorage.setItem('playflix_movies', JSON.stringify(normalized));
+        localStorage.setItem('playflix_movies_prev_ids', JSON.stringify(normalized.map(m => String(m.id))));
+      } catch (e) {
+        console.warn('saveMovies backend sync failed:', e);
+      }
+    })();
   }
 }
 
@@ -3250,7 +3779,10 @@ export function getTVShows(): TVShow[] {
   const saved = localStorage.getItem('playflix_tv_shows');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const raw = JSON.parse(saved);
+      if (Array.isArray(raw)) {
+        return raw.map((s: any) => s ? { ...s, rating: normalizeRating((s as any).rating, 8.0) } : s);
+      }
     } catch {
       return sampleTVShows;
     }
@@ -3260,7 +3792,36 @@ export function getTVShows(): TVShow[] {
 
 export function saveTVShows(shows: TVShow[]): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_tv_shows', JSON.stringify(shows));
+    const normalized = Array.isArray(shows)
+      ? shows.map((s: any) => (s ? { ...s, rating: normalizeRating(s?.rating, 8.0) } : s))
+      : shows;
+    localStorage.setItem('playflix_tv_shows', JSON.stringify(normalized));
+    (async () => {
+      try {
+        const { syncTVShowToBackend, deleteTVShowFromBackend } = await import('./api');
+        const local = new Set(normalized.map(s => String(s.id)));
+        const prevRaw = localStorage.getItem('playflix_tv_shows_prev_ids');
+        const prevIds: string[] = prevRaw ? JSON.parse(prevRaw) : [];
+        for (const pid of prevIds) {
+          if (!local.has(pid)) {
+            await deleteTVShowFromBackend(pid);
+          }
+        }
+        const results = await Promise.allSettled(normalized.map(s => syncTVShowToBackend(s)));
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled' && r.value?.id !== undefined) {
+            const bid = String(r.value.id);
+            if (String(normalized[i].id) !== bid) {
+              normalized[i] = { ...normalized[i], id: r.value.id };
+            }
+          }
+        });
+        localStorage.setItem('playflix_tv_shows', JSON.stringify(normalized));
+        localStorage.setItem('playflix_tv_shows_prev_ids', JSON.stringify(normalized.map(s => String(s.id))))
+      } catch (e) {
+        console.warn('saveTVShows backend sync failed:', e);
+      }
+    })();
   }
 }
 
@@ -3439,6 +4000,339 @@ export function saveXtreamConfigs(configs: XtreamConfig[]): void {
   }
 }
 
+export interface TvChannel {
+  id: string | number;
+  name: string;
+  description?: string;
+  logoPath?: string;
+  logoThumbPath?: string;
+  streamUrl: string;
+  category?: string;
+  language?: string;
+  country?: string;
+  isHD: boolean;
+  is4K: boolean;
+  order: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  epgId?: string;
+  nowPlaying?: string;
+  nextProgram?: string;
+  viewerCount: number;
+  rating: number;
+  timezone?: string;
+  isPaid: boolean;
+  packageName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const sampleTvChannels: TvChannel[] = [
+  {
+    id: 'cnn-us',
+    name: 'CNN',
+    description: 'Cable News Network - 24/7 News Coverage',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/240px-CNN.svg.png',
+    streamUrl: 'https://example.com/stream/cnn.m3u8',
+    category: 'News',
+    language: 'English',
+    country: 'United States',
+    isHD: true,
+    is4K: false,
+    order: 1,
+    isActive: true,
+    isFeatured: true,
+    nowPlaying: 'Breaking News Live',
+    nextProgram: 'The Situation Room with Wolf Blitzer',
+    viewerCount: 245000,
+    rating: 8.2,
+    isPaid: false,
+  },
+  {
+    id: 'bbc-world',
+    name: 'BBC World News',
+    description: 'BBC Global News and Analysis',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/BBC_News_logo_2022.svg/240px-BBC_News_logo_2022.svg.png',
+    streamUrl: 'https://example.com/stream/bbc.m3u8',
+    category: 'News',
+    language: 'English',
+    country: 'United Kingdom',
+    isHD: true,
+    is4K: false,
+    order: 2,
+    isActive: true,
+    isFeatured: true,
+    nowPlaying: 'BBC News at Ten',
+    nextProgram: 'HARDtalk',
+    viewerCount: 189000,
+    rating: 8.7,
+    isPaid: false,
+  },
+  {
+    id: 'espn',
+    name: 'ESPN',
+    description: 'Entertainment and Sports Programming Network',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/ESPN_wordmark.svg/240px-ESPN_wordmark.svg.png',
+    streamUrl: 'https://example.com/stream/espn.m3u8',
+    category: 'Sports',
+    language: 'English',
+    country: 'United States',
+    isHD: true,
+    is4K: false,
+    order: 3,
+    isActive: true,
+    isFeatured: true,
+    nowPlaying: 'Monday Night Football',
+    nextProgram: 'SportsCenter',
+    viewerCount: 512000,
+    rating: 9.1,
+    isPaid: true,
+    packageName: 'Sports Package',
+  },
+  {
+    id: 'hbo',
+    name: 'HBO',
+    description: 'Home Box Office - Premium Movies and Series',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/240px-HBO_logo.svg.png',
+    streamUrl: 'https://example.com/stream/hbo.m3u8',
+    category: 'Entertainment',
+    language: 'English',
+    country: 'United States',
+    isHD: true,
+    is4K: true,
+    order: 4,
+    isActive: true,
+    isFeatured: true,
+    nowPlaying: 'Game of Thrones - The Iron Throne',
+    nextProgram: 'Westworld',
+    viewerCount: 398000,
+    rating: 9.4,
+    isPaid: true,
+    packageName: 'Premium Package',
+  },
+  {
+    id: 'national-geographic',
+    name: 'National Geographic',
+    description: 'Science, Nature, and Adventure Documentaries',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/National-Geographic-Logo.svg/240px-National-Geographic-Logo.svg.png',
+    streamUrl: 'https://example.com/stream/nat-geo.m3u8',
+    category: 'Documentary',
+    language: 'English',
+    country: 'United States',
+    isHD: true,
+    is4K: false,
+    order: 5,
+    isActive: true,
+    isFeatured: false,
+    nowPlaying: 'Planet Earth III',
+    nextProgram: 'Cosmos: Possible Worlds',
+    viewerCount: 156000,
+    rating: 9.0,
+    isPaid: false,
+  },
+  {
+    id: 'discovery',
+    name: 'Discovery Channel',
+    description: 'The World is Just Awesome',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Discovery_Channel_logo_2019.svg/240px-Discovery_Channel_logo_2019.svg.png',
+    streamUrl: 'https://example.com/stream/discovery.m3u8',
+    category: 'Documentary',
+    language: 'English',
+    country: 'United States',
+    isHD: true,
+    is4K: false,
+    order: 6,
+    isActive: true,
+    isFeatured: false,
+    nowPlaying: 'MythBusters',
+    nextProgram: 'Gold Rush',
+    viewerCount: 112000,
+    rating: 8.5,
+    isPaid: false,
+  },
+  {
+    id: 'cartoon-network',
+    name: 'Cartoon Network',
+    description: "The Best Place for Cartoons and Kids' Entertainment",
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Cartoon_Network_logo_2010.svg/240px-Cartoon_Network_logo_2010.svg.png',
+    streamUrl: 'https://example.com/stream/cn.m3u8',
+    category: 'Kids',
+    language: 'English',
+    country: 'United States',
+    isHD: true,
+    is4K: false,
+    order: 7,
+    isActive: true,
+    isFeatured: false,
+    nowPlaying: 'Adventure Time',
+    nextProgram: 'The Amazing World of Gumball',
+    viewerCount: 89000,
+    rating: 8.8,
+    isPaid: false,
+  },
+  {
+    id: 'mtv',
+    name: 'MTV',
+    description: 'Music Television - Music, Pop Culture, and Reality',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MTV_logo_2021.svg/240px-MTV_logo_2021.svg.png',
+    streamUrl: 'https://example.com/stream/mtv.m3u8',
+    category: 'Music',
+    language: 'English',
+    country: 'United States',
+    isHD: true,
+    is4K: false,
+    order: 8,
+    isActive: true,
+    isFeatured: false,
+    nowPlaying: 'Top 40 Music Videos',
+    nextProgram: 'Ridiculousness',
+    viewerCount: 67000,
+    rating: 7.9,
+    isPaid: false,
+  },
+  {
+    id: 'food-network',
+    name: 'Food Network',
+    description: 'Cooking Shows, Recipes and Food Competitions',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Food_Network_logo_2013.svg/240px-Food_Network_logo_2013.svg.png',
+    streamUrl: 'https://example.com/stream/food.m3u8',
+    category: 'Lifestyle',
+    language: 'English',
+    country: 'United States',
+    isHD: true,
+    is4K: false,
+    order: 9,
+    isActive: true,
+    isFeatured: false,
+    nowPlaying: 'Iron Chef America',
+    nextProgram: 'Diners, Drive-Ins and Dives',
+    viewerCount: 78000,
+    rating: 8.3,
+    isPaid: false,
+  },
+  {
+    id: 'sky-sports',
+    name: 'Sky Sports',
+    description: "Europe's Leading Sports Broadcaster",
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Sky_Sports_logo_2020.svg/240px-Sky_Sports_logo_2020.svg.png',
+    streamUrl: 'https://example.com/stream/sky-sports.m3u8',
+    category: 'Sports',
+    language: 'English',
+    country: 'United Kingdom',
+    isHD: true,
+    is4K: true,
+    order: 10,
+    isActive: true,
+    isFeatured: true,
+    nowPlaying: 'Premier League Live',
+    nextProgram: 'Super Sunday',
+    viewerCount: 445000,
+    rating: 9.0,
+    isPaid: true,
+    packageName: 'Sports Package',
+  },
+  {
+    id: 'arte',
+    name: 'ARTE',
+    description: 'Franco-German Cultural Channel',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Arte_logo_2017.svg/240px-Arte_logo_2017.svg.png',
+    streamUrl: 'https://example.com/stream/arte.m3u8',
+    category: 'Culture',
+    language: 'French',
+    country: 'France',
+    isHD: true,
+    is4K: false,
+    order: 11,
+    isActive: true,
+    isFeatured: false,
+    nowPlaying: 'Cultural Documentary',
+    nextProgram: 'European Cinema Night',
+    viewerCount: 34000,
+    rating: 8.6,
+    isPaid: false,
+  },
+  {
+    id: 'al-jazeera',
+    name: 'Al Jazeera English',
+    description: 'Global News from the Middle East',
+    logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Aljazeera_english.svg/240px-Aljazeera_english.svg.png',
+    streamUrl: 'https://example.com/stream/aljazeera.m3u8',
+    category: 'News',
+    language: 'English',
+    country: 'Qatar',
+    isHD: true,
+    is4K: false,
+    order: 12,
+    isActive: true,
+    isFeatured: false,
+    nowPlaying: 'The Newsmakers',
+    nextProgram: 'UpFront',
+    viewerCount: 123000,
+    rating: 8.1,
+    isPaid: false,
+  },
+];
+
+export function getTvChannels(): TvChannel[] {
+  if (typeof window === 'undefined') return sampleTvChannels;
+  const saved = localStorage.getItem('playflix_tv_channels');
+  if (saved) {
+    try {
+      const raw = JSON.parse(saved);
+      if (Array.isArray(raw)) {
+        return raw.map((c: any) => c ? { ...c, rating: normalizeRating((c as any).rating, 8.0) } : c);
+      }
+    } catch {
+      return sampleTvChannels;
+    }
+  }
+  return sampleTvChannels;
+}
+
+export function saveTvChannels(channels: TvChannel[]): void {
+  if (typeof window !== 'undefined') {
+    const normalized = Array.isArray(channels)
+      ? channels.map((c: any) => (c ? { ...c, rating: normalizeRating(c?.rating, 8.0) } : c))
+      : channels;
+    localStorage.setItem('playflix_tv_channels', JSON.stringify(normalized));
+    (async () => {
+      try {
+        const { syncTvChannelToBackend, deleteTvChannelFromBackend } = await import('./api');
+        const local = new Set(normalized.map(c => String(c.id)));
+        const prevRaw = localStorage.getItem('playflix_tv_channels_prev_ids');
+        const prevIds: string[] = prevRaw ? JSON.parse(prevRaw) : [];
+        for (const pid of prevIds) {
+          if (!local.has(pid)) {
+            await deleteTvChannelFromBackend(pid);
+          }
+        }
+        const results = await Promise.allSettled(normalized.map(c => syncTvChannelToBackend(c)));
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled' && r.value?.id !== undefined) {
+            const bid = String(r.value.id);
+            if (String(normalized[i].id) !== bid) {
+              normalized[i] = { ...normalized[i], id: r.value.id };
+            }
+          }
+        });
+        localStorage.setItem('playflix_tv_channels', JSON.stringify(normalized));
+        localStorage.setItem('playflix_tv_channels_prev_ids', JSON.stringify(normalized.map(c => String(c.id))));
+      } catch (e) {
+        console.warn('saveTvChannels backend sync failed:', e);
+      }
+    })();
+  }
+}
+
+export const getTvChannelCategories = (): string[] => {
+  const all = getTvChannels();
+  const cats = new Set<string>();
+  for (const c of all) {
+    if (c.category) cats.add(c.category);
+  }
+  return Array.from(cats).sort();
+}
+
 export function getActiveXtreamConfig(): XtreamConfig | undefined {
   const configs = getXtreamConfigs();
   return configs.find(c => c.isActive);
@@ -3452,3 +4346,291 @@ export function setActiveXtreamConfig(configId: string): void {
   }));
   saveXtreamConfigs(updated);
 }
+
+// --- Media Sync / Upload Folder Types ---
+
+export type SyncTargetType =
+  | 'local-folder'
+  | 'external-drive'
+  | 'network-share'
+  | 's3'
+  | 'r2'
+  | 'android'
+  | 'android-tv'
+  | 'google-tv'
+  | 'ios'
+  | 'tvos'
+  | 'tizen'
+  | 'webos'
+  | 'roku'
+  | 'fire-tv'
+  | 'titan-os'
+  | 'tablet';
+
+export type SyncMode = 'copy' | 'mirror' | 'move';
+export type SyncDirection = 'backup' | 'archive' | 'restore' | 'two-way';
+
+export interface MediaSyncTarget {
+  id: string;
+  name: string;
+  userId?: string;
+  deviceId?: string;
+  type: SyncTargetType;
+  defaultMode: SyncMode;
+  defaultDirection: SyncDirection;
+  path?: string;
+  label?: string;
+  mountPoint?: string;
+  bucketName?: string;
+  endpoint?: string;
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKeyEncrypted?: string;
+  includeQualities: boolean;
+  qualities: string[];
+  includeSubtitles: boolean;
+  includeThumbnails: boolean;
+  includeOriginal: boolean;
+  includeMetadata: boolean;
+  compress: boolean;
+  splitIntoParts: boolean;
+  partSizeGB: number;
+  maxBandwidthMbps: number;
+  autoDetectOnConnect: boolean;
+  isConnected: boolean;
+  enabled: boolean;
+  freeBytes: number;
+  totalBytes: number;
+  usedBytes: number;
+  filesystem?: string;
+  autoSyncNewContent: boolean;
+  autoSyncMediaTypes: string[];
+  lastSeenAt?: Date | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export type SyncJobStatus = 'pending' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'verifying' | 'paused';
+export type SyncJobMediaType = 'video' | 'movie' | 'tv' | 'episode';
+
+export interface MediaSyncJob {
+  id: string;
+  status: SyncJobStatus;
+  direction: 'backup' | 'archive' | 'restore' | 'two-way';
+  mode: 'copy' | 'mirror' | 'move';
+  target?: MediaSyncTarget;
+  targetId?: string;
+  deviceId?: string;
+  platform?: string;
+  videoIds: string[];
+  movieIds: string[];
+  tvShowIds: string[];
+  episodeIds: string[];
+  qualities: string[];
+  includeSubtitles: boolean;
+  includeThumbnails: boolean;
+  includeOriginal: boolean;
+  includeMetadata: boolean;
+  verifyAfterCopy: boolean;
+  deleteSourceAfter: boolean;
+  itemsTotal: number;
+  itemsProcessed: number;
+  itemsFailed: number;
+  itemsSkipped: number;
+  bytesTotal: number;
+  bytesTransferred: number;
+  errors: string[];
+  warnings: string[];
+  speedMbps?: number;
+  etaSeconds?: number;
+  retryCount: number;
+  startedAt?: Date | string;
+  pausedAt?: Date | string;
+  completedAt?: Date | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+// --- Device / Multi-Platform Registration Types ---
+
+export type DevicePlatform =
+  | 'android'
+  | 'android-tv'
+  | 'google-tv'
+  | 'ios'
+  | 'tvos'
+  | 'tizen'
+  | 'webos'
+  | 'roku'
+  | 'fire-tv'
+  | 'titan-os'
+  | 'tablet'
+  | 'web-pwa';
+
+export type DeviceFormFactor = 'phone' | 'tablet' | 'tv' | 'desktop' | 'stick' | 'unknown';
+export type DeviceConnectionState = 'online' | 'offline' | 'idle' | 'syncing' | 'error';
+
+export interface Device {
+  id: string;
+  deviceKey: string;
+  name: string;
+  platform: DevicePlatform;
+  formFactor: DeviceFormFactor;
+  userId?: string;
+  model?: string;
+  manufacturer?: string;
+  osVersion?: string;
+  appVersion?: string;
+  appBuild?: string;
+  locale?: string;
+  languageCode?: string;
+  countryCode?: string;
+  timezone?: string;
+  totalBytes: number;
+  freeBytes: number;
+  usedBytes: number;
+  storagePath?: string;
+  ipAddress?: string;
+  macAddress?: string;
+  pushToken?: string;
+  connectionState: DeviceConnectionState;
+  enabled: boolean;
+  offlineEnabled: boolean;
+  autoSyncNewContent: boolean;
+  autoSyncMediaTypes: string[];
+  preferredQualities: string[];
+  autoSyncOnWifiOnly: boolean;
+  includeSubtitles: boolean;
+  includeAudioTracks: boolean;
+  maxOfflineGB: number;
+  batteryLevel?: number;
+  lastSeenAt?: Date | string;
+  lastSyncAt?: Date | string;
+  capabilities: Record<string, any>;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+// --- DLNA / Easy DLNA Device Discovery and Control Types ---
+
+export type DlnaDeviceClass =
+  | 'MediaRenderer'
+  | 'MediaServer'
+  | 'MediaPlayer'
+  | 'MediaRenderer:1'
+  | 'MediaServer:1'
+  | 'MediaServer:2'
+  | 'MediaRenderer:2'
+  | 'unknown';
+
+export type DlnaDeviceStatus = 'online' | 'offline' | 'discovering' | 'error';
+
+export type DlnaTransportState =
+  | 'STOPPED'
+  | 'PLAYING'
+  | 'TRANSITIONING'
+  | 'PAUSED_PLAYBACK'
+  | 'PAUSED_RECORDING'
+  | 'RECORDING'
+  | 'NO_MEDIA_PRESENT'
+  | 'CUSTOM';
+
+export interface DlnaDevice {
+  id: string;
+  udn: string;
+  friendlyName: string;
+  deviceClass: DlnaDeviceClass;
+  manufacturer?: string;
+  manufacturerUrl?: string;
+  modelName?: string;
+  modelDescription?: string;
+  modelNumber?: string;
+  modelUrl?: string;
+  serialNumber?: string;
+  locationUrl: string;
+  baseUrl?: string;
+  status: DlnaDeviceStatus;
+  ipAddress?: string;
+  port: number;
+  isMediaRenderer: boolean;
+  isMediaServer: boolean;
+  isRemoteControllable: boolean;
+  supportsPlay: boolean;
+  supportsPause: boolean;
+  supportsStop: boolean;
+  supportsSeek: boolean;
+  supportsSetVolume: boolean;
+  supportsSetMute: boolean;
+  avTransportControlUrl?: string;
+  renderingControlUrl?: string;
+  connectionManagerUrl?: string;
+  contentDirectoryUrl?: string;
+  supportedProtocols: string[];
+  services: string[];
+  cacheControlMaxAge: number;
+  pinned: boolean;
+  autoReconnect: boolean;
+  discoverCount: number;
+  failedAttempts: number;
+  lastKnownVolume?: number;
+  lastKnownMute: boolean;
+  lastPlayingTitle?: string;
+  lastPlayingUrl?: string;
+  lastSeenAt?: Date | string;
+  lastConnectedAt?: Date | string;
+  rawDeviceDescription: Record<string, any>;
+  capabilities: Record<string, any>;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface DlnaCastRequest {
+  deviceId: string;
+  mediaUrl: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  genre?: string;
+  posterUrl?: string;
+  contentType?: string;
+  startPositionSeconds?: number;
+  initialVolume?: number;
+  autoPlay?: boolean;
+}
+
+export interface DlnaPlaybackControlRequest {
+  volume?: number;
+  mute?: boolean;
+  seekSeconds?: number;
+  seekRelative?: string;
+}
+
+export interface DlnaPlaybackState {
+  currentTransportState: DlnaTransportState;
+  currentSpeed: string;
+  currentStatus: string;
+  trackDuration?: string;
+  relTime?: string;
+  absTime?: string;
+  currentTrack?: number;
+  currentTrackDuration?: string;
+  currentTrackMetaData?: any;
+  volume?: number;
+  mute?: boolean;
+}
+
+export interface DlnaBrowseRequest {
+  objectId?: string;
+  browseFlag?: 'BrowseMetadata' | 'BrowseDirectChildren';
+  filter?: string;
+  startingIndex?: number;
+  requestedCount?: number;
+  sortCriteria?: string;
+}
+
+export interface DlnaBrowseResponse {
+  numberReturned: number;
+  totalMatches: number;
+  items: any[];
+}
+

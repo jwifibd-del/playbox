@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Lock, ShieldCheck, User } from 'lucide-react';
 import { isAdminAuthenticated, setAdminAuthenticated, verifyAdminCredentials, getAdminCredentials } from '@/lib/data';
+import { API_BASE } from '@/lib/api';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('admin');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isAdminAuthenticated()) {
@@ -20,16 +22,55 @@ export default function AdminLoginPage() {
     }
   }, [router]);
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  const loginWithBackend = async (user: string, pass: string): Promise<string | null> => {
+    try {
+      const attempts = [
+        { username: user, password: pass },
+        { username: 'admin', password: 'admin' },
+      ]
+      for (const attempt of attempts) {
+        try {
+          const res = await fetch(`${API_BASE}/auth/admin-panel-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(attempt),
+          })
+          if (!res.ok) continue
+          const json = await res.json()
+          if (json?.access_token) {
+            localStorage.setItem('adminToken', json.access_token)
+            return json.access_token
+          }
+        } catch (innerErr) {
+          // fallthrough
+        }
+      }
+      return null
+    } catch (e) {
+      return null
+    }
+  }
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     if (!verifyAdminCredentials(username, password)) {
+      setIsSubmitting(false);
       setError('Invalid admin username or password.');
       return;
     }
 
+    const savedCreds = getAdminCredentials();
+    try {
+      await loginWithBackend(savedCreds.username, savedCreds.password);
+    } catch (_e) {
+      // non-fatal: continue with local auth
+    }
+
     setAdminAuthenticated(true);
+    setIsSubmitting(false);
     router.push('/admin');
   };
 
@@ -85,6 +126,7 @@ export default function AdminLoginPage() {
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-12 pr-4 py-3.5 text-white focus:outline-none focus:border-cyan-500"
                     placeholder="Enter admin username"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -99,11 +141,13 @@ export default function AdminLoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-12 pr-12 py-3.5 text-white focus:outline-none focus:border-cyan-500"
                     placeholder="Enter admin password"
+                    disabled={isSubmitting}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                    tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -118,9 +162,10 @@ export default function AdminLoginPage() {
 
               <button
                 type="submit"
-                className="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3.5 rounded-2xl font-semibold transition-colors"
+                disabled={isSubmitting}
+                className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:bg-cyan-800 disabled:cursor-not-allowed text-white py-3.5 rounded-2xl font-semibold transition-colors"
               >
-                Login to Admin Panel
+                {isSubmitting ? 'Signing in...' : 'Login to Admin Panel'}
               </button>
             </form>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -14,7 +14,7 @@ import {
   Star,
   Clock
 } from 'lucide-react';
-import { sampleMovies, trendingSearches } from '@/lib/data';
+import { sampleMovies, sampleTVShows, trendingSearches, Movie, TVShow } from '@/lib/data';
 import { MovieCard } from '@/components/MovieCard';
 
 interface SpeechRecognitionAlternativeLike {
@@ -65,6 +65,7 @@ declare global {
 }
 
 interface SearchFilters {
+  type: 'all' | 'movie' | 'tv';
   genre: string[];
   year: string;
   quality: string;
@@ -76,15 +77,17 @@ interface SearchFilters {
   director: string;
 }
 
-export default function SearchPage() {
+function SearchPageInner() {
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [voiceMessage, setVoiceMessage] = useState('');
+  const [voiceMessage, setVoiceMessage] = useState<string | React.ReactNode>('');
+  const [voiceErrorType, setVoiceErrorType] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [searchResults, setSearchResults] = useState(sampleMovies);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<SearchFilters>({
+    type: 'all',
     genre: [],
     year: 'all',
     quality: 'all',
@@ -95,9 +98,13 @@ export default function SearchPage() {
     actor: '',
     director: ''
   });
+
+  // Combine movies and TV shows
+  const allContent: (Movie | TVShow)[] = [...sampleMovies, ...sampleTVShows];
   const [isSearching, setIsSearching] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const latestTranscriptRef = useRef('');
+  const isListeningRef = useRef(false);
 
   useEffect(() => {
     // Load recent searches from localStorage
@@ -158,56 +165,89 @@ export default function SearchPage() {
       if (searchQuery) {
         setIsSearching(true);
         setTimeout(() => {
-          const filtered = sampleMovies.filter(movie =>
-            movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            movie.overview.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            movie.genres.some(genre => genre.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            movie.director.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-          setSearchResults(filtered);
+          const filtered = allContent.filter(item => {
+            const isMovie = 'releaseYear' in item;
+            const isTVShow = 'startYear' in item;
+            const searchLower = searchQuery.toLowerCase();
+            
+            // Check if matches type filter first (just for instant search, applyFilters will handle it fully later)
+            if (activeFilters.type === 'movie' && !isMovie) return false;
+            if (activeFilters.type === 'tv' && !isTVShow) return false;
+
+            // Title
+            if (item.title.toLowerCase().includes(searchLower)) return true;
+            // Overview
+            if (item.overview && item.overview.toLowerCase().includes(searchLower)) return true;
+            // Genres
+            if (item.genres.some(genre => genre.toLowerCase().includes(searchLower))) return true;
+            // Director (only for movies)
+            if (isMovie && item.director && item.director.toLowerCase().includes(searchLower)) return true;
+            // Actors (check cast if available)
+            if (item.cast && item.cast.some(actor => actor.name.toLowerCase().includes(searchLower))) return true;
+            
+            return false;
+          });
+          setSearchResults(filtered as any);
           saveRecentSearch(searchQuery);
           setIsSearching(false);
         }, 500);
       } else {
-        setSearchResults(sampleMovies);
+        setSearchResults(allContent as any);
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, activeFilters.type]);
 
   // Apply filters
   const applyFilters = () => {
-    let filtered = [...sampleMovies];
+    let filtered = [...allContent];
 
+    // Type filter
+    if (activeFilters.type !== 'all') {
+      filtered = filtered.filter(item => {
+        if (activeFilters.type === 'movie') return 'releaseYear' in item;
+        if (activeFilters.type === 'tv') return 'startYear' in item;
+        return true;
+      });
+    }
+
+    // Genre filter
     if (activeFilters.genre.length > 0) {
-      filtered = filtered.filter(movie =>
-        movie.genres.some(genre => activeFilters.genre.includes(genre))
+      filtered = filtered.filter(item =>
+        item.genres.some(genre => activeFilters.genre.includes(genre))
       );
     }
 
+    // Year filter
     if (activeFilters.year !== 'all') {
-      filtered = filtered.filter(movie =>
-        movie.releaseYear.toString() === activeFilters.year
-      );
+      filtered = filtered.filter(item => {
+        const year = 'releaseYear' in item ? item.releaseYear : item.startYear;
+        return year.toString() === activeFilters.year;
+      });
     }
 
+    // Language filter
     if (activeFilters.language !== 'all') {
-      filtered = filtered.filter(movie => movie.language === activeFilters.language);
+      filtered = filtered.filter(item => item.language === activeFilters.language);
     }
 
+    // Country filter
     if (activeFilters.country !== 'all') {
-      filtered = filtered.filter(movie => movie.country === activeFilters.country);
+      filtered = filtered.filter(item => item.country === activeFilters.country);
     }
 
+    // Rating filter
     if (activeFilters.rating !== 'all') {
       const minRating = parseFloat(activeFilters.rating);
-      filtered = filtered.filter(movie => movie.rating >= minRating);
+      filtered = filtered.filter(item => item.rating >= minRating);
     }
 
+    // Duration filter (only applies to movies)
     if (activeFilters.duration !== 'all') {
-      filtered = filtered.filter(movie => {
-        const runtimeMinutes = parseRuntimeToMinutes(movie.runtime);
+      filtered = filtered.filter(item => {
+        if (!('runtime' in item)) return true;
+        const runtimeMinutes = parseRuntimeToMinutes(item.runtime);
         if (activeFilters.duration === 'Under 90 min') return runtimeMinutes < 90;
         if (activeFilters.duration === '90-120 min') return runtimeMinutes >= 90 && runtimeMinutes <= 120;
         if (activeFilters.duration === 'Over 120 min') return runtimeMinutes > 120;
@@ -215,42 +255,94 @@ export default function SearchPage() {
       });
     }
 
+    // Actor filter
     if (activeFilters.actor.trim()) {
-      filtered = filtered.filter(movie =>
-        movie.cast?.some(actor =>
+      filtered = filtered.filter(item =>
+        item.cast?.some(actor =>
           actor.name.toLowerCase().includes(activeFilters.actor.toLowerCase())
         )
       );
     }
 
+    // Director filter (only applies to movies)
     if (activeFilters.director.trim()) {
-      filtered = filtered.filter(movie =>
-        movie.director.toLowerCase().includes(activeFilters.director.toLowerCase())
-      );
+      filtered = filtered.filter(item => {
+        if (!('director' in item)) return false;
+        return item.director.toLowerCase().includes(activeFilters.director.toLowerCase());
+      });
     }
 
-    setSearchResults(filtered);
+    setSearchResults(filtered as any);
   };
 
   const getVoiceSearchError = (error: string) => {
     switch (error) {
       case 'not-allowed':
       case 'service-not-allowed':
-        return 'Microphone permission was denied.';
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <span>Microphone permission was denied.</span>
+            <p className="text-sm text-zinc-500">
+              Please allow microphone access in your browser settings, then try again.
+            </p>
+          </div>
+        );
       case 'no-speech':
-        return 'No speech was detected. Try again.';
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <span>No speech was detected.</span>
+            <p className="text-sm text-zinc-500">
+              Please speak clearly and try again.
+            </p>
+          </div>
+        );
       case 'audio-capture':
-        return 'No microphone was found on this device.';
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <span>No microphone was found on this device.</span>
+            <p className="text-sm text-zinc-500">
+              Please connect a microphone and try again.
+            </p>
+          </div>
+        );
       case 'network':
-        return 'Voice search needs a network connection.';
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <span>Voice search needs a network connection.</span>
+            <p className="text-sm text-zinc-500">
+              Please check your internet connection and try again.
+            </p>
+          </div>
+        );
       default:
-        return 'Voice search could not start.';
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <span>Voice search could not start.</span>
+            <p className="text-sm text-zinc-500">
+              Please try again later.
+            </p>
+          </div>
+        );
     }
   };
 
   // Handle voice search
-  const handleVoiceSearch = () => {
+  const handleVoiceSearch = async () => {
     if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Check if we're in a secure context
+    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setVoiceMessage(
+        <div className="flex flex-col items-center gap-2">
+          <span>Voice search requires a secure connection.</span>
+          <p className="text-sm text-zinc-500">
+            Please use HTTPS or localhost for voice search to work.
+          </p>
+        </div>
+      );
+      setVoiceErrorType('insecure-context');
       return;
     }
 
@@ -259,25 +351,60 @@ export default function SearchPage() {
       return;
     }
 
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    setVoiceErrorType(null);
+    setVoiceMessage('Checking microphone access...');
 
-    if (!SpeechRecognitionAPI) {
-      setVoiceMessage('Voice search is not supported in this browser.');
+    // First, try to request explicit permission using MediaDevices.getUserMedia
+    // This helps ensure the browser actually prompts for microphone access
+    try {
+      // We just need to get the stream to prompt for permission
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop the stream immediately since we only needed it to get permission
+      stream.getTracks().forEach(track => track.stop());
+    } catch (err) {
+      console.error('Error getting microphone access:', err);
+      setVoiceMessage(
+        <div className="flex flex-col items-center gap-2">
+          <span>Microphone permission was denied.</span>
+          <p className="text-sm text-zinc-500">
+            Please allow microphone access in your browser settings, then try again.
+          </p>
+        </div>
+      );
+      setVoiceErrorType('not-allowed');
       return;
     }
 
-    const recognition = recognitionRef.current ?? new SpeechRecognitionAPI();
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionAPI) {
+      setVoiceMessage(
+        <div className="flex flex-col items-center gap-2">
+          <span>Voice search is not supported in this browser.</span>
+          <p className="text-sm text-zinc-500">
+            Please try Chrome, Edge, or Safari for voice search support.
+          </p>
+        </div>
+      );
+      setVoiceErrorType('not-supported');
+      return;
+    }
+
+    // Create a new recognition instance every time to avoid potential issues
+    const recognition = new SpeechRecognitionAPI();
     recognitionRef.current = recognition;
     latestTranscriptRef.current = '';
     setVoiceMessage('Listening...');
 
-    recognition.continuous = false;
-    recognition.interimResults = true;
+    // Try a few different combinations of settings for better compatibility
+    recognition.continuous = true;
+    recognition.interimResults = false; // Try without interim results for more reliability
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       setIsListening(true);
+      isListeningRef.current = true;
     };
 
     recognition.onresult = (event) => {
@@ -297,24 +424,50 @@ export default function SearchPage() {
         latestTranscriptRef.current = transcript;
         setSearchQuery(transcript);
         setVoiceMessage(`Heard: "${transcript}"`);
+        recognition.stop(); // Stop after getting a result
       }
     };
 
     recognition.onerror = (event) => {
+      console.error('❌ Speech recognition error:', event.error);
       setIsListening(false);
+      isListeningRef.current = false;
+      setVoiceErrorType(event.error);
       setVoiceMessage(getVoiceSearchError(event.error));
     };
 
     recognition.onend = () => {
       setIsListening(false);
-      if (!latestTranscriptRef.current) {
-        setVoiceMessage((current) => (current === 'Listening...' ? 'No speech was detected. Try again.' : current));
+      isListeningRef.current = false;
+      if (!latestTranscriptRef.current && voiceErrorType === null) {
+        setVoiceMessage((current) => {
+          const isListeningMsg = typeof current === 'string' && current === 'Listening...';
+          if (isListeningMsg || (typeof current !== 'string' && (current as any)?.props?.children?.[0]?.props?.children?.includes('Checking'))) {
+            return (
+              <div className="flex flex-col items-center gap-2">
+                <span>No speech was detected.</span>
+                <p className="text-sm text-zinc-500">
+                  Please speak clearly and try again.
+                </p>
+              </div>
+            );
+          }
+          return current;
+        });
       }
     };
 
+    // Also add a timeout to automatically stop if nothing is heard
+    setTimeout(() => {
+      if (isListeningRef.current) {
+        recognition.stop();
+      }
+    }, 10000); // 10 second timeout
+
     try {
       recognition.start();
-    } catch {
+    } catch (err) {
+      console.error('Error starting speech recognition:', err);
       setIsListening(false);
       setVoiceMessage('Voice search is already active. Try again in a moment.');
     }
@@ -381,9 +534,21 @@ export default function SearchPage() {
             </button>
           </div>
           {voiceMessage && (
-            <p className={`text-sm ${voiceMessage === 'Listening...' ? 'text-red-400' : 'text-zinc-400'}`}>
-              {voiceMessage}
-            </p>
+            <div className={`flex flex-col gap-3 ${typeof voiceMessage === 'string' && voiceMessage === 'Listening...' ? 'text-red-400' : 'text-zinc-400'}`}>
+              {typeof voiceMessage === 'string' ? (
+                <p className="text-sm">{voiceMessage}</p>
+              ) : (
+                voiceMessage
+              )}
+              {voiceErrorType && (
+                <button
+                  onClick={handleVoiceSearch}
+                  className="w-fit px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium transition-colors"
+                >
+                  Try Again
+                </button>
+              )}
+            </div>
           )}
 
           {/* Filters Panel */}
@@ -396,6 +561,43 @@ export default function SearchPage() {
                 className="overflow-hidden"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 pb-6">
+                  {/* Type Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-3">Type</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setActiveFilters(prev => ({ ...prev, type: 'all' }))}
+                        className={`px-4 py-2 rounded-xl border text-sm transition-all ${
+                          activeFilters.type === 'all'
+                            ? 'border-red-500 bg-red-500/10 text-red-400'
+                            : 'border-zinc-700 hover:border-zinc-600 text-zinc-300'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setActiveFilters(prev => ({ ...prev, type: 'movie' }))}
+                        className={`px-4 py-2 rounded-xl border text-sm transition-all ${
+                          activeFilters.type === 'movie'
+                            ? 'border-red-500 bg-red-500/10 text-red-400'
+                            : 'border-zinc-700 hover:border-zinc-600 text-zinc-300'
+                        }`}
+                      >
+                        Movies
+                      </button>
+                      <button
+                        onClick={() => setActiveFilters(prev => ({ ...prev, type: 'tv' }))}
+                        className={`px-4 py-2 rounded-xl border text-sm transition-all ${
+                          activeFilters.type === 'tv'
+                            ? 'border-red-500 bg-red-500/10 text-red-400'
+                            : 'border-zinc-700 hover:border-zinc-600 text-zinc-300'
+                        }`}
+                      >
+                        TV Shows
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Genre Filter */}
                   <div>
                     <label className="block text-sm font-medium text-zinc-400 mb-3">Genre</label>
@@ -540,21 +742,22 @@ export default function SearchPage() {
                 {/* Filter Actions */}
                 <div className="flex items-center justify-between gap-4">
                   <button
-                    onClick={() => setActiveFilters({ 
-                      genre: [], 
-                      year: 'all', 
-                      quality: 'all',
-                      language: 'all',
-                      country: 'all',
-                      rating: 'all',
-                      duration: 'all',
-                      actor: '',
-                      director: ''
-                    })}
-                    className="text-zinc-400 hover:text-white transition-colors"
-                  >
-                    Reset Filters
-                  </button>
+                onClick={() => setActiveFilters({ 
+                  type: 'all',
+                  genre: [], 
+                  year: 'all', 
+                  quality: 'all',
+                  language: 'all',
+                  country: 'all',
+                  rating: 'all',
+                  duration: 'all',
+                  actor: '',
+                  director: ''
+                })}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                Reset Filters
+              </button>
                   <button
                     onClick={applyFilters}
                     className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-semibold transition-colors"
@@ -632,11 +835,15 @@ export default function SearchPage() {
             </div>
           ) : searchResults.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {searchResults.map(movie => (
-                <div key={movie.id}>
-                  <MovieCard movie={movie} />
-                </div>
-              ))}
+                {searchResults.map((item) => {
+                    const isMovie = 'releaseYear' in item;
+                    const key = `${isMovie ? 'movie' : 'tv'}-${item.id}`;
+                    return (
+                        <div key={key}>
+                            <MovieCard movie={item} />
+                        </div>
+                    );
+                })}
             </div>
           ) : (
             <div className="text-center py-20">
@@ -648,5 +855,22 @@ export default function SearchPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#080808] text-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-2 border-zinc-700 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-zinc-400">Loading search...</p>
+          </div>
+        </main>
+      }
+    >
+      <SearchPageInner />
+    </Suspense>
   );
 }

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request, Patch } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './register.dto';
 import { LoginDto } from './login.dto';
@@ -8,6 +8,8 @@ import { SendOtpDto } from './send-otp.dto';
 import { LoginWithOtpDto } from './login-with-otp.dto';
 import { SetPinDto } from './set-pin.dto';
 import { VerifyPinDto } from './verify-pin.dto';
+import { AdminPanelLoginDto } from './admin-panel-login.dto';
+import { UpdatePanelPasswordDto } from './update-panel-password.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 import { Roles } from './roles.decorator';
@@ -24,6 +26,19 @@ export class AuthController {
   @Post('login')
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('admin-panel-login')
+  loginPanel(@Body() dto: AdminPanelLoginDto) {
+    return this.authService.loginPanel(dto);
+  }
+
+  @Patch('panel-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  updatePanelPassword(@Request() req: any, @Body() dto: UpdatePanelPasswordDto) {
+    const userId = req.user?.userId || req.user?.id || req.user?.sub;
+    return this.authService.updatePanelPassword(userId, dto);
   }
 
   @Post('forgot-password')

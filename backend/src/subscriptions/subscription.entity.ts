@@ -28,23 +28,21 @@ export class Subscription {
   userId: string;
 
   @Column({
-    type: 'enum',
-    enum: SubscriptionPlan,
+    type: 'text',
     default: SubscriptionPlan.FREE,
   })
   plan: SubscriptionPlan;
 
   @Column({
-    type: 'enum',
-    enum: SubscriptionStatus,
+    type: 'text',
     default: SubscriptionStatus.ACTIVE,
   })
   status: SubscriptionStatus;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ nullable: true })
   startDate?: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ nullable: true })
   endDate?: Date;
 
   @Column({ nullable: true })

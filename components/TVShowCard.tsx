@@ -1,22 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Plus, Info, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { isUserAuthenticated, TVShow } from '@/lib/data';
+import { formatRating } from '@/lib/utils';
 
 interface TVShowCardProps {
   tvShow: TVShow;
 }
 
 export function TVShowCard({ tvShow }: TVShowCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
+  const [isHovered, setIsHoveredState] = useState(false);
+  const isMountedRef = useRef(true);
   const router = useRouter();
 
-  const handleOpenTVShow = () => {
+  useEffect(() => () => { isMountedRef.current = false; }, []);
+
+  const setIsHovered = useCallback((next: boolean) => {
+    queueMicrotask(() => {
+      if (isMountedRef.current) setIsHoveredState(next);
+    });
+  }, []);
+
+  const handleOpenTVShow = useCallback(() => {
     router.push(isUserAuthenticated() ? `/tv/${tvShow.id}` : '/login');
-  };
+  }, [router, tvShow.id]);
 
   return (
     <motion.div
@@ -44,7 +54,7 @@ export function TVShowCard({ tvShow }: TVShowCardProps) {
             <h3 className="text-white font-bold text-lg mb-2 line-clamp-1">{tvShow.title}</h3>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-yellow-400 flex items-center gap-1 text-sm">
-                <Star fill="currentColor" size={14} /> {tvShow.rating.toFixed(1)}
+                <Star fill="currentColor" size={14} /> {formatRating(tvShow.rating)}
               </span>
               <span className="text-gray-300 text-sm">{tvShow.startYear}{tvShow.endYear ? ` - ${tvShow.endYear}` : ''}</span>
             </div>

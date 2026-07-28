@@ -1,0 +1,196 @@
+
+--- app/admin/page.tsx (Original)
++++ app/admin/page.tsx (Modified)
+
+@@ -152,6 +152,8 @@
+   const isHomeTabActive = ['home', 'kids-home', 'anime-home'].includes(activeTab);
+   const [homeDropdownOpen, setHomeDropdownOpen] = useState(isHomeTabActive);
+   const isSliderTabActive = ['sliders', 'kids-sliders', 'anime-sliders'].includes(activeTab);
+   const [sliderDropdownOpen, setSliderDropdownOpen] = useState(isSliderTabActive);
+   const isImportTabActive = ['import-movies', 'import-tv', 'import-livetv'].includes(activeTab);
+   const [importDropdownOpen, setImportDropdownOpen] = useState(isImportTabActive);
++  const isHeroTabActive = ['default-hero', 'kids-hero', 'anime-hero'].includes(activeTab);
++  const [heroDropdownOpen, setHeroDropdownOpen] = useState(isHeroTabActive);
+   const navItems = [
+     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+
+@@ -193,12 +195,20 @@
+     { id: 'livetv', label: 'Live TV', icon: Radio },
+     { id: 'xtream-api', label: 'Xtream API', icon: Wifi },
+-    { id: 'herobanner', label: 'Hero Banner', icon: Image },
++    {
++      id: 'hero-group',
++      label: 'Hero Banner',
++      icon: Image,
++      subItems: [
++        { id: 'default-hero', label: 'Default Hero Banner', icon: Image },
++        { id: 'kids-hero', label: 'Kids Hero Banners', icon: Smile },
++        { id: 'anime-hero', label: 'Anime Hero Banners', icon: Sparkles },
++      ]
++    },
+     { id: 'genres', label: 'Genres', icon: Tags },
+     { id: 'countries', label: 'Countries', icon: Globe },
+     { id: 'languages', label: 'Languages', icon: Languages },
+     { id: 'notifications', label: 'Push Notifications', icon: Send },
+
+@@ -211,6 +221,9 @@
+     if (isImportTabActive) {
+       setImportDropdownOpen(true);
+     }
++    if (isHeroTabActive) {
++      setHeroDropdownOpen(true);
++    }
+   }, [isHomeTabActive, isSliderTabActive, isImportTabActive, isHeroTabActive]);
+ 
+   return (
+
+@@ -236,11 +249,19 @@
+           if (item.subItems) {
+             const isAnySubItemActive = item.subItems.some((sub: any) => activeTab === sub.id);
+             const isHomeGroup = item.id === 'home-group';
+             const isSliderGroup = item.id === 'sliders-group';
++            const isHeroGroup = item.id === 'hero-group';
+             const dropdownOpen = isHomeGroup
+               ? homeDropdownOpen
+               : isSliderGroup
+                 ? sliderDropdownOpen
++                : isHeroGroup
++                  ? heroDropdownOpen
+                   : importDropdownOpen;
+             const setDropdownOpen = isHomeGroup
+               ? setHomeDropdownOpen
+               : isSliderGroup
+                 ? setSliderDropdownOpen
++                : isHeroGroup
++                  ? setHeroDropdownOpen
+                   : setImportDropdownOpen;
+
+---
+Then, also in the main page (not AdminSidebar):
+Add:
+  const [mobileHeroDropdownOpen, setMobileHeroDropdownOpen] = useState(false)
+After the other mobile dropdown state declarations!
+
+Update the navItems in the main page to also use hero-group instead of herobanner!
+Update the mobile dropdown open logic in the main page the same way as AdminSidebar!
+
+Also, add these new tabs' render code after the herobanner tab:
+            {activeTab === 'default-hero' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-white">Default Hero Banner</h2>
+                    <p className="text-zinc-500 mt-1">Manage the main hero banner</p>
+                  </div>
+                  <button onClick={()=>handleAddHeroBanner()} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl">
+                    <Plus className="w-4 h-4" /> Add Hero Banner
+                  </button>
+                </div>
+                {heroBanners.length === 0 && (
+                  <div className="text-center py-16 bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl">
+                    <Image className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">No Hero Banners Yet</h3>
+                    <p className="text-zinc-500">Add your first hero banner</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {heroBanners.map((banner, index)=>(
+                    <div key={index} className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                      <img src={banner.image} alt={banner.title} className="w-full aspect-video object-cover rounded-xl mb-4" />
+                      <h3 className="text-xl font-semibold text-white mb-2">{banner.title}</h3>
+                      <p className="text-zinc-400 mb-4">{banner.description}</p>
+                      <div className="flex gap-3">
+                        <button onClick={()=>handleEditHeroBanner(index)} className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl">Edit</button>
+                        <button onClick={()=>handleDeleteHeroBanner(index)} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'kids-hero' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-white">Kids Hero Banners</h2>
+                    <p className="text-zinc-500 mt-1">Manage kids hero banners</p>
+                  </div>
+                  <button onClick={()=>handleAddKidsHeroBanner()} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl">
+                    <Plus className="w-4 h-4" /> Add Kids Hero Banner
+                  </button>
+                </div>
+                {kidsHeroBanners.length ===0 && (
+                  <div className="text-center py-16 bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl">
+                    <Smile className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">No Kids Hero Banners Yet</h3>
+                    <p className="text-zinc-500">Add your first kids hero banner</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {kidsHeroBanners.map((banner, index)=>(
+                    <div key={index} className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                      <img src={banner.image} alt={banner.title} className="w-full aspect-video object-cover rounded-xl mb-4" />
+                      <h3 className="text-xl font-semibold text-white mb-2">{banner.title}</h3>
+                      <p className="text-zinc-400 mb-4">{banner.description}</p>
+                      <div className="flex gap-3">
+                        <button onClick={()=>handleEditKidsHeroBanner(index)} className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl">Edit</button>
+                        <button onClick={()=>handleDeleteKidsHeroBanner(index)} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'anime-hero' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-white">Anime Hero Banners</h2>
+                    <p className="text-zinc-500 mt-1">Manage anime hero banners</p>
+                  </div>
+                  <button onClick={()=>handleAddAnimeHeroBanner()} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl">
+                    <Plus className="w-4 h-4" /> Add Anime Hero Banner
+                  </button>
+                </div>
+                {animeHeroBanners.length===0 && (
+                  <div className="text-center py-16 bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl">
+                    <Sparkles className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">No Anime Hero Banners Yet</h3>
+                    <p className="text-zinc-500">Add your first anime hero banner</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {animeHeroBanners.map((banner, index)=>(
+                    <div key={index} className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
+                      <img src={banner.image} alt={banner.title} className="w-full aspect-video object-cover rounded-xl mb-4" />
+                      <h3 className="text-xl font-semibold text-white mb-2">{banner.title}</h3>
+                      <p className="text-zinc-400 mb-4">{banner.description}</p>
+                      <div className="flex gap-3">
+                        <button onClick={()=>handleEditAnimeHeroBanner(index)} className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl">Edit</button>
+                        <button onClick={()=>handleDeleteAnimeHeroBanner(index)} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+
+Also, add deleteUser to the imports from @/lib/data!
+So change this line:
+import { ..., getUsers, AppUser, ... } from '@/lib/data';
+To this:
+import { ..., getUsers, deleteUser, AppUser, ... } from '@/lib/data';
+
+And also add a handleDeleteRegisteredUser function near the other handlers!
+  const handleDeleteRegisteredUser = (userId: string | number, userName: string) => {
+    if(!confirm(`Delete ${userName} from registered users?`)) return;
+
+    deleteUser(userId);
+    setRegisteredUsers(getUsers());
+    showToast('User deleted successfully!', 'success');
+  }
+
+And add a delete button to each user in the users tab!

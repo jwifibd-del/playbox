@@ -19,8 +19,7 @@ export class Video {
   title: string;
 
   @Column({
-    type: 'enum',
-    enum: VideoStatus,
+    type: 'text',
     default: VideoStatus.PENDING,
   })
   status: VideoStatus;
@@ -37,13 +36,13 @@ export class Video {
   @Column({ nullable: true })
   dashManifestPath: string; // Path to DASH manifest (.mpd)
 
-  @Column({ type: 'simple-array', default: [] })
+  @Column({ type: 'simple-array', default: '' })
   qualities: string[]; // e.g. ['1080p', '720p', '480p']
 
-  @Column({ type: 'simple-array', default: [] })
+  @Column({ type: 'simple-array', default: '' })
   audioTracks: string[];
 
-  @Column({ type: 'simple-array', default: [] })
+  @Column({ type: 'simple-array', default: '' })
   subtitleTracks: string[];
 
   @Column({ nullable: true })

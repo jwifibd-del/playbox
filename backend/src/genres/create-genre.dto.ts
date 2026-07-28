@@ -1,4 +1,5 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateGenreDto {
   @IsString()
@@ -7,4 +8,9 @@ export class CreateGenreDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  tmdbId?: number;
 }

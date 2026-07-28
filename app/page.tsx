@@ -8,24 +8,37 @@ import { MovieRow } from '@/components/MovieRow';
 import { Footer } from '@/components/Footer';
 
 import { ContinueWatchingRow } from '@/components/ContinueWatchingRow';
-import { LiveTVRow } from '@/components/LiveTVRow';
 import { NewsRow } from '@/components/NewsRow';
 import { KidsRow } from '@/components/KidsRow';
 import { HorizontalSlider } from '@/components/HorizontalSlider';
 import { MovieCard } from '@/components/MovieCard';
-import { sampleMovies, continueWatching, liveChannels, newsItems, kidsContent, getGenres, getTVShows, isAnimeModeActive, isKidsModeActive } from '@/lib/data';
-import { getHeroBanners, getSliderSections, getHomepageSections, HeroBanner as HeroBannerType, SliderSection, HomepageSection } from '@/lib/data';
+import {
+  sampleMovies,
+  continueWatching,
+  newsItems,
+  kidsContent,
+  getGenres,
+  isAnimeModeActive,
+  isKidsModeActive,
+  getHeroBanners,
+  getSliderSections,
+  getHomepageSections,
+  HeroBanner as HeroBannerType,
+  SliderSection,
+  HomepageSection,
+} from '@/lib/data';
 import { TVShowCard } from '@/components/TVShowCard';
 import { TVShowRow } from '@/components/TVShowRow';
-import { fetchMovies } from '@/lib/api';
+import { fetchMovies, fetchTVShows } from '@/lib/api';
+import type { TVShow } from '@/lib/data';
 
 export default function Home() {
   const router = useRouter();
   const [isPageReady, setIsPageReady] = useState(false);
   const [movies, setMovies] = useState(sampleMovies);
-  const [tvShows, setTVShows] = useState([] as any[]);
+  const [tvShows, setTVShows] = useState<TVShow[]>([]);
   const [genres, setGenres] = useState(getGenres());
-  
+
   useEffect(() => {
     if (isKidsModeActive()) {
       router.replace('/kids');
@@ -38,13 +51,13 @@ export default function Home() {
     }
 
     async function loadData() {
-      setIsPageReady(true);
-      const apiMovies = await fetchMovies();
+      const [apiMovies, apiTVShows] = await Promise.all([
+        fetchMovies(),
+        fetchTVShows(),
+      ]);
       setMovies(apiMovies);
-      const adminTVShows = getTVShows();
-      if (adminTVShows.length > 0) {
-        setTVShows(adminTVShows);
-      }
+      setTVShows(apiTVShows);
+      setIsPageReady(true);
     }
     loadData();
   }, [router]);
@@ -95,8 +108,6 @@ export default function Home() {
         return <ContinueWatchingRow key={section.id} title={section.title} items={continueWatching} animationDuration={duration} />;
       case 'recommended':
         return <MovieRow key={section.id} title={section.title} movies={recommendations} animationDuration={duration} />;
-      case 'live-tv':
-        return <LiveTVRow key={section.id} title={section.title} channels={liveChannels} animationDuration={duration} />;
       case 'trending':
         return <MovieRow key={section.id} title={section.title} movies={trendingMovies} animationDuration={duration} />;
       case 'news':

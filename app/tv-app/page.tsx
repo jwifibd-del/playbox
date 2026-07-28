@@ -13,8 +13,9 @@ import {
 import { Navbar } from '@/components/Navbar';
 import { TVRail } from '@/components/tv/TVRail';
 import type { TVRailItem } from '@/components/tv/TVMediaCard';
-import { getLiveTVChannels, sampleMovies, type LiveTVChannel, type Movie, type TVShow } from '@/lib/data';
+import { sampleMovies, type Movie, type TVShow } from '@/lib/data';
 import { fetchMovies, fetchTVShows } from '@/lib/api';
+import { formatRating } from '@/lib/utils';
 
 interface SpeechRecognitionAlternativeLike {
   transcript: string;
@@ -91,7 +92,7 @@ function mapMovieToRailItem(movie: Movie): TVRailItem {
     meta: `${movie.runtime} • ${movie.genres.slice(0, 2).join(' • ')}`,
     href: `/movie/${movie.id}`,
     imageUrl: movie.backdropPath || movie.posterPath,
-    badge: `${movie.rating.toFixed(1)} IMDb`,
+    badge: `${formatRating(movie.rating)} IMDb`,
     kind: 'movie',
   };
 }
@@ -104,7 +105,7 @@ function mapShowToRailItem(show: TVShow): TVRailItem {
     meta: `${show.numberOfSeasons} seasons • ${show.genres.slice(0, 2).join(' • ')}`,
     href: `/tv/${show.id}`,
     imageUrl: show.backdropPath || show.posterPath,
-    badge: `${show.rating.toFixed(1)} Rating`,
+    badge: `${formatRating(show.rating)} Rating`,
     kind: 'tv',
   };
 }
@@ -122,27 +123,12 @@ function mapMovieFallbackToShow(movie: Movie): TVRailItem {
   };
 }
 
-function mapChannelToRailItem(channel: LiveTVChannel): TVRailItem {
-  return {
-    id: `live-${channel.id}`,
-    title: channel.name,
-    subtitle: `${channel.genre} • ${channel.streamType}`,
-    meta: 'Live channel guide starter',
-    href: `/live-tv/${channel.id}`,
-    imageUrl: channel.posterPath,
-    accentColor: channel.accentColor,
-    badge: 'Live',
-    kind: 'live',
-  };
-}
-
 export default function TVAppPage() {
   const router = useRouter();
   const primaryActionRef = useRef<HTMLButtonElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [movies, setMovies] = useState<Movie[]>(sampleMovies);
   const [shows, setShows] = useState<TVShow[]>([]);
-  const [channels, setChannels] = useState<LiveTVChannel[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [voiceMessage, setVoiceMessage] = useState('');
 
@@ -150,11 +136,9 @@ export default function TVAppPage() {
     async function loadData() {
       const apiMovies = await fetchMovies();
       const apiShows = await fetchTVShows();
-      const storedChannels = getLiveTVChannels();
 
       setMovies(apiMovies);
       setShows(apiShows);
-      setChannels(storedChannels);
     }
     loadData();
   }, []);
@@ -180,11 +164,6 @@ export default function TVAppPage() {
     () =>
       (shows.length > 0 ? shows.slice(0, 8).map(mapShowToRailItem) : movies.slice(0, 8).map(mapMovieFallbackToShow)),
     [movies, shows]
-  );
-
-  const liveRailItems = useMemo(
-    () => channels.slice(0, 8).map(mapChannelToRailItem),
-    [channels]
   );
 
   const recommendationRailItems = useMemo(
@@ -384,12 +363,6 @@ export default function TVAppPage() {
         />
         <TVRail
           railIndex={2}
-          title="Live Channel Guide Starter"
-          description="Live TV enters the TV roadmap with bigger cards and remote-ready channel navigation."
-          items={liveRailItems}
-        />
-        <TVRail
-          railIndex={3}
           title="Recommendation Rows"
           description="A first recommendation rail based on top-rated catalog titles. This is the foundation for richer TV suggestions."
           items={recommendationRailItems}

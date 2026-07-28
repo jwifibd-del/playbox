@@ -7,8 +7,8 @@ export class Genre {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
-  tmdbId: number;
+  @Column('int', { nullable: true, unique: true })
+  tmdbId?: number;
 
   @Column()
   name: string;

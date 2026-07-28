@@ -10,6 +10,9 @@ export class Episode {
   @ManyToOne(() => TVShow, (tvShow) => tvShow.episodes, { onDelete: 'CASCADE' })
   tvShow: TVShow;
 
+  @Column({ type: 'text', nullable: true })
+  tvShowId?: string;
+
   @Column('int')
   seasonNumber: number;
 
@@ -25,11 +28,20 @@ export class Episode {
   @Column({ nullable: true })
   stillPath?: string;
 
+  @Column({ nullable: true })
+  thumbnailPath?: string;
+
   @Column('int')
   runtime: number;
 
+  @Column({ nullable: true })
+  airDate?: string;
+
   @Column('float', { nullable: true })
   rating?: number;
+
+  @Column('int', { nullable: true })
+  tmdbId?: number;
 
   @OneToMany(() => Video, (video) => video.episode, { cascade: true })
   videos: Video[];

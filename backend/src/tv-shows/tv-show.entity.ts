@@ -35,6 +35,45 @@ export class TVShow {
   @Column('int', { default: 1 })
   numberOfSeasons: number;
 
+  @Column('int', { nullable: true })
+  tmdbId?: number;
+
+  @Column({ nullable: true })
+  imdbId?: string;
+
+  @Column({ nullable: true })
+  tvdbId?: string;
+
+  @Column({ nullable: true })
+  country?: string;
+
+  @Column({ nullable: true })
+  language?: string;
+
+  @Column({ nullable: true })
+  quality?: string;
+
+  @Column({ nullable: true })
+  studio?: string;
+
+  @Column({ nullable: true })
+  logoPath?: string;
+
+  @Column({ nullable: true })
+  hdLogoPath?: string;
+
+  @Column({ nullable: true })
+  clearArtPath?: string;
+
+  @Column({ nullable: true })
+  hdClearArtPath?: string;
+
+  @Column({ nullable: true })
+  bannerPath?: string;
+
+  @Column({ nullable: true })
+  thumbPath?: string;
+
   @OneToMany(() => Episode, (episode) => episode.tvShow, { cascade: true })
   episodes: Episode[];
 

@@ -5,16 +5,35 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Lock, Mail, Shield, UserPlus, User } from 'lucide-react';
-import { isUserAuthenticated, registerUser, resetUserPasswordByEmail, setUserAuthenticated, verifyUserCredentials } from '@/lib/data';
+import { signIn, useSession } from 'next-auth/react';
+import {
+  isUserAuthenticated,
+  setUserAuthenticated,
+  registerUser as localStorageRegisterUser,
+  verifyUserCredentials,
+  sendOTP as localStorageSendOTP,
+  verifyOTP,
+  resetUserPasswordByEmail,
+  getUsers
+} from '@/lib/data';
+import {
+  registerUser as apiRegisterUser,
+  loginUser,
+  forgotPassword as apiForgotPassword,
+  sendOtp as apiSendOtp,
+  loginWithOtp
+} from '@/lib/api';
 
 export default function UserLoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [activeView, setActiveView] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loginNotice, setLoginNotice] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const [signupData, setSignupData] = useState({
     fullName: '',
     email: '',
@@ -24,6 +43,7 @@ export default function UserLoginPage() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [signupError, setSignupError] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
   const [forgotData, setForgotData] = useState({
     email: '',
     newPassword: '',
@@ -33,97 +53,271 @@ export default function UserLoginPage() {
   const [showForgotConfirmPassword, setShowForgotConfirmPassword] = useState(false);
   const [forgotError, setForgotError] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [otpData, setOtpData] = useState({
+    email: '',
+    otp: ''
+  });
+  const [otpError, setOtpError] = useState('');
+  const [otpSuccess, setOtpSuccess] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [currentOtp, setCurrentOtp] = useState<string | null>(null);
+  const [otpVerifyLoading, setOtpVerifyLoading] = useState(false);
 
   useEffect(() => {
-    if (isUserAuthenticated()) {
+    if (status === 'authenticated' && session?.user?.email) {
+      const userEmail = session.user.email;
+      // First check if user exists in our local database
+      const users = getUsers();
+      const existingUser = users.find(u => u.email.toLowerCase() === userEmail.toLowerCase());
+      
+      if (!existingUser && session.user.name) {
+        // Register the new user with a random password
+        localStorageRegisterUser({
+          fullName: session.user.name,
+          email: userEmail,
+          password: Math.random().toString(36).slice(-8)
+        });
+      }
+      
+      setUserAuthenticated(true, userEmail);
+      router.replace('/account');
+    } else if (isUserAuthenticated()) {
       router.replace('/account');
     }
-  }, [router]);
+  }, [status, session, router]);
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
-    setLoginNotice('');
-
-    if (!verifyUserCredentials(email, password)) {
-      setError('Invalid email or password.');
-      return;
+  // Auto-fill signup fields if we have session data
+  useEffect(() => {
+    if (session?.user?.name && session?.user?.email) {
+      setSignupData({
+        ...signupData,
+        fullName: session.user.name,
+        email: session.user.email
+      });
     }
+  }, [session, signupData]);
 
-    setUserAuthenticated(true, email);
+  // Helper function to store auth data
+  const handleAuthSuccess = (data?: any) => {
+    if (data?.access_token && data?.user) {
+      localStorage.setItem('playflix_token', data.access_token);
+      localStorage.setItem('playflix_user', JSON.stringify(data.user));
+      setUserAuthenticated(true, data.user.email);
+    }
     router.push('/account');
   };
 
-  const handleSignup = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    setLoginNotice('');
+    setLoginLoading(true);
+
+    try {
+      const data = await loginUser(email, password);
+      handleAuthSuccess(data);
+    } catch (err: any) {
+      // Fall back to local storage if API fails
+      if (verifyUserCredentials(email, password)) {
+        setUserAuthenticated(true, email);
+        router.push('/account');
+      } else {
+        setError(err.message || 'Invalid email or password.');
+      }
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSignupError('');
+    setSignupLoading(true);
 
     if (!signupData.fullName.trim() || !signupData.email.trim() || !signupData.password) {
       setSignupError('Please complete all account fields.');
+      setSignupLoading(false);
       return;
     }
 
     if (signupData.password.length < 6) {
       setSignupError('Password must be at least 6 characters.');
+      setSignupLoading(false);
       return;
     }
 
     if (signupData.password !== signupData.confirmPassword) {
       setSignupError('Passwords do not match.');
+      setSignupLoading(false);
       return;
     }
 
-    const result = registerUser({
-      fullName: signupData.fullName,
-      email: signupData.email,
-      password: signupData.password
-    });
-
-    if (!result.success || !result.user) {
-      setSignupError(result.message || 'Unable to create account.');
-      return;
+    try {
+      const data = await apiRegisterUser(
+        signupData.email,
+        signupData.password,
+        signupData.fullName
+      );
+      handleAuthSuccess(data);
+    } catch (err: any) {
+      // Fall back to local storage if API fails
+      const result = localStorageRegisterUser({
+        fullName: signupData.fullName,
+        email: signupData.email,
+        password: signupData.password
+      });
+      if (!result.success || !result.user) {
+        setSignupError(result.message || 'Unable to create account.');
+      } else {
+        setUserAuthenticated(true, result.user.email);
+        router.push('/account');
+      }
+    } finally {
+      setSignupLoading(false);
     }
-
-    setUserAuthenticated(true, result.user.email);
-    router.push('/account');
   };
 
-  const handleForgotPassword = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setForgotError('');
     setForgotSuccess('');
+    setForgotLoading(true);
 
     if (!forgotData.email.trim() || !forgotData.newPassword || !forgotData.confirmPassword) {
       setForgotError('Please complete all reset fields.');
+      setForgotLoading(false);
       return;
     }
 
     if (forgotData.newPassword.length < 6) {
       setForgotError('Password must be at least 6 characters.');
+      setForgotLoading(false);
       return;
     }
 
     if (forgotData.newPassword !== forgotData.confirmPassword) {
       setForgotError('Passwords do not match.');
+      setForgotLoading(false);
       return;
     }
 
-    const result = resetUserPasswordByEmail({
-      email: forgotData.email,
-      newPassword: forgotData.newPassword
-    });
+    try {
+      // First send forgot password email (which would send a reset token)
+      await apiForgotPassword(forgotData.email);
+      // Since we don't have email set up, we'll just show a success message for now
+      setForgotSuccess('Password reset process initiated. Check your email.');
+      setEmail(forgotData.email.trim().toLowerCase());
+      setPassword('');
+      setForgotData({ email: '', newPassword: '', confirmPassword: '' });
+      setLoginNotice('Check your email for password reset instructions.');
+      setActiveView('login');
+    } catch (err: any) {
+      // Fall back to local storage reset
+      const result = resetUserPasswordByEmail({
+        email: forgotData.email,
+        newPassword: forgotData.newPassword
+      });
+      if (!result.success) {
+        setForgotError(result.message || 'Failed to send reset email.');
+      } else {
+        setForgotSuccess(result.message);
+        setEmail(forgotData.email.trim().toLowerCase());
+        setPassword('');
+        setForgotData({ email: '', newPassword: '', confirmPassword: '' });
+        setLoginNotice('Password updated successfully. Please sign in with your new password.');
+        setActiveView('login');
+      }
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
-    if (!result.success) {
-      setForgotError(result.message);
+  const handleSendOTP = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setOtpError('');
+    setOtpSuccess('');
+    setCurrentOtp(null);
+    setOtpLoading(true);
+
+    if (!otpData.email.trim()) {
+      setOtpError('Please enter your email.');
+      setOtpLoading(false);
       return;
     }
 
-    setForgotSuccess(result.message);
-    setEmail(forgotData.email.trim().toLowerCase());
-    setPassword('');
-    setForgotData({ email: '', newPassword: '', confirmPassword: '' });
-    setLoginNotice('Password updated successfully. Please sign in with your new password.');
-    setActiveView('login');
+    try {
+      const result = await apiSendOtp(otpData.email);
+      setOtpSuccess('OTP sent successfully!');
+      if (result.otp) {
+        setCurrentOtp(result.otp);
+      }
+    } catch (err: any) {
+      // Fall back to local storage if API fails
+      const result = localStorageSendOTP(otpData.email);
+      if (!result.success) {
+        setOtpError(result.message || 'Failed to send OTP.');
+      } else {
+        setOtpSuccess(result.message);
+        if (result.otp) {
+          setCurrentOtp(result.otp);
+        }
+      }
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setOtpError('');
+    setOtpSuccess('');
+    setOtpVerifyLoading(true);
+
+    if (!otpData.otp.trim()) {
+      setOtpError('Please enter the OTP.');
+      setOtpVerifyLoading(false);
+      return;
+    }
+
+    try {
+      const data = await loginWithOtp(otpData.email, otpData.otp);
+      handleAuthSuccess(data);
+    } catch (err: any) {
+      // Fall back to local storage if API fails
+      const result = verifyOTP(otpData.email, otpData.otp);
+      if (result.success) {
+        // Check if user exists, if not, create them!
+        const users = getUsers();
+        const existingUser = users.find(u => u.email.toLowerCase() === otpData.email.toLowerCase());
+        
+        if (!existingUser) {
+          // Register new user
+          const registerResult = localStorageRegisterUser({
+            fullName: otpData.email.split('@')[0],
+            email: otpData.email,
+            password: Math.random().toString(36).slice(-8)
+          });
+          if (registerResult.success && registerResult.user) {
+            setUserAuthenticated(true, registerResult.user.email);
+            router.push('/account');
+          } else {
+            setOtpError(registerResult.message || 'Could not create user');
+          }
+        } else {
+          setUserAuthenticated(true, otpData.email);
+          router.push('/account');
+        }
+      } else {
+        setOtpError(result.message || 'Invalid OTP.');
+      }
+    } finally {
+      setOtpVerifyLoading(false);
+    }
+  };
+
+  const handleSocialLogin = () => {
+    signIn('google', { callbackUrl: '/account' });
   };
 
   return (
@@ -157,58 +351,44 @@ export default function UserLoginPage() {
             className="rounded-3xl border border-zinc-800 bg-zinc-900/60 backdrop-blur-xl p-8 lg:p-10"
           >
             <div className="mb-8">
-              <div className="inline-flex items-center rounded-2xl border border-zinc-800 bg-zinc-950/70 p-1 mb-5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveView('login');
-                    setError('');
-                    setLoginNotice('');
-                    setForgotError('');
-                    setForgotSuccess('');
-                  }}
-                  className={
-                    'px-4 py-2 rounded-xl text-sm font-medium transition-colors ' +
-                    (activeView === 'login' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white')
-                  }
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveView('signup');
-                    setSignupError('');
-                    setLoginNotice('');
-                    setForgotError('');
-                    setForgotSuccess('');
-                  }}
-                  className={
-                    'px-4 py-2 rounded-xl text-sm font-medium transition-colors ' +
-                    (activeView === 'signup' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white')
-                  }
-                >
-                  Create Account
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveView('forgot');
-                    setError('');
-                    setSignupError('');
-                    setLoginNotice('');
-                    setForgotError('');
-                    setForgotSuccess('');
-                    setForgotData((current) => ({ ...current, email }));
-                  }}
-                  className={
-                    'px-4 py-2 rounded-xl text-sm font-medium transition-colors ' +
-                    (activeView === 'forgot' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white')
-                  }
-                >
-                  Forgot Password
-                </button>
-              </div>
+            <div className="inline-flex items-center rounded-2xl border border-zinc-800 bg-zinc-950/70 p-1 mb-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveView('login');
+                  setError('');
+                  setLoginNotice('');
+                  setForgotError('');
+                  setForgotSuccess('');
+                  setOtpError('');
+                  setOtpSuccess('');
+                }}
+                className={
+                  'px-4 py-2 rounded-xl text-sm font-medium transition-colors ' +
+                  (activeView === 'login' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white')
+                }
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveView('signup');
+                  setSignupError('');
+                  setLoginNotice('');
+                  setForgotError('');
+                  setForgotSuccess('');
+                  setOtpError('');
+                  setOtpSuccess('');
+                }}
+                className={
+                  'px-4 py-2 rounded-xl text-sm font-medium transition-colors ' +
+                  (activeView === 'signup' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white')
+                }
+              >
+                Create Account
+              </button>
+            </div>
               <h2 className="text-2xl font-semibold">
                 {activeView === 'login' ? 'Sign In' : activeView === 'signup' ? 'Create Account' : 'Reset Password'}
               </h2>
@@ -216,9 +396,25 @@ export default function UserLoginPage() {
                 {activeView === 'login'
                   ? 'Use your saved PlayFlix account credentials.'
                   : activeView === 'signup'
-                    ? 'Create a new user account that also appears in the admin panel.'
-                    : 'Reset your local PlayFlix password using your account email.'}
+                  ? 'Create a new user account that also appears in the admin panel.'
+                  : 'Reset your local PlayFlix password using your account email.'}
               </p>
+              
+              {/* Social Login Buttons */}
+              {(activeView === 'login' || activeView === 'signup') && (
+                <div className="grid grid-cols-1 gap-3 mt-6 mb-6">
+                  <button
+                    type="button"
+                    onClick={handleSocialLogin}
+                    className="flex items-center justify-center gap-2 p-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors"
+                  >
+                    <span className="text-lg">G</span>
+                    <span className="text-sm">
+                      {activeView === 'login' ? 'Sign in with Google' : 'Sign up with Google'}
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {activeView === 'login' ? (
@@ -270,11 +466,21 @@ export default function UserLoginPage() {
                   </div>
                 )}
 
+                <div className="flex justify-end mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('forgot')}
+                    className="text-sm text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <button
                   type="submit"
-                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-2xl font-semibold transition-colors"
+                  disabled={loginLoading}
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 text-white py-3.5 rounded-2xl font-semibold transition-colors"
                 >
-                  Login
+                  {loginLoading ? 'Logging in...' : 'Login'}
                 </button>
               </form>
             ) : activeView === 'forgot' ? (
@@ -349,12 +555,13 @@ export default function UserLoginPage() {
 
                 <button
                   type="submit"
-                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-2xl font-semibold transition-colors"
+                  disabled={forgotLoading}
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 text-white py-3.5 rounded-2xl font-semibold transition-colors"
                 >
-                  Update Password
+                  {forgotLoading ? 'Sending...' : 'Send Reset Email'}
                 </button>
-              </form>
-            ) : (
+            </form>
+          ) : (
               <form onSubmit={handleSignup} className="space-y-6">
                 <div>
                   <label className="block text-zinc-400 mb-2 text-sm font-medium">Full Name</label>
@@ -434,10 +641,11 @@ export default function UserLoginPage() {
 
                 <button
                   type="submit"
-                  className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-2xl font-semibold transition-colors"
+                  disabled={signupLoading}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 text-white py-3.5 rounded-2xl font-semibold transition-colors"
                 >
                   <UserPlus className="w-5 h-5" />
-                  Create Account
+                  {signupLoading ? 'Creating Account...' : 'Create Account'}
                 </button>
               </form>
             )}

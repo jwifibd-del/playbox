@@ -46,6 +46,33 @@ export class Movie {
   @Column({ nullable: true })
   director?: string;
 
+  @Column('int', { nullable: true })
+  tmdbId?: number;
+
+  @Column({ nullable: true })
+  imdbId?: string;
+
+  @Column({ nullable: true })
+  logoPath?: string;
+
+  @Column({ nullable: true })
+  hdLogoPath?: string;
+
+  @Column({ nullable: true })
+  clearArtPath?: string;
+
+  @Column({ nullable: true })
+  hdClearArtPath?: string;
+
+  @Column({ nullable: true })
+  bannerPath?: string;
+
+  @Column({ nullable: true })
+  thumbPath?: string;
+
+  @Column({ nullable: true })
+  discArtPath?: string;
+
   @ManyToMany(() => Genre, (genre) => genre.movies, { cascade: true })
   @JoinTable()
   genres: Genre[];

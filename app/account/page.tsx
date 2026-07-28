@@ -22,6 +22,7 @@ import {
   Edit3,
   LogOut
 } from 'lucide-react';
+import { signOut, useSession } from 'next-auth/react';
 import { 
   sampleMovies, 
   continueWatching, 
@@ -37,7 +38,11 @@ import {
   submitMovieRequest,
   MovieRequest,
   isUserAuthenticated,
-  logoutUser
+  logoutUser,
+  getActiveProfile,
+  switchProfile,
+  updateProfile,
+  Profile
 } from '@/lib/data';
 import { MovieCard } from '@/components/MovieCard';
 
@@ -66,13 +71,15 @@ function normalizeGenderValue(gender?: string): UserProfile['gender'] {
 
 export default function AccountPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState('profile');
   const [isAccessReady, setIsAccessReady] = useState(false);
-  const [parentalSettings, setParentalSettings] = useState<ParentalControlSettings>(() => getParentalControlSettings());
+  const [parentalSettings, setParentalSettings] = useState<ParentalControlSettings | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [confirmPinInput, setConfirmPinInput] = useState('');
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => getUserProfile());
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [movieRequests, setMovieRequests] = useState<MovieRequest[]>([]);
@@ -87,10 +94,38 @@ export default function AccountPage() {
     confirm: ''
   });
   const [hydrated, setHydrated] = useState(false);
+  
+  // Language options
+  const languages = [
+    { code: 'en', name: 'English' },
+    { code: 'es', name: 'Español' },
+    { code: 'fr', name: 'Français' },
+    { code: 'de', name: 'Deutsch' },
+    { code: 'ja', name: '日本語' }
+  ];
 
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+
+    const isAuthenticatedLocally = isUserAuthenticated();
+    const isAuthenticatedSession = status === 'authenticated';
+
+    if (!isAuthenticatedLocally && !isAuthenticatedSession) {
+      router.replace('/login');
+      return;
+    }
+
+    // If we have a Google session but no local auth, sync it
+    if (isAuthenticatedSession && session?.user?.email && !isAuthenticatedLocally) {
+      // Here you could register or update user profile in local storage if needed
+    }
+
+    setIsAccessReady(true);
+  }, [status, session, router]);
 
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -120,10 +155,13 @@ export default function AccountPage() {
         return;
       }
 
-      setUserProfile((currentProfile) => ({
-        ...currentProfile,
-        avatar: imageDataUrl
-      }));
+      setUserProfile((currentProfile) => {
+        if (!currentProfile) return currentProfile;
+        return {
+          ...currentProfile,
+          avatar: imageDataUrl
+        };
+      });
       setEditMode(true);
     };
     reader.onerror = () => {
@@ -159,25 +197,23 @@ export default function AccountPage() {
 
   const favorites = sampleMovies.slice(0, 4);
 
-  useEffect(() => {
-    if (!isUserAuthenticated()) {
-      router.replace('/login');
-      return;
-    }
-    setIsAccessReady(true);
-  }, [router]);
+
 
   useEffect(() => {
-    if (!isAccessReady) {
+    if (!isAccessReady || !hydrated) {
       return;
     }
 
     setUserProfile(getUserProfile());
-  }, [isAccessReady]);
+    setActiveProfile(getActiveProfile());
+    setParentalSettings(getParentalControlSettings());
+  }, [isAccessReady, hydrated]);
 
   useEffect(() => {
+    if (!userProfile) return;
+
     const syncMovieRequests = () => {
-      const profileEmail = getUserProfile().email;
+      const profileEmail = userProfile.email;
       setMovieRequests(
         getMovieRequests().filter((request) => request.requesterEmail.toLowerCase() === profileEmail.toLowerCase())
       );
@@ -191,13 +227,15 @@ export default function AccountPage() {
       window.removeEventListener('storage', syncMovieRequests);
       window.removeEventListener('playflix-movie-requests-updated', syncMovieRequests);
     };
-  }, []);
+  }, [userProfile]);
 
   const handleSaveProfile = () => {
-    saveUserProfile(userProfile);
-    setEditMode(false);
-    alert('Profile saved successfully!');
-    router.push('/');
+    if (userProfile) {
+      saveUserProfile(userProfile);
+      setEditMode(false);
+      alert('Profile saved successfully!');
+      router.push('/');
+    }
   };
 
   const handleChangePassword = () => {
@@ -220,7 +258,9 @@ export default function AccountPage() {
     alert('Password changed successfully!');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Log out of both NextAuth session and local storage
+    await signOut({ redirect: false });
     logoutUser();
     setIsAccessReady(false);
     router.replace('/login');
@@ -239,7 +279,7 @@ export default function AccountPage() {
     alert('Movie request submitted successfully!');
   };
 
-  if (!hydrated || !isAccessReady) {
+  if (!hydrated || !isAccessReady || !userProfile || !parentalSettings || !activeProfile) {
     return (
       <main className="min-h-screen bg-[#080808] text-white flex items-center justify-center">
         <div className="text-center">
@@ -257,8 +297,8 @@ export default function AccountPage() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6">
-              {/* User Avatar */}
-              <div className="flex items-center gap-4 mb-8">
+              {/* User Avatar & Profile Switcher */}
+              <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-500/50">
                   <img
                     src={userProfile.avatar}
@@ -271,6 +311,8 @@ export default function AccountPage() {
                   <p className="text-zinc-500 text-sm">{userProfile.email}</p>
                 </div>
               </div>
+              
+
 
               {/* Tabs */}
               <nav className="space-y-2">
@@ -768,77 +810,160 @@ export default function AccountPage() {
               )}
 
               {/* Account Settings */}
-              {activeTab === 'settings' && (
-                <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
-                  <h2 className="text-3xl font-bold mb-8">Account Settings</h2>
+          {activeTab === 'settings' && (
+            <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
+              <h2 className="text-3xl font-bold mb-8">Account Settings</h2>
 
-                  <div className="space-y-8">
-                    {/* Playback Settings */}
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">Playback</h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
-                          <div>
-                            <h4 className="font-medium">Auto-Play</h4>
-                            <p className="text-zinc-500 text-sm">Automatically play next episode</p>
-                          </div>
-                          <div className="w-14 h-8 bg-red-600 rounded-full relative cursor-pointer">
-                            <div className="absolute top-1 right-1 w-6 h-6 bg-white rounded-full" />
-                          </div>
+              <div className="space-y-8">
+                {/* Subscription Settings */}
+                {userProfile.subscription && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Subscription</h3>
+                    <div className="p-6 bg-zinc-800/50 rounded-xl border border-zinc-700">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="font-bold text-lg text-red-400">
+                            {userProfile.subscription.plan}
+                          </h4>
+                          <p className="text-zinc-500 text-sm">
+                            {userProfile.subscription.startDate} - {userProfile.subscription.endDate}
+                          </p>
                         </div>
-                        <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
-                          <div>
-                            <h4 className="font-medium">Default Video Quality</h4>
-                            <p className="text-zinc-500 text-sm">Choose default streaming quality</p>
-                          </div>
-                          <div className="bg-zinc-700 px-4 py-2 rounded-lg">
-                            Auto
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
-                          <div>
-                            <h4 className="font-medium">Subtitles</h4>
-                            <p className="text-zinc-500 text-sm">Show subtitles by default</p>
-                          </div>
-                          <div className="w-14 h-8 bg-zinc-700 rounded-full relative cursor-pointer">
-                            <div className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full" />
-                          </div>
+                        <div className="flex items-center gap-2 px-3 py-1 bg-emerald-600/20 text-emerald-400 rounded-full border border-emerald-600/30 text-sm font-medium">
+                          Active
                         </div>
                       </div>
-                    </div>
-
-                    {/* Privacy Settings */}
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">Privacy</h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
-                          <div>
-                            <h4 className="font-medium">Show Watch Activity</h4>
-                            <p className="text-zinc-500 text-sm">Let others see what you watch</p>
-                          </div>
-                          <div className="w-14 h-8 bg-zinc-700 rounded-full relative cursor-pointer">
-                            <div className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Danger Zone */}
-                    <div className="border-t border-zinc-700 pt-8">
-                      <h3 className="text-xl font-semibold text-red-500 mb-4">Danger Zone</h3>
-                      <div className="p-4 bg-red-900/10 border border-red-500/30 rounded-xl">
-                        <h4 className="font-semibold mb-2">Delete Account</h4>
-                        <p className="text-zinc-400 text-sm mb-4">
-                          Permanently delete your account and all associated data
-                        </p>
-                        <button className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors">
-                          Delete Account
+                      <div className="flex flex-wrap gap-3">
+                        <button className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg font-medium transition-colors">
+                          Change Plan
+                        </button>
+                        <button className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg font-medium transition-colors">
+                          {userProfile.subscription.autoRenew ? 'Disable Auto-Renew' : 'Enable Auto-Renew'}
                         </button>
                       </div>
                     </div>
                   </div>
+                )}
+                
+                {/* Language & Region Settings */}
+                <div>
+                  <h3 className="text-xl font-semibold mb-4">Language & Region</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-zinc-400 mb-2 text-sm font-medium">Display Language</label>
+                        <select
+                          value={activeProfile.preferences.language || 'English'}
+                          onChange={(e) => {
+                            const updatedProfile = { 
+                              ...activeProfile, 
+                              preferences: { ...activeProfile.preferences, language: e.target.value } 
+                            };
+                            updateProfile(activeProfile.id, updatedProfile);
+                            setActiveProfile(updatedProfile);
+                          }}
+                          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                        >
+                          {languages.map(lang => (
+                            <option key={lang.code} value={lang.name}>{lang.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+
+                {/* Playback Settings */}
+                <div>
+                  <h3 className="text-xl font-semibold mb-4">Playback</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
+                      <div>
+                        <h4 className="font-medium">Auto-Play</h4>
+                        <p className="text-zinc-500 text-sm">Automatically play next episode</p>
+                      </div>
+                      <div className="w-14 h-8 bg-red-600 rounded-full relative cursor-pointer">
+                        <div className="absolute top-1 right-1 w-6 h-6 bg-white rounded-full" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
+                      <div>
+                        <h4 className="font-medium">Default Video Quality</h4>
+                        <p className="text-zinc-500 text-sm">Choose default streaming quality</p>
+                      </div>
+                      <select
+                        value={activeProfile.preferences.defaultQuality || 'Auto'}
+                        onChange={(e) => {
+                          const updatedProfile = { 
+                            ...activeProfile, 
+                            preferences: { ...activeProfile.preferences, defaultQuality: e.target.value } 
+                          };
+                          updateProfile(activeProfile.id, updatedProfile);
+                          setActiveProfile(updatedProfile);
+                        }}
+                        className="bg-zinc-700 px-4 py-2 rounded-lg text-white"
+                      >
+                        <option value="Auto">Auto</option>
+                        <option value="4K">4K</option>
+                        <option value="1080p">1080p</option>
+                        <option value="720p">720p</option>
+                        <option value="480p">480p</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
+                      <div>
+                        <h4 className="font-medium">Subtitles</h4>
+                        <p className="text-zinc-500 text-sm">Show subtitles by default</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const updatedProfile = { 
+                            ...activeProfile, 
+                            preferences: { ...activeProfile.preferences, subtitlesEnabled: !activeProfile.preferences.subtitlesEnabled } 
+                          };
+                          updateProfile(activeProfile.id, updatedProfile);
+                          setActiveProfile(updatedProfile);
+                        }}
+                        className={`w-14 h-8 rounded-full relative cursor-pointer transition-colors ${activeProfile.preferences.subtitlesEnabled ? 'bg-red-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${activeProfile.preferences.subtitlesEnabled ? 'right-1' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Privacy Settings */}
+                <div>
+                  <h3 className="text-xl font-semibold mb-4">Privacy</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
+                      <div>
+                        <h4 className="font-medium">Show Watch Activity</h4>
+                        <p className="text-zinc-500 text-sm">Let others see what you watch</p>
+                      </div>
+                      <div className="w-14 h-8 bg-zinc-700 rounded-full relative cursor-pointer">
+                        <div className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Danger Zone */}
+                <div className="border-t border-zinc-700 pt-8">
+                  <h3 className="text-xl font-semibold text-red-500 mb-4">Danger Zone</h3>
+                  <div className="p-4 bg-red-900/10 border border-red-500/30 rounded-xl">
+                    <h4 className="font-semibold mb-2">Delete Account</h4>
+                    <p className="text-zinc-400 text-sm mb-4">
+                      Permanently delete your account and all associated data
+                    </p>
+                    <button className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors">
+                      Delete Account
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
               {/* Parental Controls */}
               {activeTab === 'parental' && (

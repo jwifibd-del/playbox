@@ -71,7 +71,7 @@ export function TVMediaCard({ item, railIndex, itemIndex, onKeyDown }: TVMediaCa
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-transparent" />
         <div className="absolute left-5 top-5 flex items-center gap-2">
           <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-100">
-            {item.kind === 'live' ? 'Live TV' : item.kind === 'tv' ? 'Series' : 'Movie'}
+            {item.kind === 'tv' ? 'Series' : 'Movie'}
           </span>
           {item.badge ? (
             <span className="rounded-full bg-amber-400/90 px-3 py-1 text-xs font-bold uppercase tracking-[0.24em] text-black">

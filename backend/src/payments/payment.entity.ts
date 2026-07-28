@@ -42,15 +42,13 @@ export class Payment {
   currency: string;
 
   @Column({
-    type: 'enum',
-    enum: PaymentStatus,
+    type: 'text',
     default: PaymentStatus.PENDING,
   })
   status: PaymentStatus;
 
   @Column({
-    type: 'enum',
-    enum: PaymentMethod,
+    type: 'text',
   })
   method: PaymentMethod;
 

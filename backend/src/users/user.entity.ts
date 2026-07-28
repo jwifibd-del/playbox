@@ -26,13 +26,13 @@ export class User {
   @Column({ default: false })
   isAdmin: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ nullable: true })
   resetPasswordTokenExpires?: Date;
 
   @Column({ nullable: true })
   resetPasswordToken?: string;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ nullable: true })
   otpExpires?: Date;
 
   @Column({ nullable: true })

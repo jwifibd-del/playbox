@@ -27,6 +27,8 @@ import { Navbar } from '@/components/Navbar';
 import { getTrailerBackgroundSource } from '@/lib/media';
 import { shareContent } from '@/lib/share';
 import { cn } from '@/lib/utils';
+import { fetchTVShowById, fetchTVShows, fetchMovies } from '@/lib/api';
+import type { TVShow, Movie } from '@/lib/data';
 
 const HERO_BACKGROUND_ANIMATION = {
   scale: [1.02, 1.08, 1.03],
@@ -82,33 +84,61 @@ export default function TVShowDetailsPage() {
   }, [router]);
 
   useEffect(() => {
-    const showId = params.id;
-    const storedShows = getTVShows();
-    const foundShow = storedShows.find(s => s.id.toString() === showId);
-    if (foundShow) {
-      setShow(foundShow);
-    } else {
-      const sampleMovieMatch = sampleMovies.find(m => `tv-${m.id}` === showId);
-      if (sampleMovieMatch) {
-        setShow({
-          ...sampleMovieMatch,
-          id: showId,
-          numberOfSeasons: 3,
-          numberOfEpisodes: 24,
-          seasons: []
-        });
-      } else {
-        setShow({
-          ...sampleMovies[0],
-          id: showId,
-          title: 'Sample TV Show',
-          numberOfSeasons: 3,
-          numberOfEpisodes: 24,
-          seasons: []
-        });
+    let cancelled = false;
+    (async () => {
+      const showId = params.id;
+      if (!showId) return;
+      const fetched = await fetchTVShowById(showId);
+      if (cancelled) return;
+      if (fetched) {
+        setShow(fetched);
+        return;
       }
-    }
+      // fallback to local
+      const storedShows = getTVShows();
+      const foundShow = storedShows.find((s: any) => s.id.toString() === showId);
+      if (!cancelled && foundShow) {
+        setShow(foundShow);
+        return;
+      }
+      const sampleMovieMatch = sampleMovies.find((m: any) => `tv-${m.id}` === showId);
+      if (!cancelled) {
+        if (sampleMovieMatch) {
+          setShow({
+            ...sampleMovieMatch,
+            id: showId,
+            numberOfSeasons: 3,
+            numberOfEpisodes: 24,
+            seasons: [],
+          });
+        } else {
+          setShow({
+            ...sampleMovies[0],
+            id: showId,
+            title: 'Sample TV Show',
+            numberOfSeasons: 3,
+            numberOfEpisodes: 24,
+            seasons: [],
+          });
+        }
+      }
+    })();
+    return () => { cancelled = true; };
   }, [params.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [shows, movies] = await Promise.all([fetchTVShows(), fetchMovies()]);
+      if (cancelled) return;
+      setRelatedShows(shows.filter((s: TVShow) => String(s.id) !== String(show?.id)));
+      setRelatedMovies(movies);
+    })();
+    return () => { cancelled = true; };
+  }, [show?.id]);
+
+  const [relatedShows, setRelatedShows] = useState<TVShow[]>([]);
+  const [relatedMovies, setRelatedMovies] = useState<Movie[]>([]);
 
   const trailerBackground = useMemo(
     () => getTrailerBackgroundSource(show?.trailerUrl, isTrailerMuted),
@@ -184,12 +214,12 @@ export default function TVShowDetailsPage() {
     <main className="min-h-screen bg-[#080808] text-white">
       <Navbar />
       {/* Hero Section with Backdrop */}
-      <div className="relative w-full min-h-[80vh] sm:aspect-video sm:max-h-[65vh] overflow-hidden" suppressHydrationWarning>
+      <div className="relative w-full min-h-[90vh] sm:min-h-[93vh] md:min-h-[95vh] lg:min-h-[97vh] xl:min-h-[100vh] overflow-hidden" suppressHydrationWarning>
         {/* Background Video or Image */}
         <div className="absolute inset-0">
           <motion.div
             className="absolute inset-0"
-            initial={{ scale: 1.02 }}
+            initial={{ scale: 1.06 }}
             animate={HERO_BACKGROUND_ANIMATION}
             transition={HERO_BACKGROUND_TRANSITION}
           >
@@ -204,7 +234,7 @@ export default function TVShowDetailsPage() {
           {trailerBackground?.kind === 'youtube' && isTrailerPlaying && (
             <motion.div
               className="absolute inset-0"
-              initial={{ scale: 1.06 }}
+              initial={{ scale: 1.18 }}
               animate={HERO_BACKGROUND_ANIMATION}
               transition={HERO_BACKGROUND_TRANSITION}
             >
@@ -213,7 +243,7 @@ export default function TVShowDetailsPage() {
                 src={trailerBackground.src}
                 title={`${show.title} trailer`}
                 allow="autoplay; encrypted-media; picture-in-picture"
-                className="absolute inset-0 h-full w-full scale-110 pointer-events-none"
+                className="absolute inset-0 h-full w-full scale-[1.3] sm:scale-[1.32] md:scale-[1.35] pointer-events-none"
               />
             </motion.div>
           )}
@@ -221,7 +251,7 @@ export default function TVShowDetailsPage() {
           {trailerBackground?.kind === 'video' && (
             <motion.div
               className="absolute inset-0"
-              initial={{ scale: 1.04 }}
+              initial={{ scale: 1.08 }}
               animate={HERO_BACKGROUND_ANIMATION}
               transition={HERO_BACKGROUND_TRANSITION}
             >
@@ -231,7 +261,7 @@ export default function TVShowDetailsPage() {
                 muted={isTrailerMuted}
                 loop
                 playsInline
-                className="w-full h-full object-cover transition-opacity duration-500"
+                className="w-full h-full object-cover transition-opacity duration-500 scale-[1.04]"
                 style={{ opacity: isTrailerPlaying ? 1 : 0 }}
               >
                 <source src={trailerBackground.src} type={trailerBackground.mimeType} />
@@ -241,11 +271,11 @@ export default function TVShowDetailsPage() {
           )}
         </div>
         
-        <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/40 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#080808]/70 md:w-2/3 sm:w-3/4 to-transparent hidden sm:block" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#080808]/85 md:w-3/4 sm:w-4/5 to-transparent hidden sm:block" />
         <motion.div
-          className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(59,130,246,0.18),transparent_40%),radial-gradient(circle_at_76%_28%,rgba(168,85,247,0.16),transparent_38%)]"
-          animate={{ opacity: [0.28, 0.45, 0.3] }}
+          className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(59,130,246,0.22),transparent_50%),radial-gradient(circle_at_76%_28%,rgba(168,85,247,0.2),transparent_45%)]"
+          animate={{ opacity: [0.3, 0.5, 0.35] }}
           transition={{ duration: 9, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
         />
 
@@ -441,27 +471,7 @@ export default function TVShowDetailsPage() {
               </section>
             )}
 
-            {/* Crew */}
-            {show.crew && show.crew.length > 0 && (
-              <section className="mb-12 sm:mb-16">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6 sm:mb-8">Crew</h2>
-                <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 sm:pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {show.crew.map((person: any) => (
-                    <div key={person.id} className="flex-shrink-0 w-24 sm:w-28 md:w-32 lg:w-40">
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden mb-3 sm:mb-4 border border-zinc-800">
-                        <img
-                          src={person.profilePath || 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=user%20avatar&image_size=square'}
-                          alt={person.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <h3 className="font-semibold text-center text-xs sm:text-sm md:text-base">{person.name}</h3>
-                      <p className="text-zinc-500 text-[10px] sm:text-xs md:text-sm text-center">{person.job}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+
 
             {/* Reviews */}
             <section className="mb-12 sm:mb-16">
@@ -576,16 +586,22 @@ export default function TVShowDetailsPage() {
         <section className="mb-12 sm:mb-16">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6 sm:mb-8">You May Also Like</h2>
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
-            {getTVShows().filter(s => s.id.toString() !== show.id.toString()).map(s => (
+            {(relatedShows.length > 0
+              ? relatedShows.filter((s: any) => s.id.toString() !== show.id.toString())
+              : getTVShows().filter((s: any) => s.id.toString() !== show.id.toString())
+            ).map((s: any) => (
               <Link key={s.id} href={`/tv/${s.id}`}>
                 <TVShowCard tvShow={s} />
               </Link>
             ))}
-            {getTVShows().length <= 1 && sampleMovies.filter(m => m.id !== show.id).map(m => (
-              <Link key={m.id} href={`/tv/tv-${m.id}`}>
-                <MovieCard movie={m} />
-              </Link>
-            ))}
+            {((relatedShows.length > 0 ? relatedShows : getTVShows()).length <= 1) &&
+              (relatedMovies.length > 0 ? relatedMovies : sampleMovies)
+                .filter((m: any) => m.id !== show.id)
+                .map((m: any) => (
+                  <Link key={m.id} href={`/tv/tv-${m.id}`}>
+                    <MovieCard movie={m} />
+                  </Link>
+                ))}
           </div>
         </section>
       </div>

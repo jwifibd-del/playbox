@@ -98,12 +98,9 @@ async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const moviesService = app.get(MoviesService);
 
-  console.log('Seeding database...');
-
   // Check if movies already exist
   const existingMovies = await moviesService.findAll();
   if (existingMovies.length > 0) {
-    console.log('Database already has movies. Skipping seed.');
     await app.close();
     return;
   }
@@ -111,10 +108,8 @@ async function bootstrap() {
   // Create sample movies
   for (const movieData of sampleMovies) {
     await moviesService.create(movieData);
-    console.log(`Created movie: ${movieData.title}`);
   }
 
-  console.log('Database seeded successfully!');
   await app.close();
 }
 

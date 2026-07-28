@@ -65,6 +65,10 @@ export class UsersService {
     });
   }
 
+  async setAdmin(userId: string, isAdmin: boolean): Promise<void> {
+    await this.usersRepository.update(userId, { isAdmin });
+  }
+
   generateResetToken(): string {
     return randomBytes(32).toString('hex');
   }

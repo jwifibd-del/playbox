@@ -13,8 +13,6 @@ export function Footer() {
       localStorage.removeItem('playflix_app_links');
     }
     const currentLinks = getAppLinks();
-    console.log("Footer app links:", currentLinks); // Debug all links!
-    currentLinks.forEach((app, idx) => console.log(`App ${idx}:`, app));
     setLinks(currentLinks);
     
     const handleStorageChange = () => {
@@ -33,7 +31,6 @@ export function Footer() {
     { name: 'Home', href: '/' },
     { name: 'Movies', href: '/movies' },
     { name: 'TV Shows', href: '/tv' },
-    { name: 'Live TV', href: '/live-tv' },
     { name: 'Kids', href: '/kids' },
     { name: 'Anime', href: '/anime' }
   ];

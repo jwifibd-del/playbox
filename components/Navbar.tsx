@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, User, Home, Tv, Smile, Radio, Clapperboard, Sparkles, Menu, X, ChevronDown } from 'lucide-react';
+import { Search, Bell, User, Home, Tv, Smile, Clapperboard, Sparkles, Menu, X, ChevronDown, Radio } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -48,18 +48,20 @@ export function Navbar() {
         { href: homeHref, label: 'Anime Home', icon: Home, match: (path: string) => path === '/anime' },
         { href: movieHref, label: 'Anime Movies', icon: Clapperboard, match: (path: string) => path === '/anime/movies' || path.startsWith('/movie/') },
         { href: tvHref, label: 'Anime Shows', icon: Tv, match: (path: string) => path === '/anime/shows' || path.startsWith('/tv/') },
+        { href: '/tv-channels', label: 'TV Channels', icon: Radio, match: (path: string) => path.startsWith('/tv-channels') },
       ]
     : isKidsView
     ? [
         { href: homeHref, label: 'Kids Home', icon: Home, match: (path: string) => path === '/kids' || path === '/' },
         { href: movieHref, label: 'Kids Movie', icon: Clapperboard, match: (path: string) => path === '/kids/movies' || path.startsWith('/movie/') },
         { href: tvHref, label: 'Kids Tv Shows', icon: Tv, match: (path: string) => path === '/kids/tv' || path.startsWith('/tv/') },
+        { href: '/tv-channels', label: 'TV Channels', icon: Radio, match: (path: string) => path.startsWith('/tv-channels') },
       ]
     : [
         { href: homeHref, label: 'Home', icon: Home, match: (path: string) => path === '/' || path === '/kids' },
         { href: movieHref, label: 'Movies', icon: Clapperboard, match: (path: string) => path.startsWith('/movies') || path.startsWith('/movie/') },
         { href: tvHref, label: 'TV Shows', icon: Tv, match: (path: string) => path.startsWith('/tv') || path === '/kids/tv' },
-        { href: '/live-tv', label: 'Live TV', icon: Radio, match: (path: string) => path.startsWith('/live-tv') },
+        { href: '/tv-channels', label: 'TV Channels', icon: Radio, match: (path: string) => path.startsWith('/tv-channels') },
       ];
 
   useEffect(() => {
@@ -188,6 +190,10 @@ export function Navbar() {
     router.push('/');
   };
 
+  if (!hydrated) {
+    return null;
+  }
+
   return (
     <>
       <nav
@@ -240,7 +246,7 @@ export function Navbar() {
                     )}
                     style={{ fontSize: navbarSettings.navbarFontSize }}
                   >
-                    <Icon size={parseInt(navbarSettings.navbarFontSize)} />
+                    <Icon size={parseInt(navbarSettings.navbarFontSize) || 18} />
                     {label}
                   </Link>
                 );
