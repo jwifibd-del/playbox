@@ -26,6 +26,7 @@ import { FanartModule } from './fanart/fanart.module';
 import { DevicesModule } from './devices/devices.module';
 import { DlnaModule } from './dlna/dlna.module';
 import { TvChannelsModule } from './tv-channels/tv-channels.module';
+import { WatchHistoryModule } from './watch-history/watch-history.module';
 import * as path from 'path';
 
 @Module({
@@ -93,6 +94,7 @@ import * as path from 'path';
     DevicesModule,
     DlnaModule,
     TvChannelsModule,
+    WatchHistoryModule,
   ],
   controllers: [],
   providers: [],

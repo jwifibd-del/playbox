@@ -16,9 +16,51 @@ import {
   getTvChannels,
 } from './data';
 
-export const API_BASE = 'http://localhost:3002';
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3002';
 
 let backendAvailable: boolean | null = null;
+
+async function getNextAuthAccessToken(): Promise<string | null> {
+  if (typeof window !== 'undefined') {
+    try {
+      const mod = await import('next-auth/react');
+      const session = await mod.getSession();
+      const token = (session as any)?.accessToken;
+      if (typeof token === 'string' && token.trim()) return token.trim();
+    } catch {}
+
+    const adminToken = localStorage.getItem('adminToken');
+    const userToken = localStorage.getItem('playflix_token');
+    const token = adminToken || userToken;
+    if (token && token.trim()) return token.trim();
+
+    return null;
+  }
+
+  try {
+    const [{ getServerSession }, { authOptions }] = await Promise.all([
+      import('next-auth/next'),
+      import('@/lib/auth-options'),
+    ]);
+    const session = await getServerSession(authOptions as any);
+    const token = (session as any)?.accessToken;
+    if (typeof token === 'string' && token.trim()) return token.trim();
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchWithAuth(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers ?? {});
+
+  const token = await getNextAuthAccessToken();
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  return fetch(input, { ...init, headers });
+}
 
 export function getAdminAuthHeaders(extra?: Record<string, string>): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json', ...(extra || {}) };
@@ -38,6 +80,57 @@ export function getAuthHeaders(extra?: Record<string, string>): Record<string, s
     if (token) h['Authorization'] = `Bearer ${token}`;
   }
   return h;
+}
+
+async function readErrorMessage(res: Response): Promise<string | null> {
+  try {
+    const data = await res.json();
+    if (data && typeof data === 'object' && 'message' in data) {
+      const msg = (data as any).message;
+      if (typeof msg === 'string' && msg.trim()) return msg.trim();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function requestBackendJson<T>(path: string, init: RequestInit, timeoutMs = 4000): Promise<T> {
+  if (backendAvailable === false) {
+    throw new Error('Backend is unavailable');
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      cache: 'no-store',
+      ...init,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      backendAvailable = true;
+      return (await res.json()) as T;
+    }
+
+    const message = await readErrorMessage(res);
+
+    if (res.status >= 400 && res.status < 500) {
+      backendAvailable = true;
+    } else {
+      backendAvailable = false;
+    }
+
+    throw new Error(message || `Request failed (${res.status})`);
+  } catch (e) {
+    clearTimeout(timeoutId);
+    backendAvailable = false;
+    throw e;
+  }
 }
 
 function mergeById<T extends { id: string | number; rating?: unknown }>(
@@ -63,82 +156,55 @@ function mergeById<T extends { id: string | number; rating?: unknown }>(
   });
 }
 
-export async function registerUser(email: string, password: string, name: string) {
-  const res = await fetch(`${API_BASE}/auth/register`, {
+export type AuthSuccessResponse = { access_token: string; user: any };
+export type AuthMessageResponse = { message: string; token?: string };
+
+export async function registerUser(email: string, password: string, name: string): Promise<AuthSuccessResponse> {
+  return requestBackendJson<AuthSuccessResponse>('/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, name }),
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Registration failed');
-  }
-  return res.json();
 }
 
-export async function loginUser(email: string, password: string) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+export async function loginUser(email: string, password: string): Promise<AuthSuccessResponse> {
+  return requestBackendJson<AuthSuccessResponse>('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Login failed');
-  }
-  return res.json();
 }
 
-export async function sendOtp(email: string) {
-  const res = await fetch(`${API_BASE}/auth/send-otp`, {
+export async function sendOtp(email: string): Promise<AuthMessageResponse> {
+  return requestBackendJson<AuthMessageResponse>('/auth/send-otp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Failed to send OTP');
-  }
-  return res.json();
 }
 
-export async function loginWithOtp(email: string, otp: string) {
-  const res = await fetch(`${API_BASE}/auth/login-with-otp`, {
+export async function loginWithOtp(email: string, otp: string): Promise<AuthSuccessResponse> {
+  return requestBackendJson<AuthSuccessResponse>('/auth/login-with-otp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, otp }),
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'OTP login failed');
-  }
-  return res.json();
 }
 
-export async function forgotPassword(email: string) {
-  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+export async function forgotPassword(email: string): Promise<AuthMessageResponse> {
+  return requestBackendJson<AuthMessageResponse>('/auth/forgot-password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Failed to send reset link');
-  }
-  return res.json();
 }
 
-export async function resetPassword(token: string, newPassword: string) {
-  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+export async function resetPassword(token: string, newPassword: string): Promise<AuthMessageResponse> {
+  return requestBackendJson<AuthMessageResponse>('/auth/reset-password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, newPassword }),
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Failed to reset password');
-  }
-  return res.json();
 }
 
 function mapAudioTrackStringsToObjects(audioTrackStrings: string[] | undefined): MediaAudioTrack[] {
@@ -578,4 +644,3 @@ export async function deleteTvChannelFromBackend(
     return false;
   }
 }
-

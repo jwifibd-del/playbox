@@ -15,8 +15,28 @@ export function PWARegistrar() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator)) return;
-    if (window.location.hostname === 'localhost') {
-      // Register anyway on localhost so dev env behaves like production
+
+    const host = window.location.hostname;
+    const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+    const enableOnLocalhost = process.env.NEXT_PUBLIC_ENABLE_PWA_ON_LOCALHOST === 'true';
+    const isProd = process.env.NODE_ENV === 'production';
+
+    if ((!isProd || isLocalhost) && !enableOnLocalhost) {
+      (async () => {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((reg) => reg.unregister()));
+        } catch {
+          /* ignore */
+        }
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        } catch {
+          /* ignore */
+        }
+      })();
+      return;
     }
 
     setState({ kind: 'registering' });

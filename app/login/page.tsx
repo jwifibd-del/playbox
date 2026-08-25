@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { signIn } from 'next-auth/react';
 import { Eye, EyeOff, Lock, Mail, Shield, UserPlus, User } from 'lucide-react';
-import { signIn, useSession } from 'next-auth/react';
 import {
   isUserAuthenticated,
   setUserAuthenticated,
@@ -20,14 +20,14 @@ import {
   registerUser as apiRegisterUser,
   loginUser,
   forgotPassword as apiForgotPassword,
+  resetPassword as apiResetPassword,
   sendOtp as apiSendOtp,
   loginWithOtp
 } from '@/lib/api';
 
 export default function UserLoginPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const [activeView, setActiveView] = useState<'login' | 'signup' | 'forgot'>('login');
+  const [activeView, setActiveView] = useState<'login' | 'signup' | 'forgot' | 'otp'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -61,42 +61,13 @@ export default function UserLoginPage() {
   const [otpError, setOtpError] = useState('');
   const [otpSuccess, setOtpSuccess] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
-  const [currentOtp, setCurrentOtp] = useState<string | null>(null);
   const [otpVerifyLoading, setOtpVerifyLoading] = useState(false);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.email) {
-      const userEmail = session.user.email;
-      // First check if user exists in our local database
-      const users = getUsers();
-      const existingUser = users.find(u => u.email.toLowerCase() === userEmail.toLowerCase());
-      
-      if (!existingUser && session.user.name) {
-        // Register the new user with a random password
-        localStorageRegisterUser({
-          fullName: session.user.name,
-          email: userEmail,
-          password: Math.random().toString(36).slice(-8)
-        });
-      }
-      
-      setUserAuthenticated(true, userEmail);
-      router.replace('/account');
-    } else if (isUserAuthenticated()) {
+    if (isUserAuthenticated()) {
       router.replace('/account');
     }
-  }, [status, session, router]);
-
-  // Auto-fill signup fields if we have session data
-  useEffect(() => {
-    if (session?.user?.name && session?.user?.email) {
-      setSignupData({
-        ...signupData,
-        fullName: session.user.name,
-        email: session.user.email
-      });
-    }
-  }, [session, signupData]);
+  }, [router]);
 
   // Helper function to store auth data
   const handleAuthSuccess = (data?: any) => {
@@ -203,15 +174,23 @@ export default function UserLoginPage() {
     }
 
     try {
-      // First send forgot password email (which would send a reset token)
-      await apiForgotPassword(forgotData.email);
-      // Since we don't have email set up, we'll just show a success message for now
-      setForgotSuccess('Password reset process initiated. Check your email.');
-      setEmail(forgotData.email.trim().toLowerCase());
-      setPassword('');
-      setForgotData({ email: '', newPassword: '', confirmPassword: '' });
-      setLoginNotice('Check your email for password reset instructions.');
-      setActiveView('login');
+      const forgotResult = await apiForgotPassword(forgotData.email);
+      const token = forgotResult?.token;
+
+      if (token) {
+        await apiResetPassword(token, forgotData.newPassword);
+        setEmail(forgotData.email.trim().toLowerCase());
+        setPassword('');
+        setForgotData({ email: '', newPassword: '', confirmPassword: '' });
+        setLoginNotice('Password updated successfully. Please sign in with your new password.');
+        setActiveView('login');
+      } else {
+        setEmail(forgotData.email.trim().toLowerCase());
+        setPassword('');
+        setForgotData({ email: '', newPassword: '', confirmPassword: '' });
+        setLoginNotice('Check your email for password reset instructions.');
+        setActiveView('login');
+      }
     } catch (err: any) {
       // Fall back to local storage reset
       const result = resetUserPasswordByEmail({
@@ -237,7 +216,6 @@ export default function UserLoginPage() {
     e.preventDefault();
     setOtpError('');
     setOtpSuccess('');
-    setCurrentOtp(null);
     setOtpLoading(true);
 
     if (!otpData.email.trim()) {
@@ -248,20 +226,14 @@ export default function UserLoginPage() {
 
     try {
       const result = await apiSendOtp(otpData.email);
-      setOtpSuccess('OTP sent successfully!');
-      if (result.otp) {
-        setCurrentOtp(result.otp);
-      }
+      setOtpSuccess(result?.message ? String(result.message) : 'OTP sent successfully! Check your email.');
     } catch (err: any) {
       // Fall back to local storage if API fails
       const result = localStorageSendOTP(otpData.email);
       if (!result.success) {
         setOtpError(result.message || 'Failed to send OTP.');
       } else {
-        setOtpSuccess(result.message);
-        if (result.otp) {
-          setCurrentOtp(result.otp);
-        }
+        setOtpSuccess('OTP generated locally (dev). Check the console.');
       }
     } finally {
       setOtpLoading(false);
@@ -316,8 +288,28 @@ export default function UserLoginPage() {
     }
   };
 
-  const handleSocialLogin = () => {
-    signIn('google', { callbackUrl: '/account' });
+  const handleSocialLogin = async (provider: 'Google' | 'Apple' | 'Facebook') => {
+    setLoginNotice('');
+    setError('');
+
+    if (provider !== 'Google') {
+      setLoginNotice(`${provider} login will be available via backend REST soon.`);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/providers', { cache: 'no-store' });
+      if (res.ok) {
+        const providers = (await res.json()) as Record<string, any>;
+        if (!providers?.google) {
+          setError('Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local.');
+          return;
+        }
+      }
+      await signIn('google', { callbackUrl: '/account' });
+    } catch {
+      setError('Google sign-in failed. Please try again.');
+    }
   };
 
   return (
@@ -388,16 +380,44 @@ export default function UserLoginPage() {
               >
                 Create Account
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveView('otp');
+                  setError('');
+                  setLoginNotice('');
+                  setSignupError('');
+                  setForgotError('');
+                  setForgotSuccess('');
+                  setOtpError('');
+                  setOtpSuccess('');
+                  setOtpData({ email: '', otp: '' });
+                }}
+                className={
+                  'px-4 py-2 rounded-xl text-sm font-medium transition-colors ' +
+                  (activeView === 'otp' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white')
+                }
+              >
+                OTP Login
+              </button>
             </div>
               <h2 className="text-2xl font-semibold">
-                {activeView === 'login' ? 'Sign In' : activeView === 'signup' ? 'Create Account' : 'Reset Password'}
+                {activeView === 'login'
+                  ? 'Sign In'
+                  : activeView === 'signup'
+                    ? 'Create Account'
+                    : activeView === 'otp'
+                      ? 'OTP Login'
+                      : 'Reset Password'}
               </h2>
               <p className="text-zinc-500 mt-2">
                 {activeView === 'login'
                   ? 'Use your saved PlayFlix account credentials.'
                   : activeView === 'signup'
-                  ? 'Create a new user account that also appears in the admin panel.'
-                  : 'Reset your local PlayFlix password using your account email.'}
+                    ? 'Create a new user account that also appears in the admin panel.'
+                    : activeView === 'otp'
+                      ? 'Receive a one-time password and sign in instantly.'
+                      : 'Reset your local PlayFlix password using your account email.'}
               </p>
               
               {/* Social Login Buttons */}
@@ -405,7 +425,7 @@ export default function UserLoginPage() {
                 <div className="grid grid-cols-1 gap-3 mt-6 mb-6">
                   <button
                     type="button"
-                    onClick={handleSocialLogin}
+                    onClick={() => handleSocialLogin('Google')}
                     className="flex items-center justify-center gap-2 p-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors"
                   >
                     <span className="text-lg">G</span>
@@ -561,6 +581,66 @@ export default function UserLoginPage() {
                   {forgotLoading ? 'Sending...' : 'Send Reset Email'}
                 </button>
             </form>
+          ) : activeView === 'otp' ? (
+            <div className="space-y-6">
+              <form onSubmit={handleSendOTP} className="space-y-4">
+                <div>
+                  <label className="block text-zinc-400 mb-2 text-sm font-medium">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                    <input
+                      type="email"
+                      value={otpData.email}
+                      onChange={(e) => setOtpData({ ...otpData, email: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-12 pr-4 py-3.5 text-white focus:outline-none focus:border-red-500"
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={otpLoading}
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 text-white py-3.5 rounded-2xl font-semibold transition-colors"
+                >
+                  {otpLoading ? 'Sending OTP...' : 'Send OTP'}
+                </button>
+              </form>
+
+              <form onSubmit={handleVerifyOTP} className="space-y-4">
+                <div>
+                  <label className="block text-zinc-400 mb-2 text-sm font-medium">OTP</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otpData.otp}
+                    onChange={(e) => setOtpData({ ...otpData, otp: e.target.value })}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-red-500 text-center text-xl tracking-widest"
+                    placeholder="000000"
+                  />
+                </div>
+
+                {otpError && (
+                  <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-200 text-sm">
+                    {otpError}
+                  </div>
+                )}
+
+                {otpSuccess && (
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-emerald-200 text-sm">
+                    {otpSuccess}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={otpVerifyLoading}
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-700 text-white py-3.5 rounded-2xl font-semibold transition-colors border border-zinc-700"
+                >
+                  {otpVerifyLoading ? 'Verifying...' : 'Verify & Login'}
+                </button>
+              </form>
+            </div>
           ) : (
               <form onSubmit={handleSignup} className="space-y-6">
                 <div>

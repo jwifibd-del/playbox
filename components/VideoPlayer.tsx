@@ -1,6 +1,6 @@
 'use client';
 
-import { type ChangeEvent, type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { type ChangeEvent, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import Hls, { Level as HlsLevel } from 'hls.js';
 import {
@@ -10,6 +10,8 @@ import {
   type MediaAudioTrack,
   type MediaSourceType,
   type MediaSubtitleTrack,
+  getWatchProgress,
+  upsertWatchHistory,
 } from '@/lib/data';
 
 interface QualityLevel {
@@ -54,6 +56,11 @@ interface VideoPlayerProps {
   }[];
   enableAutoRefresh?: boolean;
   autoRefreshInterval?: number; // in seconds
+  watchHistoryContext?: {
+    movieId?: string;
+    tvShowId?: string;
+    episodeId?: string;
+  };
 }
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -210,6 +217,7 @@ export default function VideoPlayer({
   drmConfig,
   enableAutoRefresh = false,
   autoRefreshInterval = 300, // 5 minutes default
+  watchHistoryContext,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -221,6 +229,8 @@ export default function VideoPlayer({
   const audioToastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const resumeTimeRef = useRef(0);
   const hlsRecoveryAttemptsRef = useRef(0);
+  const lastHistoryUpsertRef = useRef(0);
+  const pendingHistoryFlushRef = useRef<NodeJS.Timeout | null>(null);
   const isMiniPlayer = mode === 'mini';
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -379,19 +389,27 @@ export default function VideoPlayer({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!isHlsStreamUrl(src, sourceType)) {
+    if (externalSource) {
       setUseHlsProxy(false);
       return;
     }
     try {
       const target = new URL(src);
       const isMixedContent = window.location.protocol === 'https:' && target.protocol === 'http:';
-      const isCrossOrigin = target.origin !== window.location.origin;
-      setUseHlsProxy(isMixedContent || isCrossOrigin);
+      if (isMixedContent) {
+        setUseHlsProxy(true);
+        return;
+      }
+      if (isHlsStreamUrl(src, sourceType)) {
+        const isCrossOrigin = target.origin !== window.location.origin;
+        setUseHlsProxy(isCrossOrigin);
+        return;
+      }
+      setUseHlsProxy(false);
     } catch {
       setUseHlsProxy(false);
     }
-  }, [src, sourceType]);
+  }, [src, sourceType, externalSource]);
 
   // Load bookmarks from localStorage
   useEffect(() => {
@@ -413,16 +431,64 @@ export default function VideoPlayer({
     }
   }, []);
 
-  // Auto-resume from local storage
+  // Auto-resume from backend watch history first, then localStorage fallback
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    let cancelled = false;
 
-    const savedTime = localStorage.getItem(`playflix-watch-${videoId}`);
-    const parsedSavedTime = savedTime ? parseFloat(savedTime) : 0;
-    resumeTimeRef.current = typeof initialTime === 'number' ? initialTime : parsedSavedTime;
-  }, [initialTime, videoId]);
+    (async () => {
+      let seekFrom: number | null = null;
+      if (watchHistoryContext && (watchHistoryContext.movieId || watchHistoryContext.tvShowId || watchHistoryContext.episodeId)) {
+        const remote = await getWatchProgress(watchHistoryContext);
+        if (remote && !cancelled && typeof remote.progress === 'number') {
+          seekFrom = remote.progress;
+        }
+      }
+      if (seekFrom === null || seekFrom <= 0) {
+        const savedTime = localStorage.getItem(`playflix-watch-${videoId}`);
+        const parsedSavedTime = savedTime ? parseFloat(savedTime) : 0;
+        seekFrom = parsedSavedTime;
+      }
+      if (cancelled) return;
+      resumeTimeRef.current = typeof initialTime === 'number' ? initialTime : (seekFrom ?? 0);
+    })();
 
-  // Save watch progress
+    return () => { cancelled = true; };
+  }, [initialTime, videoId, watchHistoryContext]);
+
+  const flushWatchHistory = useCallback(async () => {
+    if (!watchHistoryContext) return;
+    const video = videoRef.current;
+    if (!video) return;
+    const progress = Math.max(0, Math.floor(video.currentTime || 0));
+    const duration = Math.max(progress, Math.floor(video.duration || 0));
+    if (progress < 5) return;
+    lastHistoryUpsertRef.current = Date.now();
+    await upsertWatchHistory({
+      movieId: watchHistoryContext.movieId,
+      tvShowId: watchHistoryContext.tvShowId,
+      episodeId: watchHistoryContext.episodeId,
+      progress,
+      duration,
+    });
+  }, [watchHistoryContext]);
+
+  const throttleFlushWatchHistory = useCallback(() => {
+    if (!watchHistoryContext) return;
+    const now = Date.now();
+    if (now - lastHistoryUpsertRef.current < 15000) {
+      if (!pendingHistoryFlushRef.current) {
+        pendingHistoryFlushRef.current = setTimeout(() => {
+          pendingHistoryFlushRef.current = null;
+          void flushWatchHistory();
+        }, 15000);
+      }
+      return;
+    }
+    void flushWatchHistory();
+  }, [flushWatchHistory, watchHistoryContext]);
+
+  // Save watch progress locally + remote (throttled)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -433,10 +499,26 @@ export default function VideoPlayer({
           videoRef.current.currentTime.toString(),
         );
       }
+      throttleFlushWatchHistory();
     };
     const interval = setInterval(saveProgress, 5000);
-    return () => clearInterval(interval);
-  }, [videoId]);
+    const onUnload = () => {
+      if (pendingHistoryFlushRef.current) clearTimeout(pendingHistoryFlushRef.current);
+      void flushWatchHistory();
+    };
+    window.addEventListener('beforeunload', onUnload);
+    window.addEventListener('pagehide', onUnload);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', onUnload);
+      window.removeEventListener('pagehide', onUnload);
+      if (pendingHistoryFlushRef.current) {
+        clearTimeout(pendingHistoryFlushRef.current);
+        pendingHistoryFlushRef.current = null;
+      }
+      void flushWatchHistory();
+    };
+  }, [videoId, throttleFlushWatchHistory, flushWatchHistory]);
 
   // Load audio tracks from prop (declared metadata for current source).
   // If native audio tracks are also present, cross-reference and carry hlsIndex through.
@@ -629,7 +711,7 @@ export default function VideoPlayer({
     if (!video || externalSource) return;
 
     const isHlsStream = isHlsStreamUrl(src, sourceType);
-    const resolvedSrc = isHlsStream && useHlsProxy ? buildHlsProxyUrl(src) : src;
+    const resolvedSrc = useHlsProxy ? buildHlsProxyUrl(src) : src;
 
     if (Hls.isSupported() && isHlsStream) {
       const hls = new Hls({
@@ -769,7 +851,7 @@ export default function VideoPlayer({
       const currentTime = video.currentTime;
       const wasPlaying = !video.paused;
       const isHlsStream = isHlsStreamUrl(src, sourceType);
-      const resolvedSrc = isHlsStream && useHlsProxy ? buildHlsProxyUrl(src) : src;
+      const resolvedSrc = useHlsProxy ? buildHlsProxyUrl(src) : src;
 
       if (hlsRef.current) {
         hlsRef.current.loadSource(resolvedSrc);
@@ -1378,7 +1460,7 @@ export default function VideoPlayer({
       ) : (
         (() => {
           const isHlsStream = isHlsStreamUrl(src, sourceType);
-          const resolvedSrc = isHlsStream && useHlsProxy ? buildHlsProxyUrl(src) : src;
+          const resolvedSrc = useHlsProxy ? buildHlsProxyUrl(src) : src;
           const shouldSetSrc = !isHlsStream || !Hls.isSupported();
           return (
             <video
@@ -1397,6 +1479,19 @@ export default function VideoPlayer({
               onEnded={() => setIsPlaying(false)}
               onError={(e) => {
                 console.error('Video element error:', e);
+                if (!useHlsProxy) {
+                  try {
+                    const target = new URL(src);
+                    const isMixedContent =
+                      window.location.protocol === 'https:' && target.protocol === 'http:';
+                    if (isMixedContent) {
+                      setHlsError(null);
+                      setUseHlsProxy(true);
+                      setPlaybackAttempt((currentAttempt) => currentAttempt + 1);
+                      return;
+                    }
+                  } catch {}
+                }
                 setHlsError('Video error: Could not load or play the stream');
               }}
               onTouchStart={handleTouchStart}

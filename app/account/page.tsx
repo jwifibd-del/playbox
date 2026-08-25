@@ -32,12 +32,15 @@ import {
   getUserProfile,
   saveUserProfile,
   UserProfile,
+  registerUser,
+  getUsers,
   getUserAuthCredentials,
   saveUserAuthCredentials,
   getMovieRequests,
   submitMovieRequest,
   MovieRequest,
   isUserAuthenticated,
+  setUserAuthenticated,
   logoutUser,
   getActiveProfile,
   switchProfile,
@@ -73,6 +76,7 @@ export default function AccountPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const syncedSessionEmailRef = useRef<string | null>(null);
   const [activeTab, setActiveTab] = useState('profile');
   const [isAccessReady, setIsAccessReady] = useState(false);
   const [parentalSettings, setParentalSettings] = useState<ParentalControlSettings | null>(null);
@@ -119,9 +123,82 @@ export default function AccountPage() {
       return;
     }
 
-    // If we have a Google session but no local auth, sync it
-    if (isAuthenticatedSession && session?.user?.email && !isAuthenticatedLocally) {
-      // Here you could register or update user profile in local storage if needed
+    // If we have a Google session, sync it into local storage for profile management
+    if (isAuthenticatedSession && session?.user?.email) {
+      const email = String(session.user.email).trim().toLowerCase();
+
+      if (syncedSessionEmailRef.current !== email) {
+        syncedSessionEmailRef.current = email;
+
+        const fullName = String(session.user.name ?? email.split('@')[0] ?? email).trim();
+        const existingUsers = getUsers();
+        const existingUser = existingUsers.find((user) => user.email.toLowerCase() === email);
+
+        if (!existingUser) {
+          registerUser({
+            fullName,
+            email,
+            password: `google-${Math.random().toString(36).slice(2, 12)}`,
+          });
+        }
+
+        setUserAuthenticated(true, email);
+
+        // Preserve any existing custom dataURL avatar the user uploaded previously (don't overwrite with Google's URL on every sync)
+        const currentSaved = getUserProfile();
+        const hasCustomUploadedAvatar =
+          typeof currentSaved?.avatar === 'string' &&
+          currentSaved.avatar.trim().startsWith('data:image/');
+        const googleImage = String((session.user as any)?.image ?? '').trim();
+        const fallbackExisting =
+          existingUser?.avatar && String(existingUser.avatar).trim()
+            ? String(existingUser.avatar).trim()
+            : '';
+        const finalAvatar: string | undefined = hasCustomUploadedAvatar
+          ? currentSaved.avatar
+          : googleImage || fallbackExisting || undefined;
+
+        saveUserProfile({
+          fullName,
+          email,
+          ...(finalAvatar ? { avatar: finalAvatar } : {}),
+        });
+
+        setUserProfile(getUserProfile());
+        setActiveProfile(getActiveProfile());
+
+        const accessToken = (session as any)?.accessToken;
+        const backendUser = (session as any)?.backendUser;
+        if (accessToken) {
+          localStorage.setItem('playflix_token', String(accessToken));
+        }
+        if (backendUser) {
+          const refreshed = getUserProfile();
+          localStorage.setItem(
+            'playflix_user',
+            JSON.stringify({
+              ...backendUser,
+              avatar: refreshed?.avatar || backendUser.avatar,
+              fullName: refreshed?.fullName || backendUser.fullName || fullName,
+              profiles: refreshed?.profiles || backendUser.profiles,
+              activeProfileId: refreshed?.activeProfileId || backendUser.activeProfileId,
+            })
+          );
+        } else {
+          const refreshed = getUserProfile();
+          localStorage.setItem(
+            'playflix_user',
+            JSON.stringify({
+              email,
+              name: fullName,
+              fullName: refreshed?.fullName || fullName,
+              avatar: refreshed?.avatar,
+              profiles: refreshed?.profiles,
+              activeProfileId: refreshed?.activeProfileId,
+            }),
+          );
+        }
+      }
     }
 
     setIsAccessReady(true);

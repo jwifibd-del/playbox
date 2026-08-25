@@ -986,38 +986,203 @@ export const sampleTVShows: TVShow[] = [
   }
 ];
 
-export interface ContinueWatchingItem extends Movie {
-  progress: number;
-  currentTime: string;
-  duration: string;
+export interface ContinueWatchingItem extends Partial<Movie> {
+  id: string;
+  title: string;
+  backdropPath: string;
+  posterPath?: string;
+  progress: number;        // 0-100
+  currentTime: string;     // Human-readable
+  duration: string;        // Human-readable
+  progressSeconds: number; // Exact seek point
+  totalSeconds: number;    // Exact total
+  kind: 'movie' | 'episode';
+  movieId?: string;        // Direct link if kind=movie
+  tvShowId?: string;       // Direct link if kind=episode
+  episodeId?: string;      // Direct link if kind=episode
+  seasonNumber?: number;
+  episodeNumber?: number;
+  showName?: string;
 }
 
-export const continueWatching: ContinueWatchingItem[] = [
+const STATIC_CONTINUE_WATCHING: ContinueWatchingItem[] = [
   {
     ...sampleMovies[0],
+    id: String(sampleMovies[0].id),
     progress: 65,
     currentTime: "1h 47m",
-    duration: "2h 49m"
+    duration: "2h 49m",
+    progressSeconds: 107 * 60,
+    totalSeconds: 169 * 60,
+    kind: 'movie',
+    movieId: String(sampleMovies[0].id),
   },
   {
     ...sampleMovies[1],
+    id: String(sampleMovies[1].id),
     progress: 30,
     currentTime: "45m",
-    duration: "2h 32m"
+    duration: "2h 32m",
+    progressSeconds: 45 * 60,
+    totalSeconds: 152 * 60,
+    kind: 'movie',
+    movieId: String(sampleMovies[1].id),
   },
   {
     ...sampleMovies[2],
+    id: String(sampleMovies[2].id),
     progress: 80,
     currentTime: "2h 02m",
-    duration: "2h 28m"
+    duration: "2h 28m",
+    progressSeconds: 122 * 60,
+    totalSeconds: 148 * 60,
+    kind: 'movie',
+    movieId: String(sampleMovies[2].id),
   },
   {
     ...sampleMovies[3],
+    id: String(sampleMovies[3].id),
     progress: 45,
     currentTime: "1h 10m",
-    duration: "2h 22m"
-  }
+    duration: "2h 22m",
+    progressSeconds: 70 * 60,
+    totalSeconds: 142 * 60,
+    kind: 'movie',
+    movieId: String(sampleMovies[3].id),
+  },
 ];
+
+export const continueWatching = STATIC_CONTINUE_WATCHING;
+
+function getAuthHeadersForUser(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json' };
+  if (typeof window !== 'undefined') {
+    const adminToken = localStorage.getItem('adminToken');
+    const userToken = localStorage.getItem('playflix_token');
+    const token = adminToken || userToken;
+    if (token && token.trim()) headers['Authorization'] = `Bearer ${token.trim()}`;
+  }
+  return headers;
+}
+
+export function formatSeconds(totalSeconds: number): string {
+  if (!totalSeconds || Number.isNaN(totalSeconds) || totalSeconds < 0) return '0m';
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) {
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  if (m > 0) {
+    return sec > 0 ? `${m}m ${sec}s` : `${m}m`;
+  }
+  return `${sec}s`;
+}
+
+export async function fetchWatchHistory(take = 24, includeCompleted = false): Promise<ContinueWatchingItem[]> {
+  try {
+    const res = await fetch(`${BACKEND_API_BASE}/watch-history?take=${take}&includeCompleted=${includeCompleted ? 'true' : 'false'}`, {
+      headers: getAuthHeadersForUser(),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      if (res.status === 401) return [];
+      return STATIC_CONTINUE_WATCHING;
+    }
+    const rows = await res.json() as any[];
+    if (!Array.isArray(rows)) return STATIC_CONTINUE_WATCHING;
+    const items: ContinueWatchingItem[] = rows
+      .map(row => {
+        const kind: 'movie' | 'episode' = row.kind || (row.episodeId || row.tvShowId ? 'episode' : 'movie');
+        const total = Math.max(0, Number(row.duration) || 0);
+        const prog = Math.min(total, Math.max(0, Number(row.progress) || 0));
+        const percent = total > 0 ? Math.round((prog / total) * 100) : 0;
+        let backdrop = row.backdropPath;
+        if (!backdrop && row.posterPath) backdrop = row.posterPath;
+        return {
+          id: row.id,
+          kind,
+          title: (kind === 'episode' && row.showName && row.episodeNumber !== undefined
+            ? `${row.showName} — S${row.seasonNumber ?? 0}E${row.episodeNumber}`
+            : (row.title || 'Watched item')) as string,
+          backdropPath: backdrop || '',
+          posterPath: row.posterPath,
+          progress: percent,
+          currentTime: formatSeconds(prog),
+          duration: formatSeconds(total),
+          progressSeconds: prog,
+          totalSeconds: total,
+          movieId: row.movieId,
+          tvShowId: row.tvShowId,
+          episodeId: row.episodeId,
+          seasonNumber: row.seasonNumber,
+          episodeNumber: row.episodeNumber,
+          showName: row.showName,
+          releaseDate: row.releaseDate,
+          firstAirDate: row.firstAirDate,
+        } as ContinueWatchingItem;
+      })
+      .filter(it => it.backdropPath || it.posterPath)
+      .slice(0, take);
+    return items.length > 0 ? items : STATIC_CONTINUE_WATCHING;
+  } catch (e) {
+    return STATIC_CONTINUE_WATCHING;
+  }
+}
+
+export async function upsertWatchHistory(input: {
+  movieId?: string;
+  tvShowId?: string;
+  episodeId?: string;
+  progress: number;
+  duration: number;
+  completed?: boolean;
+}): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_API_BASE}/watch-history`, {
+      method: 'POST',
+      headers: getAuthHeadersForUser(),
+      body: JSON.stringify(input),
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function getWatchProgress(key: { movieId?: string; tvShowId?: string; episodeId?: string }): Promise<{ progress: number; duration: number; completed: boolean } | null> {
+  try {
+    const params = new URLSearchParams();
+    if (key.movieId) params.set('movieId', key.movieId);
+    if (key.tvShowId) params.set('tvShowId', key.tvShowId);
+    if (key.episodeId) params.set('episodeId', key.episodeId);
+    if ([...params.values()].length === 0) return null;
+    const res = await fetch(`${BACKEND_API_BASE}/watch-history/progress?${params.toString()}`, {
+      headers: getAuthHeadersForUser(),
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    return await res.json() as any;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function buildResumeUrl(item: ContinueWatchingItem): string {
+  if (item.kind === 'episode' && item.episodeId && item.tvShowId) {
+    const seek = item.progressSeconds ? `?t=${Math.max(0, Math.round(item.progressSeconds - 3))}` : '';
+    return `/tv/${item.tvShowId}/episode/${item.episodeId}${seek}`;
+  }
+  if (item.kind === 'movie' && item.movieId) {
+    const seek = item.progressSeconds ? `?t=${Math.max(0, Math.round(item.progressSeconds - 3))}` : '';
+    return `/movie/${item.movieId}${seek}`;
+  }
+  if (item.tvShowId) {
+    return `/tv/${item.tvShowId}`;
+  }
+  return '#';
+}
 
 // News Section Data
 export interface NewsItem {
@@ -1129,7 +1294,7 @@ export function getAIRecommendations(): Movie[] {
   const watchedDirectors: string[] = [];
   
   continueWatching.forEach(item => {
-    watchedGenres.push(...item.genres);
+    if (Array.isArray(item.genres)) watchedGenres.push(...item.genres);
     if (item.director) {
       watchedDirectors.push(item.director);
     }
@@ -1161,7 +1326,7 @@ export function getAIRecommendations(): Movie[] {
   scoredMovies.sort((a, b) => b.score - a.score);
   
   // Exclude already watched (continue watching) and return top recommendations
-  const watchedIds = new Set(continueWatching.map(i => i.id));
+  const watchedIds = new Set<string | number>(continueWatching.map(i => i.id));
   return scoredMovies
     .filter(({ movie }) => !watchedIds.has(movie.id))
     .map(({ movie }) => movie)
@@ -1179,7 +1344,8 @@ export function getBecauseYouWatched(): Movie[] {
   const scoredMovies = sampleMovies.map(movie => {
     let score = 0;
     if (movie.id === lastWatched.id) return null;
-    const genreMatches = movie.genres.filter(g => lastWatched.genres.includes(g)).length;
+    const lastGenres: string[] = Array.isArray(lastWatched.genres) ? lastWatched.genres : [];
+    const genreMatches = movie.genres.filter(g => lastGenres.includes(g)).length;
     score += genreMatches * 3;
     if (movie.director === lastWatched.director) score += 5;
     if (movie.country === lastWatched.country) score += 2;
@@ -1557,17 +1723,25 @@ function persistUsers(users: AppUser[]): void {
 
 function normalizeUserRecord(user: Partial<AppUser>, index: number): AppUser {
   const defaultUser = getDefaultUser();
+  const fallbackName = user.fullName || defaultUser.fullName;
+  const keepAvatar: string | undefined = (() => {
+    if (typeof user.avatar === 'string') {
+      const a = user.avatar.trim();
+      if (a.length > 0) return a;
+    }
+    return undefined;
+  })();
   
   return {
     ...defaultUser,
     ...user,
     id: user.id ?? `${Date.now()}-${index}`,
-    fullName: user.fullName || defaultUser.fullName,
+    fullName: fallbackName,
     email: user.email || `${Date.now()}@playflix.app`,
     gender: normalizeUserGender(user.gender),
     joinDate: user.joinDate || formatReadableDate(new Date()),
     lastLogin: user.lastLogin || 'Never',
-    avatar: user.avatar || createAvatarUrl(user.fullName || defaultUser.fullName),
+    avatar: keepAvatar ?? createAvatarUrl(fallbackName),
     subscription: user.subscription || defaultUser.subscription,
     profiles: user.profiles || defaultUser.profiles,
     activeProfileId: user.activeProfileId || defaultUser.activeProfileId,
@@ -1589,7 +1763,7 @@ export function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export function sendOTP(email: string): { success: boolean; message: string; otp?: string } {
+export function sendOTP(email: string): { success: boolean; message: string } {
   if (typeof window === 'undefined') {
     return { success: false, message: 'OTP is only available in browser.' };
   }
@@ -1602,8 +1776,8 @@ export function sendOTP(email: string): { success: boolean; message: string; otp
   };
   
   localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otpEntry));
-  
-  return { success: true, message: 'OTP sent successfully!', otp };
+  console.log(`OTP for ${email}: ${otp}`);
+  return { success: true, message: 'OTP sent successfully!' };
 }
 
 export function verifyOTP(email: string, otp: string): { success: boolean; message: string } {
@@ -1791,23 +1965,40 @@ function setCurrentUserId(userId: string | number): void {
 }
 
 function getCurrentUserRecord(): AppUser {
-  // First check for playflix_user from backend auth
+  // Fall back to original method to fetch the user list first, so we can merge overrides
+  const users = getUsers();
+  const currentUserId = getCurrentUserId();
+
+  // First check for playflix_user from backend auth, but merge any newer fields
+  // (avatar, etc.) from the matching entry in the persisted USER_LIST so
+  // avatar/profile edits are visible even with a backend-signed-in session.
   if (typeof window !== 'undefined') {
     const storedUserRaw = localStorage.getItem('playflix_user');
     if (storedUserRaw) {
       try {
         const storedUser = JSON.parse(storedUserRaw);
+        const storedEmail = String(storedUser?.email || '').trim().toLowerCase();
+        let merged: any = { ...(storedUser || {}) };
+        if (storedEmail) {
+          const listMatch = users.find((u) => String(u.email || '').trim().toLowerCase() === storedEmail);
+          if (listMatch) {
+            // Prefer user-list values for avatar / fullName / profiles / activeProfileId
+            // because those are what saveUserProfile mutates.
+            merged = {
+              ...merged,
+              ...listMatch,
+              id: merged.id || listMatch.id,
+              email: merged.email || listMatch.email,
+            };
+          }
+        }
         // Convert stored user to AppUser format
-        return normalizeUserRecord(storedUser, 0);
+        return normalizeUserRecord(merged, 0);
       } catch {
         // ignore invalid JSON
       }
     }
   }
-  
-  // Fall back to original method
-  const users = getUsers();
-  const currentUserId = getCurrentUserId();
 
   if (currentUserId) {
     const matchedUser = users.find((user) => String(user.id) === currentUserId);
@@ -1977,6 +2168,37 @@ export function saveUserProfile(profile: Partial<UserProfile>): void {
   );
 
   persistUsers(updatedUsers);
+
+  // Also sync updates into the separate backend-auth session key so
+  // avatar/profile edits show up immediately for backend-signed-in users.
+  try {
+    const storedUserRaw = localStorage.getItem('playflix_user');
+    if (storedUserRaw) {
+      const stored = JSON.parse(storedUserRaw);
+      const storedEmail = String(stored?.email || '').trim().toLowerCase();
+      const curEmail = String(currentUser.email || '').trim().toLowerCase();
+      if (stored && (storedEmail === curEmail || !storedEmail || !curEmail)) {
+        const merged: any = {
+          ...(stored || {}),
+          ...profile,
+          email: profile.email || stored.email || currentUser.email,
+          gender: normalizedGender || stored.gender || currentUser.gender,
+        };
+        // Sync user-list fields (avatar/profiles/fullName/...) that are part of AppUser/UserProfile
+        const listMatch = updatedUsers.find((u) => String(u.id) === String(currentUser.id));
+        if (listMatch) {
+          merged.avatar = listMatch.avatar || merged.avatar;
+          merged.fullName = listMatch.fullName || merged.fullName;
+          merged.profiles = listMatch.profiles || merged.profiles;
+          merged.activeProfileId = listMatch.activeProfileId || merged.activeProfileId;
+          merged.subscription = listMatch.subscription || merged.subscription;
+        }
+        localStorage.setItem('playflix_user', JSON.stringify(merged));
+      }
+    }
+  } catch {
+    // ignore JSON errors on best-effort sync
+  }
 }
 
 export function resetUserPasswordByEmail(input: {
@@ -2949,9 +3171,23 @@ export type HomepageSectionType =
   | 'kids' 
   | 'anime'
   | 'top-rated' 
+  | 'latest-movies'
+  | 'tv-shows'
+  | 'live-tv'
+  | 'new-releases'
+  | 'regional'
+  | 'hollywood'
+  | 'bollywood'
+  | 'bangla'
+  | 'korean'
+  | 'japanese'
+  | 'chinese'
+  | 'turkish'
   | 'custom'
   | 'movie-genre'
-  | 'tv-genre';
+  | 'tv-genre'
+  | 'movie-studio'
+  | 'tv-studio';
 
 export interface HomepageSection {
   id: string;
@@ -2965,6 +3201,7 @@ export interface HomepageSection {
   genre?: string;
   contentType?: 'movie' | 'tv';
   description?: string;
+  studio?: string;
 }
 
 const defaultHomepageSections: HomepageSection[] = [
@@ -4633,4 +4870,3 @@ export interface DlnaBrowseResponse {
   totalMatches: number;
   items: any[];
 }
-

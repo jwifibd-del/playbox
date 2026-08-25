@@ -267,14 +267,15 @@ A comprehensive guide to building the complete premium streaming platform.
 ## Phase 8: Performance & Security
 
 ### 8.1 Performance Optimization
-- [ ] Server-Side Rendering (SSR)
-- [ ] Image optimization (Next.js Image Component)
-- [ ] Lazy loading
-- [ ] Infinite scroll
-- [ ] PWA support
-- [ ] Offline caching
-- [ ] Core Web Vitals optimization
-- [ ] SEO optimization
+- [x] Baseline SSR via Next.js App Router (Server Components by default)
+- [ ] Audit client-only routes and minimize hydration (move logic to server where possible)
+- [x] PWA baseline (manifest + `public/sw.js` + `PWARegistrar`)
+- [x] Offline caching baseline (SW shell/media/runtime caching strategies)
+- [ ] Image optimization: migrate key images to Next.js Image (`next/image`) with proper `sizes` and `priority` for LCP
+- [ ] Lazy loading: defer heavy client code (VideoPlayer / HLS / Dash) via dynamic import and viewport-based loading
+- [ ] Infinite scroll / virtualization for large catalogs and admin lists
+- [ ] Core Web Vitals: measure (INP/LCP/CLS), set budgets, and optimize bundles + critical rendering path
+- [ ] SEO: per-route metadata, OG/Twitter images, sitemap.xml, robots.txt, canonical URLs, and structured data
 
 ### 8.2 Security
 - [ ] HTTPS enforcement

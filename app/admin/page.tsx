@@ -81,6 +81,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { API_BASE } from '@/lib/api';
+import { maskStreamUrl } from '@/lib/utils';
 import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, getTMDBSeasonDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, convertTMDBToMovieWithFanart, convertTMDBToTVShowWithEpisodesAndFanart, enrichMovieWithFanart, enrichTVShowWithFanart, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, deleteUser, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow, getXtreamConfigs, saveXtreamConfigs, getActiveXtreamConfig, setActiveXtreamConfig, XtreamConfig, getFanartMovieArt, getFanartTvArt, pickBestFanartImage, FanartMovieArt, FanartTvArt, TvChannel, getTvChannels, saveTvChannels, getTvChannelCategories } from '@/lib/data';
 
 function cn(...inputs: any[]) {
@@ -1329,6 +1330,12 @@ const TvChannelModal = ({ channel, onClose, onSave, categories }: any) => {
   }))
 
   const update = (patch: Partial<TvChannel>) => setForm((f) => ({ ...f, ...patch }))
+  const [revealStreamUrl, setRevealStreamUrl] = useState(false)
+  const streamUrlInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    setRevealStreamUrl(false)
+  }, [channel])
 
   return (
     <motion.div
@@ -1444,13 +1451,35 @@ const TvChannelModal = ({ channel, onClose, onSave, categories }: any) => {
                 <span className="text-[11px] font-bold tracking-wider uppercase text-zinc-500">Stream & Classification</span>
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 space-y-4">
                   <Field label="Stream URL *">
-                    <input
-                      type="text"
-                      className={cn(inputCls, 'font-mono text-xs')}
-                      value={form.streamUrl}
-                      onChange={(e) => update({ streamUrl: e.target.value })}
-                      placeholder="http:// or https:// or rtmp:// stream (e.g. https://live.example.com/ch.m3u8)"
-                    />
+                    <div className="relative">
+                      <input
+                        ref={streamUrlInputRef}
+                        type="text"
+                        className={cn(inputCls, 'font-mono text-xs pr-12')}
+                        value={revealStreamUrl || !form.streamUrl ? form.streamUrl : maskStreamUrl(form.streamUrl)}
+                        readOnly={!revealStreamUrl && !!form.streamUrl}
+                        onChange={(e) => update({ streamUrl: e.target.value })}
+                        placeholder="http:// or https:// or rtmp:// stream (e.g. https://live.example.com/ch.m3u8)"
+                      />
+                      {!!form.streamUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRevealStreamUrl((v) => {
+                              const next = !v
+                              if (next) {
+                                setTimeout(() => streamUrlInputRef.current?.focus(), 0)
+                              }
+                              return next
+                            })
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl border border-zinc-700 bg-zinc-950/40 hover:bg-zinc-900 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
+                          aria-label={revealStreamUrl ? 'Hide stream url' : 'Reveal stream url'}
+                        >
+                          {revealStreamUrl ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
                     <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
                       Supported: <span className="text-emerald-400 font-semibold">http://</span>,{' '}
                       <span className="text-emerald-400 font-semibold">https://</span>,{' '}
@@ -1892,7 +1921,7 @@ const AdminMovieCard = ({ movie, onEdit, onDelete, isSelected, onSelect }: any) 
         </div>
       </div>
       <div className="flex items-center gap-3 text-zinc-400 text-sm mb-2">
-        <span className="text-yellow-400 font-bold">â˜… {movie.rating}</span>
+        <span className="text-yellow-400 font-bold">★ {movie.rating}</span>
         <span>{movie.releaseYear}</span>
         <span>{movie.runtime}</span>
       </div>
@@ -1946,7 +1975,7 @@ const AdminTVShowCard = ({
         <h3 className="text-white font-bold text-lg line-clamp-2">{tvShow.title}</h3>
         <div className="flex items-center gap-2 text-zinc-300 text-sm mt-1">
           <span>{tvShow.startYear}{tvShow.endYear ? ` - ${tvShow.endYear}` : ''}</span>
-          <span>â€¢</span>
+          <span>•</span>
           <span>{tvShow.numberOfSeasons} Season{tvShow.numberOfSeasons !== 1 ? 's' : ''}</span>
         </div>
         <div className="flex items-center gap-2 text-zinc-200 text-sm mt-3">
@@ -1958,7 +1987,7 @@ const AdminTVShowCard = ({
     <div className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-yellow-400 font-bold">â˜… {tvShow.rating}</span>
+          <span className="text-yellow-400 font-bold">★ {tvShow.rating}</span>
           {tvShow.genres?.slice(0, 2).map((genre: string, i: number) => (
             <span key={i} className="text-zinc-400 text-sm">{genre}</span>
           ))}
@@ -2016,7 +2045,7 @@ const TMDBSearchResultCard = ({ item, type, onImport, importing }: any) => {
       <div className="p-4">
         <h3 className="text-white font-semibold line-clamp-1 mb-2">{title}</h3>
         <div className="flex items-center gap-3 text-zinc-400 text-sm mb-3">
-          <span className="text-yellow-400 font-bold">â˜… {item.vote_average?.toFixed(1) || 'N/A'}</span>
+          <span className="text-yellow-400 font-bold">★ {item.vote_average?.toFixed(1) || 'N/A'}</span>
           <span>{year}</span>
         </div>
         <p className="text-zinc-500 text-sm line-clamp-3 mb-4">{item.overview || 'No overview available'}</p>
@@ -4993,10 +5022,39 @@ export default function AdminPage() {
   const checkServerHealth = async () => {
     const now = new Date();
 
-    // Frontend Health
+    // App Server (Next.js) Health
     const frontendStart = Date.now();
-    await new Promise(r => setTimeout(r, 50 + Math.random() * 100));
-    const frontendResponseTime = Date.now() - frontendStart;
+    let frontendResponseTime = 0;
+    let frontendData: any = null;
+    let frontendMessage = '';
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`/api/server-health`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeoutId);
+      frontendResponseTime = Date.now() - frontendStart;
+
+      if (!res.ok) {
+        frontendMessage = `Health endpoint returned ${res.status}`;
+      } else {
+        const data = await res.json();
+        if (data?.status === 'healthy') {
+          frontendData = data;
+        } else {
+          frontendMessage = data?.message || 'App server reported an unhealthy state.';
+        }
+      }
+    } catch (err: any) {
+      frontendResponseTime = Date.now() - frontendStart;
+      frontendMessage =
+        err?.name === 'AbortError'
+          ? 'App server health check timed out.'
+          : err?.message || 'Unable to reach app server.';
+    }
 
     let backendData: any = null;
     let backendResponseTime = 0;
@@ -5033,10 +5091,11 @@ export default function AdminPage() {
 
     setServerHealth({
       frontend: { 
-        status: 'healthy', 
+        status: frontendData ? 'healthy' : 'unhealthy', 
         lastChecked: now, 
         responseTime: frontendResponseTime,
-        message: ''
+        message: frontendData ? '' : (frontendMessage || 'Unable to fetch /api/server-health'),
+        ...frontendData
       },
       backend: { 
         status: backendData ? 'healthy' : 'unhealthy',
@@ -7457,8 +7516,8 @@ export default function AdminPage() {
                           <span className="text-sm text-zinc-400 font-medium">Bandwidth</span>
                         </div>
                         <div className="flex flex-col items-end text-xs">
-                          <span className="text-emerald-400">â†‘ {serverHealth.backend.bandwidth?.sentFormatted || '0 B'}</span>
-                          <span className="text-blue-400">â†“ {serverHealth.backend.bandwidth?.receivedFormatted || '0 B'}</span>
+                          <span className="text-emerald-400">↑ {serverHealth.backend.bandwidth?.sentFormatted || '0 B'}</span>
+                          <span className="text-blue-400">↓ {serverHealth.backend.bandwidth?.receivedFormatted || '0 B'}</span>
                         </div>
                       </div>
                       <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
@@ -7944,6 +8003,39 @@ export default function AdminPage() {
                               className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
                             />
                           </div>
+                          <div>
+                            <label className="block text-zinc-400 mb-2 font-medium text-sm">Type</label>
+                            <select
+                              value={section.type}
+                              onChange={(e) => handleEditHomepageSection(section.id, 'type', e.target.value as any)}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                            >
+                              <option value="continue-watching">Continue Watching</option>
+                              <option value="recommended">Recommended</option>
+                              <option value="trending">Trending</option>
+                              <option value="latest-movies">Latest Movies</option>
+                              <option value="tv-shows">TV Shows</option>
+                              <option value="live-tv">Live TV</option>
+                              <option value="top-rated">Top Rated</option>
+                              <option value="new-releases">New Releases</option>
+                              <option value="regional">Regional</option>
+                              <option value="hollywood">Hollywood</option>
+                              <option value="bollywood">Bollywood</option>
+                              <option value="bangla">Bangla</option>
+                              <option value="korean">Korean</option>
+                              <option value="japanese">Japanese</option>
+                              <option value="chinese">Chinese</option>
+                              <option value="turkish">Turkish</option>
+                              <option value="news">News</option>
+                              <option value="popular">Popular</option>
+                              <option value="kids">Kids</option>
+                              <option value="movie-genre">Movie Genre</option>
+                              <option value="tv-genre">TV Genre</option>
+                              <option value="movie-studio">Movie Studio</option>
+                              <option value="tv-studio">TV Studio</option>
+                              <option value="custom">Custom (Collections)</option>
+                            </select>
+                          </div>
                           <div className="lg:col-span-2">
                             <label className="block text-zinc-400 mb-2 font-medium text-sm">Description</label>
                             <textarea
@@ -7954,60 +8046,41 @@ export default function AdminPage() {
                             />
                           </div>
                           {section.type === 'custom' && (
-                            <>
-                              <div>
-                                <label className="block text-zinc-400 mb-2 font-medium text-sm">Type</label>
-                                <select
-                                  value={section.type}
-                                  onChange={(e) => handleEditHomepageSection(section.id, 'type', e.target.value as any)}
-                                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                            <div className="lg:col-span-2">
+                              <div className="flex items-center justify-between mb-4">
+                                <label className="block text-zinc-400 font-medium text-sm">Selected Movies</label>
+                                <button
+                                  onClick={() => {
+                                    setActiveHomepageSectionForMovieSelection(section.id)
+                                    setSelectedMovieIds(new Set(section.movieIds || []))
+                                  }}
+                                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium text-white transition-colors"
                                 >
-                                  <option value="continue-watching">Continue Watching</option>
-                                  <option value="recommended">Recommended</option>
-                                  <option value="trending">Trending</option>
-                                  <option value="news">News</option>
-                                  <option value="popular">Popular</option>
-                                  <option value="kids">Kids</option>
-                                  <option value="top-rated">Top Rated</option>
-                                  <option value="custom">Custom</option>
-                                </select>
+                                  Manage Movies
+                                </button>
                               </div>
-                              <div className="lg:col-span-2">
-                                <div className="flex items-center justify-between mb-4">
-                                  <label className="block text-zinc-400 font-medium text-sm">Selected Movies</label>
-                                  <button
-                                    onClick={() => {
-                                      setActiveHomepageSectionForMovieSelection(section.id)
-                                      setSelectedMovieIds(new Set(section.movieIds || []))
-                                    }}
-                                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium text-white transition-colors"
-                                  >
-                                    Manage Movies
-                                  </button>
+                              {section.movieIds && section.movieIds.length > 0 ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                  {section.movieIds.map((movieId: any) => {
+                                    const movie = movies.find(m => m.id === movieId)
+                                    return movie ? (
+                                      <div key={movieId} className="bg-zinc-800 rounded-lg p-2 flex flex-col items-center">
+                                        {movie.posterPath && (
+                                          <img 
+                                            src={movie.posterPath} 
+                                            alt={movie.title} 
+                                            className="w-full aspect-[2/3] rounded-md object-cover mb-2"
+                                          />
+                                        )}
+                                        <p className="text-xs text-white text-center truncate">{movie.title}</p>
+                                      </div>
+                                    ) : null
+                                  })}
                                 </div>
-                                {section.movieIds && section.movieIds.length > 0 ? (
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                    {section.movieIds.map((movieId: any) => {
-                                      const movie = movies.find(m => m.id === movieId)
-                                      return movie ? (
-                                        <div key={movieId} className="bg-zinc-800 rounded-lg p-2 flex flex-col items-center">
-                                          {movie.posterPath && (
-                                            <img 
-                                              src={movie.posterPath} 
-                                              alt={movie.title} 
-                                              className="w-full aspect-[2/3] rounded-md object-cover mb-2"
-                                            />
-                                          )}
-                                          <p className="text-xs text-white text-center truncate">{movie.title}</p>
-                                        </div>
-                                      ) : null
-                                    })}
-                                  </div>
-                                ) : (
-                                  <p className="text-zinc-500 text-sm">No movies selected for this section</p>
-                                )}
-                              </div>
-                            </>
+                              ) : (
+                                <p className="text-zinc-500 text-sm">No movies selected for this section</p>
+                              )}
+                            </div>
                           )}
                           {(section.type === 'movie-genre' || section.type === 'tv-genre') && (
                             <div>
@@ -8020,6 +8093,29 @@ export default function AdminPage() {
                                 {genres.filter(g => g.isActive).map((g) => (
                                   <option key={g.id} value={g.name}>{g.name}</option>
                                 ))}
+                              </select>
+                            </div>
+                          )}
+                          {(section.type === 'movie-studio' || section.type === 'tv-studio') && (
+                            <div>
+                              <label className="block text-zinc-400 mb-2 font-medium text-sm">Studio</label>
+                              <select
+                                value={section.studio || ''}
+                                onChange={(e) => handleEditHomepageSection(section.id, 'studio', e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500"
+                              >
+                                <option value="">All Studios</option>
+                                {Array.from(
+                                  new Set(
+                                    (section.type === 'tv-studio' ? tvShows : movies)
+                                      .map((m: any) => m?.studio)
+                                      .filter(Boolean)
+                                  )
+                                )
+                                  .sort()
+                                  .map((studio: any) => (
+                                    <option key={studio} value={studio}>{studio}</option>
+                                  ))}
                               </select>
                             </div>
                           )}
@@ -10199,7 +10295,7 @@ export default function AdminPage() {
                                           <div>
                                             <p className="text-white font-medium">{source.title}</p>
                                             <p className="text-zinc-500 text-sm mt-1">
-                                              {source.type} â€¢ {source.quality || 'N/A'} â€¢ {source.size || 'N/A'}
+                                              {source.type} • {source.quality || 'N/A'} • {source.size || 'N/A'}
                                             </p>
                                           </div>
 
@@ -10692,6 +10788,15 @@ export default function AdminPage() {
                     {serverHealth.frontend.lastChecked && (
                       <p className="text-zinc-600 text-xs mt-1">Last check: {serverHealth.frontend.lastChecked.toLocaleTimeString()}</p>
                     )}
+                    {(serverHealth.frontend as any).uptime?.formatted && (
+                      <p className="text-zinc-400 text-xs mt-2">Uptime: {(serverHealth.frontend as any).uptime.formatted}</p>
+                    )}
+                    {(serverHealth.frontend as any).memory?.usagePercentage && (
+                      <p className="text-zinc-400 text-xs mt-1">Memory: {(serverHealth.frontend as any).memory.usagePercentage}%</p>
+                    )}
+                    {serverHealth.frontend.message && (
+                      <p className="text-yellow-400 text-xs mt-2">{serverHealth.frontend.message}</p>
+                    )}
                   </div>
 
                   {/* Backend Status */}
@@ -10793,8 +10898,8 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium text-emerald-400">â†‘ {serverHealth.backend.bandwidth?.sentFormatted || '0 B'}</p>
-                      <p className="text-sm font-medium text-blue-400">â†“ {serverHealth.backend.bandwidth?.receivedFormatted || '0 B'}</p>
+                      <p className="text-sm font-medium text-emerald-400">↑ {serverHealth.backend.bandwidth?.sentFormatted || '0 B'}</p>
+                      <p className="text-sm font-medium text-blue-400">↓ {serverHealth.backend.bandwidth?.receivedFormatted || '0 B'}</p>
                     </div>
                   </div>
                 </div>
@@ -12925,12 +13030,12 @@ export default function AdminPage() {
                             <div className="min-w-0">
                               <p className="text-white font-semibold truncate">{item.title}</p>
                               <p className="text-zinc-500 text-sm">
-                                {item.contentType} â€¢ {item.releaseYear || item.startYear || 'N/A'}
+                                {item.contentType} • {item.releaseYear || item.startYear || 'N/A'}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-yellow-400 font-semibold">â˜… {item.rating || 'N/A'}</p>
+                            <p className="text-yellow-400 font-semibold">★ {item.rating || 'N/A'}</p>
                             <p className="text-zinc-500 text-sm">{(item.genres || []).slice(0, 2).join(', ') || 'Uncategorized'}</p>
                           </div>
                         </div>

@@ -383,6 +383,7 @@ export default function MovieDetailsPage() {
               videoId={playback.videoId || `movie-${movie.id}`}
               subtitles={playback.subtitles}
               audioTracks={playback.audioTracks}
+              watchHistoryContext={{ movieId: String(movie.id) }}
             />
           </div>
         </section>

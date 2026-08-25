@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, User, Home, Tv, Smile, Clapperboard, Sparkles, Menu, X, ChevronDown, Radio } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Bell, User, Home, Tv, Smile, Clapperboard, Sparkles, Menu, X, Radio } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -29,8 +29,6 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [navbarSettings, setNavbarSettings] = useState(getGeneralSettings());
   const [hydrated, setHydrated] = useState(false);
-  const [modDropdownOpen, setModDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -48,14 +46,12 @@ export function Navbar() {
         { href: homeHref, label: 'Anime Home', icon: Home, match: (path: string) => path === '/anime' },
         { href: movieHref, label: 'Anime Movies', icon: Clapperboard, match: (path: string) => path === '/anime/movies' || path.startsWith('/movie/') },
         { href: tvHref, label: 'Anime Shows', icon: Tv, match: (path: string) => path === '/anime/shows' || path.startsWith('/tv/') },
-        { href: '/tv-channels', label: 'TV Channels', icon: Radio, match: (path: string) => path.startsWith('/tv-channels') },
       ]
     : isKidsView
     ? [
         { href: homeHref, label: 'Kids Home', icon: Home, match: (path: string) => path === '/kids' || path === '/' },
         { href: movieHref, label: 'Kids Movie', icon: Clapperboard, match: (path: string) => path === '/kids/movies' || path.startsWith('/movie/') },
         { href: tvHref, label: 'Kids Tv Shows', icon: Tv, match: (path: string) => path === '/kids/tv' || path.startsWith('/tv/') },
-        { href: '/tv-channels', label: 'TV Channels', icon: Radio, match: (path: string) => path.startsWith('/tv-channels') },
       ]
     : [
         { href: homeHref, label: 'Home', icon: Home, match: (path: string) => path === '/' || path === '/kids' },
@@ -86,23 +82,6 @@ export function Navbar() {
       window.removeEventListener('playflix-general-settings-updated', syncNavbarState);
     };
   }, [pathname]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setModDropdownOpen(false);
-      }
-    }
-
-    if (modDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [modDropdownOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -212,8 +191,9 @@ export function Navbar() {
         )}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
-          <div className="flex min-w-0 flex-1 items-center lg:w-1/4 lg:flex-none">
-            <Link href={homeHref} className="flex min-w-0 items-center gap-2">
+          {/* Left: Logo + Nav links (Home · Movies · TV Shows · TV Channels · Anime · Kids) */}
+          <div className="flex min-w-0 flex-1 items-center justify-start gap-6 lg:gap-8">
+            <Link href={homeHref} className="flex min-w-0 items-center gap-2 shrink-0">
               {navbarSettings.navbarLogo ? (
                 <img
                   src={navbarSettings.navbarLogo}
@@ -229,10 +209,11 @@ export function Navbar() {
                 </span>
               )}
             </Link>
-          </div>
-          <div className="hidden lg:flex flex-1 items-center justify-start gap-4 xl:gap-6">
-            {navLinks.map(({ href, label, icon: Icon, match }) => {
-              const isActive = match(pathname);
+
+            <div className="hidden lg:flex items-center justify-start gap-4 xl:gap-6">
+              {navLinks.map(({ href, label, icon: Icon, match }) => {
+                const isActive = match(pathname);
+                const iconSize = parseInt(navbarSettings.navbarFontSize) || 18;
 
                 return (
                   <Link
@@ -240,87 +221,68 @@ export function Navbar() {
                     href={href}
                     className={cn(
                       'transition-all duration-200 flex items-center gap-2 font-bold',
-                      isActive 
-                        ? 'text-white scale-105' 
+                      isActive
+                        ? 'text-white scale-105'
                         : 'text-gray-300 hover:text-white hover:scale-105'
                     )}
                     style={{ fontSize: navbarSettings.navbarFontSize }}
                   >
-                    <Icon size={parseInt(navbarSettings.navbarFontSize) || 18} />
+                    <Icon size={iconSize} />
                     {label}
                   </Link>
                 );
               })}
+
+              {/* Anime toggle (same sizing as nav links) — hidden when Kids mode is on */}
+              {!kidsMode && (
+                <button
+                  onClick={handleAnimeModeToggle}
+                  className={cn(
+                    'transition-all duration-200 flex items-center gap-2 font-bold px-1.5',
+                    animeMode
+                      ? 'text-white scale-105 drop-shadow-[0_0_12px_rgba(217,70,239,0.35)]'
+                      : 'text-gray-300 hover:text-white hover:scale-105'
+                  )}
+                  style={{ fontSize: navbarSettings.navbarFontSize }}
+                >
+                  <Sparkles
+                    size={parseInt(navbarSettings.navbarFontSize) || 18}
+                    className={animeMode ? 'text-fuchsia-300' : ''}
+                  />
+                  {animeMode ? 'Anime On' : 'Anime'}
+                </button>
+              )}
+
+              {/* Kids toggle (same sizing as nav links) — hidden when Anime mode is on */}
+              {!animeMode && (
+                <button
+                  onClick={handleKidsModeToggle}
+                  className={cn(
+                    'transition-all duration-200 flex items-center gap-2 font-bold px-1.5',
+                    kidsMode
+                      ? 'text-white scale-105 drop-shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      : 'text-gray-300 hover:text-white hover:scale-105'
+                  )}
+                  style={{ fontSize: navbarSettings.navbarFontSize }}
+                >
+                  <Smile
+                    size={parseInt(navbarSettings.navbarFontSize) || 18}
+                    className={kidsMode ? 'text-emerald-300' : ''}
+                  />
+                  {kidsMode ? 'Kids On' : 'Kids'}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex flex-1 items-center justify-end gap-2 sm:gap-4 lg:w-1/4 lg:flex-none">
+
+          {/* Right: Actions */}
+          <div className="flex flex-none items-center justify-end gap-2 sm:gap-4">
             <button
               className="lg:hidden text-white hover:text-gray-300 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            {/* Modes Dropdown or Mode Buttons */}
-            {animeMode || kidsMode ? (
-              // Show individual buttons when mode is active
-              <>
-                {animeMode && (
-                  <button
-                    onClick={handleAnimeModeToggle}
-                    className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all text-white hover:text-gray-200"
-                  >
-                    <Sparkles size={18} />
-                    Anime On
-                  </button>
-                )}
-                {kidsMode && (
-                  <button
-                    onClick={handleKidsModeToggle}
-                    className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all text-white hover:text-gray-200"
-                  >
-                    <Smile size={18} />
-                    Kids On
-                  </button>
-                )}
-              </>
-            ) : (
-              // Show Mod dropdown when no mode is active
-              <div ref={dropdownRef} className="relative hidden lg:block">
-                <button
-                  onClick={() => setModDropdownOpen(!modDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all text-zinc-200 hover:text-white"
-                >
-                  Modes
-                <ChevronDown size={18} />
-                </button>
-                {/* Dropdown Menu */}
-                {modDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-48 bg-zinc-900/95 border border-zinc-700 rounded-xl shadow-lg backdrop-blur-xl z-50">
-                    {/* Anime Option */}
-                    <button
-                      onClick={() => {
-                        handleAnimeModeToggle();
-                        setModDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-t-xl hover:bg-zinc-800 transition-colors"
-                    >
-                      <Sparkles size={18} />
-                      <span className="text-zinc-300">Anime</span>
-                    </button>
-                    {/* Kids Option */}
-                    <button
-                      onClick={() => {
-                        handleKidsModeToggle();
-                        setModDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-b-xl hover:bg-zinc-800 transition-colors"
-                    >
-                      <Smile size={18} />
-                      <span className="text-zinc-300">Kids</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
             <Link href="/search" className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white transition-all duration-300">
               <Search size={20} className="sm:w-6 sm:h-6" />
               <span className="hidden sm:inline text-sm font-medium">Search</span>
@@ -418,21 +380,24 @@ export function Navbar() {
                   {animeMode ? 'Anime On' : 'Anime'}
                 </button>
               )}
-              <button
-                onClick={() => {
-                  handleKidsModeToggle();
-                  setMobileMenuOpen(false);
-                }}
-                className={cn(
-                  'flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all',
-                  kidsMode
-                    ? 'text-white hover:text-gray-200'
-                    : 'text-zinc-200 hover:text-white'
-                )}
-              >
-                <Smile size={18} />
-                {kidsMode ? 'Kids On' : 'Kids'}
-              </button>
+              {/* Kids mode toggle (mobile) — hidden when Anime mode is on */}
+              {!animeMode && (
+                <button
+                  onClick={() => {
+                    handleKidsModeToggle();
+                    setMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    'flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all',
+                    kidsMode
+                      ? 'text-white hover:text-gray-200'
+                      : 'text-zinc-200 hover:text-white'
+                  )}
+                >
+                  <Smile size={18} />
+                  {kidsMode ? 'Kids On' : 'Kids'}
+                </button>
+              )}
             </div>
           </div>
         </div>

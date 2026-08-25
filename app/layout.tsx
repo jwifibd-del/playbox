@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL
       ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') + '/'
-      : 'http://localhost:3001/',
+      : 'http://localhost:3000/',
   ),
   title: {
     default: 'PlayFlix - Premium Streaming Platform',

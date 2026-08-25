@@ -30,7 +30,7 @@ import {
   getTvChannelCategories,
   getTvChannels,
 } from '@/lib/data';
-import { cn } from '@/lib/utils';
+import { cn, maskStreamUrl } from '@/lib/utils';
 import type { MediaSourceType } from '@/lib/data';
 
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), {
@@ -510,7 +510,9 @@ function ChannelPreviewModal({ channel, onClose }: { channel: TvChannel; onClose
 
   const startPlayback = () => {
     if (!streamValid) {
-      setStreamError(`Invalid stream URL: ${channel.streamUrl || '(empty)'}. Only http://, https://, and rtmp:// URLs are supported.`);
+      setStreamError(
+        `Invalid stream URL: ${channel.streamUrl ? maskStreamUrl(channel.streamUrl) : '(empty)'}. Only http://, https://, and rtmp:// URLs are supported.`,
+      );
       return;
     }
     setStreamError(null);
@@ -667,7 +669,7 @@ function ChannelPreviewModal({ channel, onClose }: { channel: TvChannel; onClose
                 </span>
                 {channel.streamUrl && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 break-all max-w-[200px] sm:max-w-[280px] truncate">
-                    {channel.streamUrl}
+                    {maskStreamUrl(channel.streamUrl)}
                   </span>
                 )}
               </div>

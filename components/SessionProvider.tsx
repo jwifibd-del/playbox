@@ -35,6 +35,8 @@ const nextAuthLogger: NextAuthLogger = {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider
+      refetchInterval={0}
+      refetchOnWindowFocus={typeof window !== 'undefined' ? window.location.protocol === 'https:' : false}
       {...({ logger: nextAuthLogger } as any)}
     >
       {children}

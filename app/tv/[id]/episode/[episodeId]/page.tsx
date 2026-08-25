@@ -187,6 +187,10 @@ export default function EpisodePlayerPage() {
               videoId={playback.videoId || `tv-${show.id}-episode-${episode.id}`}
               subtitles={playback.subtitles}
               audioTracks={playback.audioTracks}
+              watchHistoryContext={{
+                tvShowId: String(show.id),
+                episodeId: String(episode.id),
+              }}
             />
           ) : (
             <div className="flex aspect-video items-center justify-center bg-black px-6 text-center">

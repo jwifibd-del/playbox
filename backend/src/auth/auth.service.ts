@@ -155,7 +155,7 @@ export class AuthService implements OnModuleInit {
     const expires = new Date(Date.now() + 300000); // 5 minutes
     await this.usersService.updateOTP(user.id, otp, expires);
     // TODO: Send OTP via email/SMS
-    return { message: 'OTP sent successfully.', otp };
+    return { message: 'OTP sent successfully.' };
   }
 
   async loginWithOtp(loginWithOtpDto: LoginWithOtpDto) {

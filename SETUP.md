@@ -5,13 +5,14 @@
 2. Step 1: Update System Packages
 3. Step 2: Install Required Dependencies
 4. Step 3: Install Node.js and npm
-5. Step 4: Install PostgreSQL Database
-6. Step 5: Configure PostgreSQL
+5. Step 4: Install FFmpeg + SQLite
+6. Step 5: (Optional) Install Redis
 7. Step 6: Clone PlayFlix Repository
-8. Step 7: Backend Setup
-9. Step 8: Frontend Setup
-10. Step 9: Install and Configure Nginx
-11. Troubleshooting
+8. Step 7: Backend Setup (NestJS + SQLite/TypeORM)
+9. Step 8: Frontend Setup (Next.js + NextAuth)
+10. Step 9: Install and Configure Nginx (Reverse Proxy)
+11. Step 10: Install PM2 to Keep Apps Running
+12. Troubleshooting
 
 ---
 
@@ -54,37 +55,34 @@ npm -v
 
 ---
 
-## Step 4: Install PostgreSQL Database Locally
-Install PostgreSQL and contrib packages:
+## Step 4: Install FFmpeg + SQLite
+PlayFlix backend uses FFmpeg for media processing and SQLite for the default database.
+
+Install FFmpeg and SQLite:
 ```bash
-sudo apt install -y postgresql postgresql-contrib
+sudo apt install -y ffmpeg sqlite3
 ```
 
-Start and enable PostgreSQL service to run on system boot:
+Verify:
 ```bash
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
-
-Verify PostgreSQL is running:
-```bash
-sudo systemctl status postgresql
+ffmpeg -version
+sqlite3 --version
 ```
 
 ---
 
-## Step 5: Configure PostgreSQL Database
-Switch to the `postgres` user and open psql shell:
+## Step 5: (Optional) Install Redis
+Redis is optional. If Redis is not available, the backend falls back to in-memory caching.
+
 ```bash
-sudo -u postgres psql
+sudo apt install -y redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
 ```
 
-Inside the psql shell, create a new user and database for PlayFlix (replace `your_secure_password_here` with a strong password):
-```sql
-CREATE USER playflix WITH PASSWORD 'your_secure_password_here';
-CREATE DATABASE playflix_db;
-GRANT ALL PRIVILEGES ON DATABASE playflix_db TO playflix;
-\q
+Verify:
+```bash
+redis-cli ping
 ```
 
 ---
@@ -115,12 +113,30 @@ Copy the example environment file to .env:
 cp .env.example .env
 ```
 
-Edit the .env file with your PostgreSQL database configuration (replace placeholders with your actual values):
+Edit `backend/.env` (minimum recommended values below).  
+Note: The backend uses SQLite by default (`playflix.db` is created automatically when the backend starts).
 ```env
-# Example .env configuration
-DATABASE_URL=postgres://playflix:your_secure_password_here@localhost:5432/playflix_db
 NODE_ENV=development
 PORT=3002
+
+# Optional (recommended)
+TMDB_API_KEY=your-tmdb-api-key-here
+FANART_API_KEY=your-fanart-tv-api-key-here
+JWT_SECRET=your-super-secret-jwt-key
+
+# Admin Panel Credentials (default admin panel login)
+ADMIN_PANEL_USER=admin
+ADMIN_PANEL_PASSWORD=admin
+ADMIN_PANEL_EMAIL=admin@playflix.local
+
+# Optional Redis cache
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+Start the backend:
+```bash
+npm run start:dev
 ```
 
 ---
@@ -134,6 +150,38 @@ cd ..
 Install dependencies:
 ```bash
 npm install
+```
+
+Create `.env.local` in the project root (minimum required for NextAuth Google provider):
+```env
+# NextAuth
+AUTH_SECRET=replace-with-a-long-random-secret
+NEXTAUTH_URL=http://localhost:3000
+
+# Google OAuth (required by current NextAuth config)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# App URL used for metadata / canonical base
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# PWA service worker on localhost (optional)
+# NEXT_PUBLIC_ENABLE_PWA_ON_LOCALHOST=true
+```
+
+Run the frontend dev server:
+```bash
+npm run dev
+```
+
+Open:
+```text
+http://localhost:3000
+```
+
+If you want to run frontend on a different port (example 3001), keep `NEXTAUTH_URL` and `NEXT_PUBLIC_APP_URL` in sync:
+```bash
+npx next dev -p 3001
 ```
 
 Build the frontend for production:
@@ -195,6 +243,13 @@ server {
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
     }
+
+    # Backend static uploads (posters, profile images, etc.)
+    location /uploads/ {
+        proxy_pass http://localhost:3002/uploads/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
 }
 ```
 
@@ -228,7 +283,8 @@ sudo npm install -g pm2
 ### Start Backend with PM2:
 ```bash
 cd ~/projects/PlayFlix/backend
-pm2 start npm --name "playflix-backend" -- run start:dev
+npm run build
+pm2 start npm --name "playflix-backend" -- run start:prod
 ```
 
 ### Start Frontend with PM2 (Production mode):
@@ -249,8 +305,10 @@ Follow the on-screen instructions to complete the PM2 startup setup!
 
 ## Troubleshooting
 - **Port in use**: If a port is already in use, find and kill the process with `sudo lsof -ti :<port> | xargs kill -9`
-- **PostgreSQL connection errors**: Verify PostgreSQL is running with `sudo systemctl status postgresql` and double-check your DATABASE_URL in .env
+- **Backend database**: If the backend fails to start, check file permissions for `backend/playflix.db` and make sure `sqlite3` is installed
 - **Nginx errors**: Check Nginx logs with `sudo tail -f /var/log/nginx/error.log`
 - **Node.js/npm errors**: Try clearing npm cache with `npm cache clean --force`
 - **PM2 process issues**: Check PM2 logs with `pm2 logs <process-name>`
+- **NextAuth session errors**: Ensure `AUTH_SECRET`, `NEXTAUTH_URL`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` are set in `.env.local` and the dev server was restarted
+- **PWA caching issues**: In the browser DevTools → Application → Service Workers, unregister the SW and clear site data, then hard reload
 

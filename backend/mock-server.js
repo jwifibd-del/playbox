@@ -405,7 +405,7 @@ const server = http.createServer(async (req, res) => {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       mockOtps[email.toLowerCase()] = { otp, expiresAt: Date.now() + 300000 };
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ otp, message: 'OTP sent successfully' }));
+      res.end(JSON.stringify({ message: 'OTP sent successfully' }));
       return;
     }
 
@@ -461,6 +461,58 @@ const server = http.createServer(async (req, res) => {
       }));
       return;
     }
+
+    // Admin panel login (username + password)
+    if (authPath === 'admin-panel-login' && req.method === 'POST') {
+      const username = typeof body?.username === 'string' ? body.username.trim() : '';
+      const password = typeof body?.password === 'string' ? body.password : '';
+      const ok =
+        (username === 'admin' && password === 'admin') ||
+        (username === 'admin' && password === 'admin') ||
+        (username.length > 0 && password.length >= 4 && password.length < 200);
+      if (ok) {
+        const issued = Date.now();
+        const token = `mock-admin-${issued.toString(36)}.${Buffer.from(JSON.stringify({ sub: username || 'admin', role: 'admin', iat: issued, exp: issued + 86400000 })).toString('base64url')}`;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          access_token: token,
+          token_type: 'Bearer',
+          expires_in: 86400,
+          admin: { username: username || 'admin', role: 'admin' },
+        }));
+      } else {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Invalid admin credentials' }));
+      }
+      return;
+    }
+
+    // Admin panel password change (requires bearer token)
+    if (authPath === 'panel-password' && req.method === 'PATCH') {
+      const auth = (req.headers?.authorization || '').toString();
+      const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+      if (!bearer) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Missing admin token' }));
+        return;
+      }
+      const newPassword = typeof body?.newPassword === 'string' ? body.newPassword : '';
+      if (!newPassword || newPassword.length < 4) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'New password too short' }));
+        return;
+      }
+      const issued = Date.now();
+      const token = `mock-admin-${issued.toString(36)}.${Buffer.from(JSON.stringify({ sub: 'admin', role: 'admin', iat: issued, exp: issued + 86400000 })).toString('base64url')}`;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        ok: true,
+        message: 'Admin password updated',
+        access_token: token,
+      }));
+      return;
+    }
+
     // Forgot Password
     if (authPath === 'forgot-password' && req.method === 'POST') {
       const { email } = body;

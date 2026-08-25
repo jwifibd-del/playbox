@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3001';
+const API_BASE = 'http://localhost:3002';
 
 // Check if backend is available once, cache the result
 let backendAvailable: boolean | null = null;
