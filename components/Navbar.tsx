@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, User, Home, Tv, Smile, Clapperboard, Sparkles, Menu, X, Radio } from 'lucide-react';
+import { Search, Bell, User, Home, Tv, Smile, Clapperboard, Sparkles, Menu, X, Radio, Smartphone } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -46,18 +46,24 @@ export function Navbar() {
         { href: homeHref, label: 'Anime Home', icon: Home, match: (path: string) => path === '/anime' },
         { href: movieHref, label: 'Anime Movies', icon: Clapperboard, match: (path: string) => path === '/anime/movies' || path.startsWith('/movie/') },
         { href: tvHref, label: 'Anime Shows', icon: Tv, match: (path: string) => path === '/anime/shows' || path.startsWith('/tv/') },
+        { href: '/tv-app', label: 'TV App', icon: Tv, match: (path: string) => path.startsWith('/tv-app') },
+        { href: '/mobile-app', label: 'Mobile App', icon: Smartphone, match: (path: string) => path.startsWith('/mobile-app') },
       ]
     : isKidsView
     ? [
         { href: homeHref, label: 'Kids Home', icon: Home, match: (path: string) => path === '/kids' || path === '/' },
         { href: movieHref, label: 'Kids Movie', icon: Clapperboard, match: (path: string) => path === '/kids/movies' || path.startsWith('/movie/') },
         { href: tvHref, label: 'Kids Tv Shows', icon: Tv, match: (path: string) => path === '/kids/tv' || path.startsWith('/tv/') },
+        { href: '/tv-app', label: 'TV App', icon: Tv, match: (path: string) => path.startsWith('/tv-app') },
+        { href: '/mobile-app', label: 'Mobile App', icon: Smartphone, match: (path: string) => path.startsWith('/mobile-app') },
       ]
     : [
         { href: homeHref, label: 'Home', icon: Home, match: (path: string) => path === '/' || path === '/kids' },
         { href: movieHref, label: 'Movies', icon: Clapperboard, match: (path: string) => path.startsWith('/movies') || path.startsWith('/movie/') },
         { href: tvHref, label: 'TV Shows', icon: Tv, match: (path: string) => path.startsWith('/tv') || path === '/kids/tv' },
         { href: '/tv-channels', label: 'TV Channels', icon: Radio, match: (path: string) => path.startsWith('/tv-channels') },
+        { href: '/tv-app', label: 'TV App', icon: Tv, match: (path: string) => path.startsWith('/tv-app') },
+        { href: '/mobile-app', label: 'Mobile App', icon: Smartphone, match: (path: string) => path.startsWith('/mobile-app') },
       ];
 
   useEffect(() => {

@@ -9,6 +9,7 @@ interface TVRailProps {
   title: string;
   description: string;
   items: TVRailItem[];
+  onFocusItem?: (item: TVRailItem) => void;
 }
 
 function findFocusableCard(railIndex: number, itemIndex: number) {
@@ -35,7 +36,7 @@ function focusCard(railIndex: number, itemIndex: number) {
   return false;
 }
 
-export function TVRail({ railIndex, title, description, items }: TVRailProps) {
+export function TVRail({ railIndex, title, description, items, onFocusItem }: TVRailProps) {
   const handleKeyDown = (event: KeyboardEvent<HTMLAnchorElement>, itemIndex: number) => {
     if (event.key === 'ArrowRight') {
       event.preventDefault();
@@ -86,6 +87,7 @@ export function TVRail({ railIndex, title, description, items }: TVRailProps) {
             railIndex={railIndex}
             itemIndex={itemIndex}
             onKeyDown={handleKeyDown}
+            onFocusItem={onFocusItem}
           />
         ))}
       </div>

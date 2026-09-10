@@ -29,6 +29,7 @@ import {
   TvChannel,
   getTvChannelCategories,
   getTvChannels,
+  sampleTvChannels,
 } from '@/lib/data';
 import { cn, maskStreamUrl } from '@/lib/utils';
 import type { MediaSourceType } from '@/lib/data';
@@ -505,13 +506,23 @@ function CategoryChip({ active, onClick, label, count, icon: Icon, styleClass }:
 function ChannelPreviewModal({ channel, onClose }: { channel: TvChannel; onClose: () => void }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
-  const streamValid = isValidStreamUrl(channel.streamUrl);
-  const sourceType = detectStreamSourceType(channel.streamUrl);
+
+  const resolvedStreamUrl = useMemo(() => {
+    let url = channel.streamUrl || '';
+    if (!url || url.includes('example.com')) {
+      const fallback = sampleTvChannels.find((s) => s.id === channel.id);
+      return fallback ? fallback.streamUrl : 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8';
+    }
+    return url;
+  }, [channel.streamUrl, channel.id]);
+
+  const streamValid = isValidStreamUrl(resolvedStreamUrl);
+  const sourceType = detectStreamSourceType(resolvedStreamUrl);
 
   const startPlayback = () => {
     if (!streamValid) {
       setStreamError(
-        `Invalid stream URL: ${channel.streamUrl ? maskStreamUrl(channel.streamUrl) : '(empty)'}. Only http://, https://, and rtmp:// URLs are supported.`,
+        `Invalid stream URL: ${resolvedStreamUrl ? maskStreamUrl(resolvedStreamUrl) : '(empty)'}. Only http://, https://, and rtmp:// URLs are supported.`,
       );
       return;
     }
@@ -540,7 +551,7 @@ function ChannelPreviewModal({ channel, onClose }: { channel: TvChannel; onClose
           {isPlaying && streamValid ? (
             <VideoPlayer
               key={`tv-stream-${String(channel.id)}`}
-              src={channel.streamUrl}
+              src={resolvedStreamUrl}
               sourceType={sourceType}
               poster={channel.logoPath}
               title={channel.name}

@@ -539,8 +539,14 @@ export async function deleteTVShowFromBackend(id: string | number): Promise<bool
 }
 
 function mapBackendTvChannel(backendChannel: any): TvChannel {
+  let streamUrl = backendChannel?.streamUrl || '';
+  if (!streamUrl || streamUrl.includes('example.com')) {
+    const fallback = sampleTvChannels.find((s) => s.id === backendChannel?.id);
+    streamUrl = fallback ? fallback.streamUrl : 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8';
+  }
   return {
     ...backendChannel,
+    streamUrl,
     isHD: Boolean(backendChannel?.isHD),
     is4K: Boolean(backendChannel?.is4K),
     order: Number(backendChannel?.order ?? 0),

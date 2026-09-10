@@ -22,6 +22,7 @@ interface TVMediaCardProps {
   railIndex: number;
   itemIndex: number;
   onKeyDown: (event: KeyboardEvent<HTMLAnchorElement>, itemIndex: number) => void;
+  onFocusItem?: (item: TVRailItem) => void;
 }
 
 const kindIconMap = {
@@ -30,7 +31,7 @@ const kindIconMap = {
   live: Radio,
 } as const;
 
-export function TVMediaCard({ item, railIndex, itemIndex, onKeyDown }: TVMediaCardProps) {
+export function TVMediaCard({ item, railIndex, itemIndex, onKeyDown, onFocusItem }: TVMediaCardProps) {
   const KindIcon = kindIconMap[item.kind];
 
   return (
@@ -40,13 +41,16 @@ export function TVMediaCard({ item, railIndex, itemIndex, onKeyDown }: TVMediaCa
       data-tv-rail-index={railIndex}
       data-tv-item-index={itemIndex}
       onKeyDown={(event) => onKeyDown(event, itemIndex)}
-      onFocus={(event) =>
+      onFocus={(event) => {
         event.currentTarget.scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
           inline: 'center',
-        })
-      }
+        });
+        if (onFocusItem) {
+          onFocusItem(item);
+        }
+      }}
       className={cn(
         'tv-focus-ring group relative block w-[320px] flex-shrink-0 snap-start overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950/90',
         'sm:w-[360px] xl:w-[400px]'

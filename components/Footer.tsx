@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Facebook, Twitter, Instagram, Youtube, Smartphone, AppWindow, Tv, Monitor } from 'lucide-react';
 import { getAppLinks, AppLink } from '@/lib/data';
 
@@ -31,6 +32,8 @@ export function Footer() {
     { name: 'Home', href: '/' },
     { name: 'Movies', href: '/movies' },
     { name: 'TV Shows', href: '/tv' },
+    { name: 'TV Living Room App', href: '/tv-app' },
+    { name: 'Mobile App (APK & PWA)', href: '/mobile-app' },
     { name: 'Kids', href: '/kids' },
     { name: 'Anime', href: '/anime' }
   ];
@@ -125,34 +128,44 @@ export function Footer() {
               <p className="text-gray-300 text-sm sm:text-base">Watch on your favorite devices</p>
             </div>
             <div className="flex w-full lg:w-auto flex-wrap gap-4">
-              {links.map((app) => (
-                <a 
-                  key={app.platform} 
-                  href={app.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-6 py-4 bg-black/30 hover:bg-red-600/80 backdrop-blur-xl rounded-2xl border border-white/10 transition-all duration-300 hover:border-red-500 hover:shadow-xl hover:shadow-red-600/30 hover:-translate-y-1"
-                >
-                  {(() => {
-                    switch (app.platform) {
-                      case 'android':
-                      case 'play':
-                        return <Smartphone size={32} className="text-white" />;
-                      case 'ios':
-                        return <AppWindow size={32} className="text-white" />;
-                      case 'androidtv':
-                      case 'appletv':
-                        return <Tv size={32} className="text-white" />;
-                      default:
-                        return <Smartphone size={32} className="text-white" />;
-                    }
-                  })()}
-                  <div className="text-left">
-                    <div className="text-xs text-gray-400 font-medium">Get it on</div>
-                    <div className="text-white font-bold text-lg">{app.name}</div>
-                  </div>
-                </a>
-              ))}
+              {links.map((app) => {
+                const targetHref =
+                  app.url && app.url !== '#'
+                    ? app.url
+                    : app.platform === 'androidtv' || app.platform === 'appletv'
+                    ? '/tv-app'
+                    : '/mobile-app';
+                const isExternal = targetHref.startsWith('http');
+
+                return (
+                  <Link 
+                    key={app.platform} 
+                    href={targetHref} 
+                    target={isExternal ? '_blank' : undefined}
+                    rel={isExternal ? 'noopener noreferrer' : undefined}
+                    className="flex items-center gap-3 px-6 py-4 bg-black/30 hover:bg-red-600/80 backdrop-blur-xl rounded-2xl border border-white/10 transition-all duration-300 hover:border-red-500 hover:shadow-xl hover:shadow-red-600/30 hover:-translate-y-1"
+                  >
+                    {(() => {
+                      switch (app.platform) {
+                        case 'android':
+                        case 'play':
+                          return <Smartphone size={32} className="text-white" />;
+                        case 'ios':
+                          return <AppWindow size={32} className="text-white" />;
+                        case 'androidtv':
+                        case 'appletv':
+                          return <Tv size={32} className="text-white" />;
+                        default:
+                          return <Smartphone size={32} className="text-white" />;
+                      }
+                    })()}
+                    <div className="text-left">
+                      <div className="text-xs text-gray-400 font-medium">Get it on</div>
+                      <div className="text-white font-bold text-lg">{app.name}</div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>

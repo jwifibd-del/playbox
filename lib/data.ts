@@ -94,7 +94,7 @@ export const sampleMovies: Movie[] = [
     tags: ["Space", "Time Travel", "Wormhole"],
     trailerUrl: "https://www.youtube.com/watch?v=zSWdZVtXT7E",
     sources: [
-      { id: 1, title: "Main Source", quality: "4K", size: "12.5 GB", type: "MKV", isLocal: false, url: "https://example.com/interstellar-4k.mkv" },
+      { id: 1, title: "Main Source", quality: "4K", size: "12.5 GB", type: "MP4", isLocal: false, url: "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4" },
       {
         id: 2,
         title: "HLS Stream",
@@ -102,7 +102,7 @@ export const sampleMovies: Movie[] = [
         size: "4.2 GB",
         type: "HLS",
         isLocal: false,
-        url: "https://example.com/interstellar/playlist.m3u8",
+        url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
         audioTracks: [
           { id: "audio-en", label: "English 5.1", lang: "en", isDefault: true },
           { id: "audio-es", label: "Spanish Dub", lang: "es" },
@@ -148,7 +148,7 @@ export const sampleMovies: Movie[] = [
         size: "3.8 GB",
         type: "MP4",
         isLocal: false,
-        url: "https://example.com/dark-knight.mp4",
+        url: "https://www.w3schools.com/html/mov_bbb.mp4",
         audioTracks: [
           { id: "audio-en-stereo", label: "English Stereo", lang: "en", isDefault: true },
           { id: "audio-hi", label: "Hindi Dub", lang: "hi" }
@@ -2349,7 +2349,7 @@ const defaultDownloads: Download[] = [
     id: '1',
     title: 'Interstellar Odyssey',
     posterPath: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=epic%20sci-fi%20movie%20poster%2C%20interstellar%2C%20cinematic%2C%20space%2C%20black%20hole&image_size=portrait_4_3',
-    url: 'https://example.com/interstellar-4k.mkv',
+    url: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
     status: 'completed',
     progress: 100,
     size: '12.5 GB',
@@ -2362,7 +2362,7 @@ const defaultDownloads: Download[] = [
     id: '2',
     title: 'The Dark Knight',
     posterPath: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=dark%20knight%20movie%20poster%2C%20batman%2C%20joker%2C%20cinematic%2C%20dark%20tones&image_size=portrait_4_3',
-    url: 'https://example.com/dark-knight-1080p.mp4',
+    url: 'https://www.w3schools.com/html/mov_bbb.mp4',
     status: 'downloading',
     progress: 65,
     size: '3.8 GB',
@@ -4270,7 +4270,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'CNN',
     description: 'Cable News Network - 24/7 News Coverage',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/240px-CNN.svg.png',
-    streamUrl: 'https://example.com/stream/cnn.m3u8',
+    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
     category: 'News',
     language: 'English',
     country: 'United States',
@@ -4290,7 +4290,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'BBC World News',
     description: 'BBC Global News and Analysis',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/BBC_News_logo_2022.svg/240px-BBC_News_logo_2022.svg.png',
-    streamUrl: 'https://example.com/stream/bbc.m3u8',
+    streamUrl: 'https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8',
     category: 'News',
     language: 'English',
     country: 'United Kingdom',
@@ -4310,7 +4310,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'ESPN',
     description: 'Entertainment and Sports Programming Network',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/ESPN_wordmark.svg/240px-ESPN_wordmark.svg.png',
-    streamUrl: 'https://example.com/stream/espn.m3u8',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     category: 'Sports',
     language: 'English',
     country: 'United States',
@@ -4331,7 +4331,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'HBO',
     description: 'Home Box Office - Premium Movies and Series',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/240px-HBO_logo.svg.png',
-    streamUrl: 'https://example.com/stream/hbo.m3u8',
+    streamUrl: 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
     category: 'Entertainment',
     language: 'English',
     country: 'United States',
@@ -4352,7 +4352,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'National Geographic',
     description: 'Science, Nature, and Adventure Documentaries',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/National-Geographic-Logo.svg/240px-National-Geographic-Logo.svg.png',
-    streamUrl: 'https://example.com/stream/nat-geo.m3u8',
+    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
     category: 'Documentary',
     language: 'English',
     country: 'United States',
@@ -4372,7 +4372,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'Discovery Channel',
     description: 'The World is Just Awesome',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Discovery_Channel_logo_2019.svg/240px-Discovery_Channel_logo_2019.svg.png',
-    streamUrl: 'https://example.com/stream/discovery.m3u8',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     category: 'Documentary',
     language: 'English',
     country: 'United States',
@@ -4392,7 +4392,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'Cartoon Network',
     description: "The Best Place for Cartoons and Kids' Entertainment",
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Cartoon_Network_logo_2010.svg/240px-Cartoon_Network_logo_2010.svg.png',
-    streamUrl: 'https://example.com/stream/cn.m3u8',
+    streamUrl: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8',
     category: 'Kids',
     language: 'English',
     country: 'United States',
@@ -4412,7 +4412,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'MTV',
     description: 'Music Television - Music, Pop Culture, and Reality',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MTV_logo_2021.svg/240px-MTV_logo_2021.svg.png',
-    streamUrl: 'https://example.com/stream/mtv.m3u8',
+    streamUrl: 'https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8',
     category: 'Music',
     language: 'English',
     country: 'United States',
@@ -4432,7 +4432,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'Food Network',
     description: 'Cooking Shows, Recipes and Food Competitions',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Food_Network_logo_2013.svg/240px-Food_Network_logo_2013.svg.png',
-    streamUrl: 'https://example.com/stream/food.m3u8',
+    streamUrl: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8',
     category: 'Lifestyle',
     language: 'English',
     country: 'United States',
@@ -4452,7 +4452,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'Sky Sports',
     description: "Europe's Leading Sports Broadcaster",
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Sky_Sports_logo_2020.svg/240px-Sky_Sports_logo_2020.svg.png',
-    streamUrl: 'https://example.com/stream/sky-sports.m3u8',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     category: 'Sports',
     language: 'English',
     country: 'United Kingdom',
@@ -4473,7 +4473,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'ARTE',
     description: 'Franco-German Cultural Channel',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Arte_logo_2017.svg/240px-Arte_logo_2017.svg.png',
-    streamUrl: 'https://example.com/stream/arte.m3u8',
+    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
     category: 'Culture',
     language: 'French',
     country: 'France',
@@ -4493,7 +4493,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'Al Jazeera English',
     description: 'Global News from the Middle East',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Aljazeera_english.svg/240px-Aljazeera_english.svg.png',
-    streamUrl: 'https://example.com/stream/aljazeera.m3u8',
+    streamUrl: 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
     category: 'News',
     language: 'English',
     country: 'Qatar',
@@ -4517,7 +4517,19 @@ export function getTvChannels(): TvChannel[] {
     try {
       const raw = JSON.parse(saved);
       if (Array.isArray(raw)) {
-        return raw.map((c: any) => c ? { ...c, rating: normalizeRating((c as any).rating, 8.0) } : c);
+        return raw.map((c: any) => {
+          if (!c) return c;
+          let streamUrl = c.streamUrl;
+          if (!streamUrl || streamUrl.includes('example.com')) {
+            const fallback = sampleTvChannels.find((s) => s.id === c.id);
+            streamUrl = fallback ? fallback.streamUrl : 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8';
+          }
+          return {
+            ...c,
+            streamUrl,
+            rating: normalizeRating((c as any).rating, 8.0),
+          };
+        });
       }
     } catch {
       return sampleTvChannels;

@@ -4,6 +4,7 @@ import './globals.css';
 import { MiniPlayerHost } from '@/components/MiniPlayerHost';
 import { AuthProvider } from '@/components/SessionProvider';
 import { PWARegistrar } from '@/components/PWARegistrar';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -139,6 +140,7 @@ export default function RootLayout({
           {children}
         </AuthProvider>
         <MiniPlayerHost />
+        <MobileBottomNav />
         <PWARegistrar />
       </body>
     </html>

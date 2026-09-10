@@ -33,8 +33,8 @@ const sampleMovies = [
     tags: ["Space", "Time Travel", "Wormhole"],
     trailerUrl: "https://www.youtube.com/watch?v=zSWdZVtXT7E",
     sources: [
-      { id: 1, title: "Main Source", quality: "4K", size: "12.5 GB", type: "MKV", isLocal: false, url: "https://example.com/interstellar-4k.mkv" },
-      { id: 2, title: "HLS Stream", quality: "1080p", size: "4.2 GB", type: "HLS", isLocal: false, url: "https://example.com/interstellar/playlist.m3u8" }
+      { id: 1, title: "Main Source", quality: "4K", size: "12.5 GB", type: "MP4", isLocal: false, url: "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4" },
+      { id: 2, title: "HLS Stream", quality: "1080p", size: "4.2 GB", type: "HLS", isLocal: false, url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
     ],
     cast: [
       { id: 1, name: "Matthew McConaughey", role: "Actor", character: "Cooper", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20matthew%20mcconaughey%20portrait%2C%20professional%20headshot&image_size=square" },

@@ -77,19 +77,76 @@ type VideoWithOptionalAudioTracks = HTMLVideoElement & {
   audioTracks?: ArrayLike<NativeAudioTrack>;
 };
 
-function isHlsStreamUrl(src: string, sourceType?: MediaSourceType): boolean {
-  if (sourceType === 'HLS' || sourceType === 'M3U8') return true;
-  try {
-    const url = new URL(src);
-    if (url.pathname.toLowerCase().endsWith('.m3u8')) return true;
-    return url.searchParams.toString().toLowerCase().includes('.m3u8');
-  } catch {
-    return src.toLowerCase().includes('.m3u8');
+function isHlsStreamUrl(src: string, sourceType?: MediaSourceType | string): boolean {
+  if (!src) return false;
+  const sType = String(sourceType || '').toUpperCase();
+  if (sType === 'HLS' || sType === 'M3U8' || sType === 'TS') return true;
+  if (src.startsWith('/api/hls-proxy')) return true;
+
+  const clean = src.split('#')[0];
+  const lower = clean.toLowerCase();
+  if (
+    lower.includes('.m3u8') ||
+    lower.includes('/hls/') ||
+    lower.includes('hls=true') ||
+    lower.includes('format=m3u8') ||
+    lower.includes('type=m3u8') ||
+    lower.includes('output=ts') ||
+    lower.includes('output=hls')
+  ) {
+    return true;
   }
+  try {
+    const url = new URL(clean, 'http://localhost');
+    if (url.pathname.toLowerCase().endsWith('.m3u8') || url.pathname.toLowerCase().endsWith('.m3u')) return true;
+    if (url.searchParams.toString().toLowerCase().includes('m3u8')) return true;
+  } catch {
+    // ignore
+  }
+  return false;
 }
 
 function buildHlsProxyUrl(src: string): string {
+  if (!src || src.startsWith('/api/hls-proxy')) return src;
   return `/api/hls-proxy?u=${encodeURIComponent(src)}`;
+}
+
+function shouldUseProxy(src: string, sourceType?: MediaSourceType | string): boolean {
+  if (!src) return false;
+  if (src.startsWith('/api/hls-proxy') || src.startsWith('blob:') || src.startsWith('data:')) {
+    return false;
+  }
+  const sType = String(sourceType || '').toUpperCase();
+  if (sType === 'EMBED URL' || sType === 'YOUTUBE URL') return false;
+  if (src.includes('youtube.com') || src.includes('youtu.be')) return false;
+
+  // 1. Any HTTP link on HTTPS page MUST be proxied to avoid Mixed Content blocker
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && src.startsWith('http://')) {
+    return true;
+  }
+
+  // 2. Any HLS stream from an external domain needs proxying to bypass CORS
+  if (isHlsStreamUrl(src, sourceType)) {
+    if (typeof window !== 'undefined') {
+      try {
+        const target = new URL(src);
+        if (target.origin !== window.location.origin) {
+          return true;
+        }
+      } catch {
+        return true;
+      }
+    } else {
+      return true;
+    }
+  }
+
+  // 3. Fallback for SSR
+  if (typeof window === 'undefined' && src.startsWith('http://')) {
+    return true;
+  }
+
+  return false;
 }
 
 function getYouTubeEmbedUrl(url: string, options?: { lang?: string | null }): string | null {
@@ -265,9 +322,6 @@ export default function VideoPlayer({
   const [showMiniTransferNotice, setShowMiniTransferNotice] = useState(false);
   const [hlsError, setHlsError] = useState<string | null>(null);
   const [playbackAttempt, setPlaybackAttempt] = useState(0);
-  const [useHlsProxy, setUseHlsProxy] = useState(false);
-  const [isMetadataLoaded, setIsMetadataLoaded] = useState(false);
-  const [isInPictureInPicture, setIsInPictureInPicture] = useState(false);
   const currentSelectedAudioTrack = useMemo<MediaAudioTrack | null>(
     () => availableAudioTracks.find((t) => t.id === currentAudioTrack) ?? null,
     [availableAudioTracks, currentAudioTrack],
@@ -277,6 +331,12 @@ export default function VideoPlayer({
     [src, sourceType, currentSelectedAudioTrack],
   );
   const isYouTubePlayback = Boolean(externalSource?.type === 'youtube' || sourceType === 'YouTube URL');
+
+  const [useHlsProxy, setUseHlsProxy] = useState<boolean>(() => {
+    return !externalSource && shouldUseProxy(src, sourceType);
+  });
+  const [isMetadataLoaded, setIsMetadataLoaded] = useState(false);
+  const [isInPictureInPicture, setIsInPictureInPicture] = useState(false);
 
   const isVideoMetadataReady = (video: HTMLVideoElement): boolean => {
     return video.readyState >= 1 || Number.isFinite(video.duration) && video.duration > 0;
@@ -340,7 +400,7 @@ export default function VideoPlayer({
     return 'Failed to load stream.';
   };
 
-  const handleHlsError = (player: Hls, data: { fatal: boolean; type: string; details?: string }) => {
+  const handleHlsError = useCallback((player: Hls, data: { fatal: boolean; type: string; details?: string }) => {
     console.error('HLS error:', data);
 
     const isBufferStall =
@@ -349,43 +409,54 @@ export default function VideoPlayer({
       data.details === 'bufferSeekOverHole' ||
       data.details === 'bufferNudgeOnStall';
 
-    const isRecoverableNetworkError =
-      (data.fatal || isBufferStall) &&
-      (data.type === Hls.ErrorTypes.NETWORK_ERROR ||
-        data.details?.includes('LoadError') ||
-        data.details?.includes('LoadTimeOut'));
+    const isNetworkError =
+      data.type === Hls.ErrorTypes.NETWORK_ERROR ||
+      Boolean(data.details?.includes('LoadError')) ||
+      Boolean(data.details?.includes('LoadTimeOut'));
 
-    if (isRecoverableNetworkError && !useHlsProxy && isHlsStreamUrl(src, sourceType)) {
+    // 1. If not yet using proxy, switch to proxy immediately and retry
+    if (!useHlsProxy) {
       setHlsError(null);
       setUseHlsProxy(true);
       setPlaybackAttempt((currentAttempt) => currentAttempt + 1);
       return;
     }
 
-    if (isBufferStall && useHlsProxy && isHlsStreamUrl(src, sourceType)) {
-      if (hlsRecoveryAttemptsRef.current < 1) {
+    // 2. Fatal network error recovery with Hls.js
+    if (isNetworkError && data.fatal) {
+      if (hlsRecoveryAttemptsRef.current < 2) {
         hlsRecoveryAttemptsRef.current += 1;
-        setPlaybackAttempt((currentAttempt) => currentAttempt + 1);
+        player.startLoad();
         return;
       }
     }
 
-    const errorMessage = getHlsErrorMessage(data);
-
-    if (data.type === Hls.ErrorTypes.MEDIA_ERROR && data.fatal) {
-      if (hlsRecoveryAttemptsRef.current < 1) {
+    // 3. Buffer stall handling
+    if (isBufferStall) {
+      if (hlsRecoveryAttemptsRef.current < 2) {
         hlsRecoveryAttemptsRef.current += 1;
         player.recoverMediaError();
         return;
       }
     }
 
+    // 4. Fatal media error recovery
+    if (data.type === Hls.ErrorTypes.MEDIA_ERROR && data.fatal) {
+      if (hlsRecoveryAttemptsRef.current < 2) {
+        hlsRecoveryAttemptsRef.current += 1;
+        player.recoverMediaError();
+        return;
+      }
+    }
+
+    const errorMessage = getHlsErrorMessage(data);
+
     if (data.fatal) {
       player.stopLoad();
     }
 
     setHlsError(errorMessage);
-  };
+  }, [useHlsProxy]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -393,22 +464,7 @@ export default function VideoPlayer({
       setUseHlsProxy(false);
       return;
     }
-    try {
-      const target = new URL(src);
-      const isMixedContent = window.location.protocol === 'https:' && target.protocol === 'http:';
-      if (isMixedContent) {
-        setUseHlsProxy(true);
-        return;
-      }
-      if (isHlsStreamUrl(src, sourceType)) {
-        const isCrossOrigin = target.origin !== window.location.origin;
-        setUseHlsProxy(isCrossOrigin);
-        return;
-      }
-      setUseHlsProxy(false);
-    } catch {
-      setUseHlsProxy(false);
-    }
+    setUseHlsProxy(shouldUseProxy(src, sourceType));
   }, [src, sourceType, externalSource]);
 
   // Load bookmarks from localStorage
@@ -784,6 +840,12 @@ export default function VideoPlayer({
         dash.initialize(video, src, autoplay);
       })();
     } else {
+      if (video.src !== resolvedSrc) {
+        video.src = resolvedSrc;
+        if (autoplay) {
+          video.play().catch(() => {});
+        }
+      }
       const nativeTracks = mapNativeAudioTracks(video);
       if (nativeTracks.length > 0) {
         setHasNativeAudioSwitching(nativeTracks.length > 1);
@@ -838,7 +900,7 @@ export default function VideoPlayer({
         clearInterval(autoRefreshTimerRef.current);
       }
     };
-  }, [audioTracks, externalSource, src, autoplay, drmConfig, enableAutoRefresh, autoRefreshInterval, sourceType, playbackAttempt, useHlsProxy]);
+  }, [audioTracks, externalSource, src, autoplay, drmConfig, enableAutoRefresh, autoRefreshInterval, sourceType, playbackAttempt, useHlsProxy, handleHlsError]);
 
   // Auto-refresh for streams
   useEffect(() => {
@@ -1480,17 +1542,10 @@ export default function VideoPlayer({
               onError={(e) => {
                 console.error('Video element error:', e);
                 if (!useHlsProxy) {
-                  try {
-                    const target = new URL(src);
-                    const isMixedContent =
-                      window.location.protocol === 'https:' && target.protocol === 'http:';
-                    if (isMixedContent) {
-                      setHlsError(null);
-                      setUseHlsProxy(true);
-                      setPlaybackAttempt((currentAttempt) => currentAttempt + 1);
-                      return;
-                    }
-                  } catch {}
+                  setHlsError(null);
+                  setUseHlsProxy(true);
+                  setPlaybackAttempt((currentAttempt) => currentAttempt + 1);
+                  return;
                 }
                 setHlsError('Video error: Could not load or play the stream');
               }}
