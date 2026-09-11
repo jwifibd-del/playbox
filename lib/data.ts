@@ -3,14 +3,14 @@ export interface CastMember {
   name: string;
   role: string; // e.g., "Actor", "Actress"
   character: string;
-  profilePath: string;
+  profilePath?: string;
 }
 
 export interface CrewMember {
   id: string | number;
   name: string;
   job: string; // e.g., "Director", "Producer", "Writer"
-  profilePath: string;
+  profilePath?: string;
 }
 
 export interface MediaSubtitleTrack {
@@ -115,10 +115,10 @@ export const sampleMovies: Movie[] = [
       },
     ],
     cast: [
-      { id: 1, name: "Matthew McConaughey", role: "Actor", character: "Cooper", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20matthew%20mcconaughey%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Anne Hathaway", role: "Actress", character: "Brand", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20anne%20hathaway%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 3, name: "Jessica Chastain", role: "Actress", character: "Murph", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20jessica%20chastain%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 4, name: "Michael Caine", role: "Actor", character: "Professor Brand", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20michael%20caine%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Matthew McConaughey", role: "Actor", character: "Cooper", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/3/8927.jpg" },
+      { id: 2, name: "Anne Hathaway", role: "Actress", character: "Brand", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/254/635982.jpg" },
+      { id: 3, name: "Jessica Chastain", role: "Actress", character: "Murph", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/51/128106.jpg" },
+      { id: 4, name: "Michael Caine", role: "Actor", character: "Professor Brand", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/45/114043.jpg" }
     ],
     imdbId: "tt0816692"
   },
@@ -159,12 +159,12 @@ export const sampleMovies: Movie[] = [
       }
     ],
     cast: [
-      { id: 1, name: "Christian Bale", role: "Actor", character: "Bruce Wayne / Batman", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20christian%20bale%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Heath Ledger", role: "Actor", character: "The Joker", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20heath%20ledger%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 3, name: "Aaron Eckhart", role: "Actor", character: "Harvey Dent", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20aaron%20eckhart%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 4, name: "Maggie Gyllenhaal", role: "Actress", character: "Rachel Dawes", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20maggie%20gyllenhaal%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 5, name: "Michael Caine", role: "Actor", character: "Alfred Pennyworth", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20michael%20caine%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 6, name: "Gary Oldman", role: "Actor", character: "Commissioner Gordon", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20gary%20oldman%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Christian Bale", role: "Actor", character: "Bruce Wayne / Batman", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/70/176856.jpg" },
+      { id: 2, name: "Heath Ledger", role: "Actor", character: "The Joker", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/44/112055.jpg" },
+      { id: 3, name: "Aaron Eckhart", role: "Actor", character: "Harvey Dent", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/33/82837.jpg" },
+      { id: 4, name: "Maggie Gyllenhaal", role: "Actress", character: "Rachel Dawes", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/29/74019.jpg" },
+      { id: 5, name: "Michael Caine", role: "Actor", character: "Alfred Pennyworth", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/45/114043.jpg" },
+      { id: 6, name: "Gary Oldman", role: "Actor", character: "Commissioner Gordon", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/45/114347.jpg" }
     ],
     imdbId: "tt0468569"
   },
@@ -188,11 +188,11 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=8hP9D6kZseM",
     sources: [],
     cast: [
-      { id: 1, name: "Leonardo DiCaprio", role: "Actor", character: "Dom Cobb", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20leonardo%20dicaprio%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Joseph Gordon-Levitt", role: "Actor", character: "Arthur", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20joseph%20gordon-levitt%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 3, name: "Ellen Page", role: "Actress", character: "Ariadne", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20ellen%20page%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 4, name: "Tom Hardy", role: "Actor", character: "Eames", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20tom%20hardy%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 5, name: "Marion Cotillard", role: "Actress", character: "Mal", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20marion%20cotillard%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Leonardo DiCaprio", role: "Actor", character: "Dom Cobb", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/269/672763.jpg" },
+      { id: 2, name: "Joseph Gordon-Levitt", role: "Actor", character: "Arthur", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/85/214698.jpg" },
+      { id: 3, name: "Ellen Page", role: "Actress", character: "Ariadne", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/413/1034108.jpg" },
+      { id: 4, name: "Tom Hardy", role: "Actor", character: "Eames", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/92/231677.jpg" },
+      { id: 5, name: "Marion Cotillard", role: "Actress", character: "Mal", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/91/229385.jpg" }
     ],
     imdbId: "tt1375666"
   },
@@ -216,9 +216,9 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=NmzuHjWmXOc",
     sources: [],
     cast: [
-      { id: 1, name: "Tim Robbins", role: "Actor", character: "Andy Dufresne", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20tim%20robbins%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Morgan Freeman", role: "Actor", character: "Ellis Redding", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20morgan%20freeman%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 3, name: "Bob Gunton", role: "Actor", character: "Warden Norton", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20bob%20gunton%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Tim Robbins", role: "Actor", character: "Andy Dufresne", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/9/24280.jpg" },
+      { id: 2, name: "Morgan Freeman", role: "Actor", character: "Ellis Redding", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/47/119670.jpg" },
+      { id: 3, name: "Bob Gunton", role: "Actor", character: "Warden Norton", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/183/457608.jpg" }
     ],
     imdbId: "tt0111161"
   },
@@ -242,10 +242,10 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=s7EdQ4FqbhY",
     sources: [],
     cast: [
-      { id: 1, name: "John Travolta", role: "Actor", character: "Vincent Vega", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20john%20travolta%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Samuel L. Jackson", role: "Actor", character: "Jules Winnfield", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20samuel%20l.%20jackson%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 3, name: "Uma Thurman", role: "Actress", character: "Mia Wallace", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20uma%20thurman%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 4, name: "Bruce Willis", role: "Actor", character: "Butch Coolidge", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20bruce%20willis%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "John Travolta", role: "Actor", character: "Vincent Vega", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/74/186963.jpg" },
+      { id: 2, name: "Samuel L. Jackson", role: "Actor", character: "Jules Winnfield", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/624/1562412.jpg" },
+      { id: 3, name: "Uma Thurman", role: "Actress", character: "Mia Wallace", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/9/23853.jpg" },
+      { id: 4, name: "Bruce Willis", role: "Actor", character: "Butch Coolidge", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/9/23686.jpg" }
     ],
     imdbId: "tt0110912"
   },
@@ -269,10 +269,10 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=vKQi3bBA1y8",
     sources: [],
     cast: [
-      { id: 1, name: "Keanu Reeves", role: "Actor", character: "Neo", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20keanu%20reeves%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Laurence Fishburne", role: "Actor", character: "Morpheus", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20laurence%20fishburne%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 3, name: "Carrie-Anne Moss", role: "Actress", character: "Trinity", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20carrie-anne%20moss%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 4, name: "Hugo Weaving", role: "Actor", character: "Agent Smith", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20hugo%20weaving%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Keanu Reeves", role: "Actor", character: "Neo", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/45/113789.jpg" },
+      { id: 2, name: "Laurence Fishburne", role: "Actor", character: "Morpheus", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/636/1590529.jpg" },
+      { id: 3, name: "Carrie-Anne Moss", role: "Actress", character: "Trinity", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/120/301939.jpg" },
+      { id: 4, name: "Hugo Weaving", role: "Actor", character: "Agent Smith", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/53/133124.jpg" }
     ]
   },
   {
@@ -295,9 +295,9 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=bLvqoHBptjg",
     sources: [],
     cast: [
-      { id: 1, name: "Tom Hanks", role: "Actor", character: "Forrest Gump", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20tom%20hanks%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Robin Wright", role: "Actress", character: "Jenny Curran", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20robin%20wright%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 3, name: "Gary Sinise", role: "Actor", character: "Lt. Dan Taylor", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20gary%20sinise%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Tom Hanks", role: "Actor", character: "Forrest Gump", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/28/72307.jpg" },
+      { id: 2, name: "Robin Wright", role: "Actress", character: "Jenny Curran", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/3/8644.jpg" },
+      { id: 3, name: "Gary Sinise", role: "Actor", character: "Lt. Dan Taylor", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/8/20153.jpg" }
     ]
   },
   {
@@ -320,9 +320,9 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=SUXWAEX2jlg",
     sources: [],
     cast: [
-      { id: 1, name: "Brad Pitt", role: "Actor", character: "Tyler Durden", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20brad%20pitt%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Edward Norton", role: "Actor", character: "The Narrator", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actor%20edward%20norton%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 3, name: "Helena Bonham Carter", role: "Actress", character: "Marla Singer", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=actress%20helena%20bonham%20carter%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Brad Pitt", role: "Actor", character: "Tyler Durden", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/11/29350.jpg" },
+      { id: 2, name: "Edward Norton", role: "Actor", character: "The Narrator", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/525/1313957.jpg" },
+      { id: 3, name: "Helena Bonham Carter", role: "Actress", character: "Marla Singer", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/530/1325009.jpg" }
     ]
   },
   {
@@ -345,8 +345,8 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=ByXuk9QqQkk",
     sources: [],
     cast: [
-      { id: 1, name: "Rumi Hiiragi", role: "Voice Actress", character: "Chihiro", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actress%20rumi%20hiiragi%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Miyu Irino", role: "Voice Actor", character: "Haku", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actor%20miyu%20irino%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Rumi Hiiragi", role: "Voice Actress", character: "Chihiro", profilePath: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" },
+      { id: 2, name: "Miyu Irino", role: "Voice Actor", character: "Haku", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/70/176906.jpg" }
     ],
     isAnime: true
   },
@@ -370,8 +370,8 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=o4-URMnBOPU",
     sources: [],
     cast: [
-      { id: 1, name: "Ryunosuke Kamiki", role: "Voice Actor", character: "Taki Tachibana", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actor%20ryunosuke%20kamiki%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Mone Kamishiraishi", role: "Voice Actress", character: "Mitsuha Miyamizu", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actress%20mone%20kamishiraishi%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Ryunosuke Kamiki", role: "Voice Actor", character: "Taki Tachibana", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/65/163658.jpg" },
+      { id: 2, name: "Mone Kamishiraishi", role: "Voice Actress", character: "Mitsuha Miyamizu", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/95/237669.jpg" }
     ],
     isAnime: true
   },
@@ -395,8 +395,8 @@ export const sampleMovies: Movie[] = [
     trailerUrl: "https://www.youtube.com/watch?v=GAM2g3yS5V8",
     sources: [],
     cast: [
-      { id: 1, name: "Mitsuo Iwata", role: "Voice Actor", character: "Kaneda", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actor%20mitsuo%20iwata%20portrait%2C%20professional%20headshot&image_size=square" },
-      { id: 2, name: "Nozomu Sasaki", role: "Voice Actor", character: "Tetsuo", profilePath: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=voice%20actor%20nozomu%20sasaki%20portrait%2C%20professional%20headshot&image_size=square" }
+      { id: 1, name: "Mitsuo Iwata", role: "Voice Actor", character: "Kaneda", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/25/64614.jpg" },
+      { id: 2, name: "Nozomu Sasaki", role: "Voice Actor", character: "Tetsuo", profilePath: "https://static.tvmaze.com/uploads/images/medium_portrait/73/184364.jpg" }
     ],
     isAnime: true
   }
@@ -3484,7 +3484,8 @@ export interface PickedFanartTVResult {
 
 const BACKEND_API_BASE =
   (typeof window !== 'undefined' && (window as any).__PLAYFLIX_API_BASE__) ||
-  'http://localhost:3002';
+  process.env.NEXT_PUBLIC_API_BASE ||
+  (typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3000');
 
 export async function getFanartMovieByTMDBBackend(tmdbId: number): Promise<PickedFanartMovieResult | null> {
   try {
@@ -4066,7 +4067,7 @@ export function saveTVShows(shows: TVShow[]): void {
 export interface ScraperSource {
   id: string;
   name: string;
-  type: 'tmdb' | 'imdb' | 'local';
+  type: 'tmdb' | 'imdb' | 'local' | 'tvmaze';
   isEnabled: boolean;
   apiKey?: string;
   config: any;
@@ -4093,6 +4094,7 @@ export interface ScrapingConfig {
   scrapingJobs: ScrapingJob[];
   localScanPaths: string[];
   supportedExtensions: string[];
+  lastScrapeTime?: string;
 }
 
 const defaultScrapingSources: ScraperSource[] = [
@@ -4107,6 +4109,13 @@ const defaultScrapingSources: ScraperSource[] = [
       includeVideos: true,
       includeCredits: true
     }
+  },
+  {
+    id: 'tvmaze',
+    name: 'TVMaze & Open Media (Free, No Key Required)',
+    type: 'tvmaze',
+    isEnabled: true,
+    config: {}
   },
   {
     id: 'local',

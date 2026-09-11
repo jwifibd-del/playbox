@@ -7,7 +7,7 @@ const NEXTAUTH_SECRET =
   process.env.AUTH_SECRET ||
   'playflix-dev-fallback-change-me-in-production-please';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3002';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:3000';
 
 type BackendAuthResponse = {
   access_token: string;

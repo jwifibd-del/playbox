@@ -16,7 +16,9 @@ import {
   getTvChannels,
 } from './data';
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3002';
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ||
+  (typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3000');
 
 let backendAvailable: boolean | null = null;
 

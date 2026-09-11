@@ -145,13 +145,14 @@ function mapShowToRailItem(show: TVShow): TVRailItem {
 }
 
 function mapChannelToRailItem(channel: TvChannel): TVRailItem {
+  const quality = (channel as any).quality || (channel.is4K ? '4K' : channel.isHD ? 'HD' : 'SD');
   return {
     id: `channel-${channel.id}`,
     title: channel.name,
-    subtitle: `${channel.category} • ${channel.quality}`,
-    meta: `${channel.language} • ${channel.country}`,
+    subtitle: `${channel.category || 'Live TV'} • ${quality}`,
+    meta: `${channel.language || 'Global'} • ${channel.country || 'Live'}`,
     href: `/tv-channels?channel=${channel.id}`,
-    imageUrl: channel.logo,
+    imageUrl: channel.logoPath || (channel as any).logo,
     badge: 'LIVE',
     kind: 'live',
   };

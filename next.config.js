@@ -9,6 +9,18 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'static.tvmaze.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'coresg-normal.trae.ai',
       },
     ],

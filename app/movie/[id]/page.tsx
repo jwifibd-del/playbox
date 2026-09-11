@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { isUserAuthenticated, sampleMovies, getMovies } from '@/lib/data';
 import { MovieCard } from '@/components/MovieCard';
+import { CastAvatar } from '@/components/CastAvatar';
 import { Navbar } from '@/components/Navbar';
 import VideoPlayer from '@/components/VideoPlayer';
 import { getTrailerBackgroundSource } from '@/lib/media';
@@ -430,11 +431,11 @@ export default function MovieDetailsPage() {
                 <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 sm:pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {movie.cast.map((person: any) => (
                     <div key={person.id} className="flex-shrink-0 w-24 sm:w-28 md:w-32 lg:w-40">
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden mb-3 sm:mb-4 border border-zinc-800">
-                        <img
-                          src={person.profilePath || 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=user%20avatar&image_size=square'}
-                          alt={person.name}
-                          className="w-full h-full object-cover"
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden mb-3 sm:mb-4 border border-zinc-800 bg-zinc-900 shadow-md">
+                        <CastAvatar
+                          name={person.name}
+                          profilePath={person.profilePath}
+                          sizeClassName="w-full h-full"
                         />
                       </div>
                       <h3 className="font-semibold text-center text-xs sm:text-sm md:text-base">{person.name}</h3>
