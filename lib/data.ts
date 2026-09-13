@@ -997,6 +997,8 @@ export interface ContinueWatchingItem extends Partial<Movie> {
   progressSeconds: number; // Exact seek point
   totalSeconds: number;    // Exact total
   kind: 'movie' | 'episode';
+  isMovie?: boolean;
+  watchedAt?: string;
   movieId?: string;        // Direct link if kind=movie
   tvShowId?: string;       // Direct link if kind=episode
   episodeId?: string;      // Direct link if kind=episode
@@ -1080,7 +1082,89 @@ export function formatSeconds(totalSeconds: number): string {
   return `${sec}s`;
 }
 
+export function getWatchHistory(): ContinueWatchingItem[] {
+  if (typeof window === 'undefined') return STATIC_CONTINUE_WATCHING;
+  const saved = localStorage.getItem('playflix_watch_history');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+  }
+  return STATIC_CONTINUE_WATCHING;
+}
+
+export function saveWatchHistory(items: ContinueWatchingItem[]): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('playflix_watch_history', JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent('playflix-watch-history-updated'));
+  }
+}
+
+export function removeWatchHistoryItem(id: string | number): void {
+  const current = getWatchHistory();
+  const filtered = current.filter(i => String(i.id) !== String(id));
+  saveWatchHistory(filtered);
+}
+
+export function clearWatchHistory(): void {
+  saveWatchHistory([]);
+}
+
+export type WatchHistoryItem = ContinueWatchingItem;
+
+export function addWatchHistoryItem(item: {
+  id: string | number;
+  title: string;
+  posterPath: string;
+  backdropPath?: string;
+  progress?: number;
+  isMovie?: boolean;
+}): void {
+  const current = getWatchHistory();
+  const existingIndex = current.findIndex(i => 
+    String(i.id) === String(item.id) || 
+    (item.isMovie && String(i.movieId) === String(item.id)) || 
+    (!item.isMovie && String(i.tvShowId) === String(item.id))
+  );
+  const totalSec = item.isMovie ? 7200 : 2700;
+  const progPct = item.progress || 10;
+  const progSec = Math.round((progPct / 100) * totalSec);
+  const historyItem: ContinueWatchingItem = {
+    id: String(item.id),
+    kind: item.isMovie ? 'movie' : 'episode',
+    title: item.title,
+    posterPath: item.posterPath,
+    backdropPath: item.backdropPath || item.posterPath,
+    progress: progPct,
+    currentTime: formatSeconds(progSec),
+    duration: formatSeconds(totalSec),
+    progressSeconds: progSec,
+    totalSeconds: totalSec,
+    movieId: item.isMovie ? String(item.id) : undefined,
+    tvShowId: !item.isMovie ? String(item.id) : undefined,
+  };
+  let updated: ContinueWatchingItem[];
+  if (existingIndex >= 0) {
+    updated = [...current];
+    updated[existingIndex] = { ...updated[existingIndex], ...historyItem };
+    const [moved] = updated.splice(existingIndex, 1);
+    updated.unshift(moved);
+  } else {
+    updated = [historyItem, ...current];
+  }
+  saveWatchHistory(updated);
+}
+
 export async function fetchWatchHistory(take = 24, includeCompleted = false): Promise<ContinueWatchingItem[]> {
+  // If local history exists, provide it immediately
+  if (typeof window !== 'undefined') {
+    const local = getWatchHistory();
+    if (local && local.length > 0) {
+      return local.slice(0, take);
+    }
+  }
+
   try {
     const res = await fetch(`${BACKEND_API_BASE}/watch-history?take=${take}&includeCompleted=${includeCompleted ? 'true' : 'false'}`, {
       headers: getAuthHeadersForUser(),
@@ -1088,10 +1172,10 @@ export async function fetchWatchHistory(take = 24, includeCompleted = false): Pr
     });
     if (!res.ok) {
       if (res.status === 401) return [];
-      return STATIC_CONTINUE_WATCHING;
+      return getWatchHistory();
     }
     const rows = await res.json() as any[];
-    if (!Array.isArray(rows)) return STATIC_CONTINUE_WATCHING;
+    if (!Array.isArray(rows)) return getWatchHistory();
     const items: ContinueWatchingItem[] = rows
       .map(row => {
         const kind: 'movie' | 'episode' = row.kind || (row.episodeId || row.tvShowId ? 'episode' : 'movie');
@@ -1125,9 +1209,9 @@ export async function fetchWatchHistory(take = 24, includeCompleted = false): Pr
       })
       .filter(it => it.backdropPath || it.posterPath)
       .slice(0, take);
-    return items.length > 0 ? items : STATIC_CONTINUE_WATCHING;
+    return items.length > 0 ? items : getWatchHistory();
   } catch (e) {
-    return STATIC_CONTINUE_WATCHING;
+    return getWatchHistory();
   }
 }
 
@@ -1139,6 +1223,76 @@ export async function upsertWatchHistory(input: {
   duration: number;
   completed?: boolean;
 }): Promise<boolean> {
+  // Always update local storage first so watch progress is immediately saved and responsive
+  if (typeof window !== 'undefined') {
+    try {
+      const current = getWatchHistory();
+      const allMovies = getMovies();
+      const allShows = getTVShows();
+
+      let title = 'Watched item';
+      let posterPath = '';
+      let backdropPath = '';
+      const total = Math.max(0, Number(input.duration) || 0);
+      const prog = Math.min(total, Math.max(0, Number(input.progress) || 0));
+      const percent = total > 0 ? Math.round((prog / total) * 100) : 0;
+
+      if (input.movieId) {
+        const movie = allMovies.find(m => String(m.id) === String(input.movieId)) || sampleMovies.find(m => String(m.id) === String(input.movieId));
+        if (movie) {
+          title = movie.title;
+          posterPath = movie.posterPath;
+          backdropPath = movie.backdropPath || movie.posterPath;
+        }
+      } else if (input.tvShowId) {
+        const show = allShows.find(s => String(s.id) === String(input.tvShowId)) || sampleTVShows.find(s => String(s.id) === String(input.tvShowId));
+        if (show) {
+          title = show.title;
+          posterPath = show.posterPath;
+          backdropPath = show.backdropPath || show.posterPath;
+        }
+      }
+
+      const id = input.episodeId ? `ep-${input.episodeId}` : (input.movieId ? `movie-${input.movieId}` : `tv-${input.tvShowId || Date.now()}`);
+
+      const historyItem: ContinueWatchingItem = {
+        id,
+        kind: input.episodeId || input.tvShowId ? 'episode' : 'movie',
+        title,
+        backdropPath: backdropPath || posterPath,
+        posterPath,
+        progress: percent,
+        currentTime: formatSeconds(prog),
+        duration: formatSeconds(total),
+        progressSeconds: prog,
+        totalSeconds: total,
+        movieId: input.movieId,
+        tvShowId: input.tvShowId,
+        episodeId: input.episodeId,
+      };
+
+      const existingIndex = current.findIndex(it =>
+        (input.movieId && String(it.movieId) === String(input.movieId)) ||
+        (input.episodeId && String(it.episodeId) === String(input.episodeId)) ||
+        String(it.id) === String(id)
+      );
+
+      let updated: ContinueWatchingItem[];
+      if (existingIndex >= 0) {
+        updated = [...current];
+        updated[existingIndex] = { ...updated[existingIndex], ...historyItem };
+        const [moved] = updated.splice(existingIndex, 1);
+        updated.unshift(moved);
+      } else {
+        updated = [historyItem, ...current];
+      }
+
+      saveWatchHistory(updated);
+    } catch (e) {
+      console.warn('Failed to update local watch history:', e);
+    }
+  }
+
   try {
     const res = await fetch(`${BACKEND_API_BASE}/watch-history`, {
       method: 'POST',
@@ -1870,6 +2024,29 @@ export function updateProfile(profileId: string | number, updatedProfile: Partia
   persistUsers(updatedUsers);
 }
 
+export function deleteProfile(profileId: string | number): boolean {
+  if (typeof window === 'undefined') return false;
+  const currentUser = getCurrentUserRecord();
+  if (currentUser.profiles.length <= 1) {
+    return false; // Cannot delete the only profile
+  }
+  const updatedProfiles = currentUser.profiles.filter(p => String(p.id) !== String(profileId));
+  if (updatedProfiles.length === currentUser.profiles.length) {
+    return false;
+  }
+  const newActiveId = String(currentUser.activeProfileId) === String(profileId) 
+    ? updatedProfiles[0].id 
+    : currentUser.activeProfileId;
+  const updatedUsers = getUsers().map(user => {
+    if (String(user.id) === String(currentUser.id)) {
+      return { ...user, profiles: updatedProfiles, activeProfileId: newActiveId };
+    }
+    return user;
+  });
+  persistUsers(updatedUsers);
+  return true;
+}
+
 function migrateLegacyUsers(): AppUser[] {
   const legacyProfileRaw = localStorage.getItem(LEGACY_USER_PROFILE_STORAGE_KEY);
   const legacyCredentialsRaw = localStorage.getItem(LEGACY_USER_CREDENTIALS_STORAGE_KEY);
@@ -2326,6 +2503,15 @@ export function submitMovieRequest(input: {
   return { success: true, request: newRequest };
 }
 
+export function deleteMovieRequest(requestId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const requests = getMovieRequests();
+  const filtered = requests.filter(r => r.id !== requestId);
+  if (filtered.length === requests.length) return false;
+  saveMovieRequests(filtered);
+  return true;
+}
+
 // Downloads Management
 export type DownloadStatus = 'pending' | 'downloading' | 'paused' | 'completed' | 'failed';
 
@@ -2391,6 +2577,199 @@ export function saveDownloads(downloads: Download[]): void {
     localStorage.setItem('playflix_downloads', JSON.stringify(downloads));
     window.dispatchEvent(new CustomEvent('playflix-downloads-updated'));
   }
+}
+
+export function removeDownload(id: string): void {
+  const current = getDownloads();
+  const filtered = current.filter(d => d.id !== id);
+  saveDownloads(filtered);
+}
+
+export function clearDownloads(): void {
+  saveDownloads([]);
+}
+
+export function toggleDownloadPause(id: string): void {
+  const current = getDownloads();
+  const updated = current.map(d => {
+    if (d.id === id) {
+      const nextStatus = d.status === 'downloading' ? 'paused' : 'downloading';
+      return { ...d, status: nextStatus as DownloadStatus };
+    }
+    return d;
+  });
+  saveDownloads(updated);
+}
+
+export function addDownload(item: { title: string; posterPath: string; url?: string; quality?: string; size?: string }): Download {
+  const current = getDownloads();
+  const existing = current.find(d => d.title.toLowerCase() === item.title.toLowerCase());
+  if (existing) return existing;
+  const newDownload: Download = {
+    id: `dl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title: item.title,
+    posterPath: item.posterPath,
+    url: item.url || 'https://www.w3schools.com/html/mov_bbb.mp4',
+    status: 'downloading',
+    progress: 15,
+    size: item.size || '2.4 GB',
+    downloadedSize: '360 MB',
+    quality: item.quality || '1080p',
+    addedAt: new Date().toISOString(),
+    isEncrypted: false,
+  };
+  saveDownloads([newDownload, ...current]);
+  return newDownload;
+}
+
+// Favorites Management
+export function getFavorites(): (Movie | TVShow)[] {
+  if (typeof window === 'undefined') return sampleMovies.slice(0, 4);
+  const saved = localStorage.getItem('playflix_favorites');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+  }
+  return sampleMovies.slice(0, 3);
+}
+
+export function saveFavorites(favorites: (Movie | TVShow)[]): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('playflix_favorites', JSON.stringify(favorites));
+    window.dispatchEvent(new CustomEvent('playflix-favorites-updated'));
+  }
+}
+
+export function isFavorite(id: string | number): boolean {
+  const current = getFavorites();
+  return current.some(item => String(item.id) === String(id));
+}
+
+export function toggleFavorite(item: Movie | TVShow): boolean {
+  const current = getFavorites();
+  const exists = current.some(m => String(m.id) === String(item.id));
+  let updated: (Movie | TVShow)[];
+  let isNowFav: boolean;
+  if (exists) {
+    updated = current.filter(m => String(m.id) !== String(item.id));
+    isNowFav = false;
+  } else {
+    updated = [item, ...current];
+    isNowFav = true;
+  }
+  saveFavorites(updated);
+  return isNowFav;
+}
+
+export function removeFavorite(id: string | number): void {
+  const current = getFavorites();
+  saveFavorites(current.filter(m => String(m.id) !== String(id)));
+}
+
+export function clearFavorites(): void {
+  saveFavorites([]);
+}
+
+// User Notifications
+export interface UserNotification {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  unread: boolean;
+  type?: 'system' | 'release' | 'account' | 'request';
+  link?: string;
+}
+
+const defaultUserNotifications: UserNotification[] = [
+  {
+    id: 'notif-1',
+    title: 'New Release: Interstellar Odyssey 4K HDR',
+    message: 'Interstellar Odyssey is now streaming with Dolby Atmos audio and HDR 10+ visual enhancement.',
+    date: '2 hours ago',
+    unread: true,
+    type: 'release',
+    link: '/movie/1'
+  },
+  {
+    id: 'notif-2',
+    title: 'Subscription Active & Verified',
+    message: 'Your Premium membership is active. Enjoy ad-free streaming on all your linked devices.',
+    date: '1 day ago',
+    unread: true,
+    type: 'account',
+  },
+  {
+    id: 'notif-3',
+    title: 'New TV Shows Added to Catalog',
+    message: 'Explore the newly added seasonal series and anime in the PlayFlix library.',
+    date: '3 days ago',
+    unread: false,
+    type: 'release',
+    link: '/tv'
+  },
+  {
+    id: 'notif-4',
+    title: 'Profile Settings Synchronized',
+    message: 'Your playback and audio preferences have been synchronized across all active devices.',
+    date: '1 week ago',
+    unread: false,
+    type: 'system',
+  }
+];
+
+export function getUserNotifications(): UserNotification[] {
+  if (typeof window === 'undefined') return defaultUserNotifications;
+  const saved = localStorage.getItem('playflix_user_notifications');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+  }
+  return defaultUserNotifications;
+}
+
+export function saveUserNotifications(notifications: UserNotification[]): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('playflix_user_notifications', JSON.stringify(notifications));
+    window.dispatchEvent(new CustomEvent('playflix-notifications-updated'));
+  }
+}
+
+export function markAllNotificationsAsRead(): void {
+  const current = getUserNotifications();
+  const updated = current.map(n => ({ ...n, unread: false }));
+  saveUserNotifications(updated);
+}
+
+export function toggleNotificationRead(id: string): void {
+  const current = getUserNotifications();
+  const updated = current.map(n => n.id === id ? { ...n, unread: !n.unread } : n);
+  saveUserNotifications(updated);
+}
+
+export function deleteUserNotification(id: string): void {
+  const current = getUserNotifications();
+  const updated = current.filter(n => n.id !== id);
+  saveUserNotifications(updated);
+}
+
+export function clearAllUserNotifications(): void {
+  saveUserNotifications([]);
+}
+
+export function addUserNotification(notification: Omit<UserNotification, 'id' | 'date'> & { date?: string }): UserNotification {
+  const current = getUserNotifications();
+  const newNotif: UserNotification = {
+    ...notification,
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    date: notification.date || 'Just now',
+  };
+  saveUserNotifications([newNotif, ...current]);
+  return newNotif;
 }
 
 // Storage Manager
@@ -4279,7 +4658,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'CNN',
     description: 'Cable News Network - 24/7 News Coverage',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/240px-CNN.svg.png',
-    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     category: 'News',
     language: 'English',
     country: 'United States',
@@ -4299,7 +4678,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'BBC World News',
     description: 'BBC Global News and Analysis',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/BBC_News_logo_2022.svg/240px-BBC_News_logo_2022.svg.png',
-    streamUrl: 'https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8',
+    streamUrl: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8',
     category: 'News',
     language: 'English',
     country: 'United Kingdom',
@@ -4361,7 +4740,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'National Geographic',
     description: 'Science, Nature, and Adventure Documentaries',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/National-Geographic-Logo.svg/240px-National-Geographic-Logo.svg.png',
-    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
+    streamUrl: 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
     category: 'Documentary',
     language: 'English',
     country: 'United States',
@@ -4421,7 +4800,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'MTV',
     description: 'Music Television - Music, Pop Culture, and Reality',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MTV_logo_2021.svg/240px-MTV_logo_2021.svg.png',
-    streamUrl: 'https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8',
+    streamUrl: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8',
     category: 'Music',
     language: 'English',
     country: 'United States',
@@ -4482,7 +4861,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'ARTE',
     description: 'Franco-German Cultural Channel',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Arte_logo_2017.svg/240px-Arte_logo_2017.svg.png',
-    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
+    streamUrl: 'http://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8',
     category: 'Culture',
     language: 'French',
     country: 'France',
@@ -4529,9 +4908,15 @@ export function getTvChannels(): TvChannel[] {
         return raw.map((c: any) => {
           if (!c) return c;
           let streamUrl = c.streamUrl;
-          if (!streamUrl || streamUrl.includes('example.com')) {
+          // Auto-upgrade dead legacy sample streams
+          if (
+            !streamUrl ||
+            streamUrl.includes('example.com') ||
+            streamUrl.includes('cph-p2p-msl.akamaized.net') ||
+            streamUrl.includes('moctobpltc-i.akamaihd.net')
+          ) {
             const fallback = sampleTvChannels.find((s) => s.id === c.id);
-            streamUrl = fallback ? fallback.streamUrl : 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8';
+            streamUrl = fallback ? fallback.streamUrl : 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
           }
           return {
             ...c,
@@ -4553,6 +4938,7 @@ export function saveTvChannels(channels: TvChannel[]): void {
       ? channels.map((c: any) => (c ? { ...c, rating: normalizeRating(c?.rating, 8.0) } : c))
       : channels;
     localStorage.setItem('playflix_tv_channels', JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent('playflix_tv_channels_updated', { detail: normalized }));
     (async () => {
       try {
         const { syncTvChannelToBackend, deleteTvChannelFromBackend } = await import('./api');

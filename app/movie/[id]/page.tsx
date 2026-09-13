@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
   Plus,
+  Check,
   Star,
   Download,
   ChevronDown,
@@ -17,7 +18,7 @@ import {
   Volume2,
   VolumeX
 } from 'lucide-react';
-import { isUserAuthenticated, sampleMovies, getMovies } from '@/lib/data';
+import { isUserAuthenticated, sampleMovies, getMovies, isFavorite, toggleFavorite, addDownload } from '@/lib/data';
 import { MovieCard } from '@/components/MovieCard';
 import { CastAvatar } from '@/components/CastAvatar';
 import { Navbar } from '@/components/Navbar';
@@ -82,10 +83,15 @@ export default function MovieDetailsPage() {
       if (cancelled) return;
       if (fetched) {
         setMovie(fetched);
+        setIsLiked(isFavorite(fetched.id));
       } else {
         const storedMovies = getMovies();
         const found = storedMovies.find(m => m.id.toString() === movieId) || sampleMovies.find(m => m.id.toString() === movieId);
-        if (!cancelled) setMovie(found || sampleMovies[0]);
+        const resolved = found || sampleMovies[0];
+        if (!cancelled) {
+          setMovie(resolved);
+          setIsLiked(isFavorite(resolved.id));
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -172,6 +178,15 @@ export default function MovieDetailsPage() {
       return;
     }
     try {
+      if (movie) {
+        addDownload({
+          title: movie.title,
+          posterPath: movie.posterPath,
+          url: playback.url,
+          quality: '1080p',
+          size: '2.4 GB',
+        });
+      }
       const response = await fetch(playback.url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -186,6 +201,12 @@ export default function MovieDetailsPage() {
       console.error('Download failed:', err);
       alert('Failed to download the movie.');
     }
+  };
+
+  const handleToggleFavorite = () => {
+    if (!movie) return;
+    const nextState = toggleFavorite(movie);
+    setIsLiked(nextState);
   };
 
   return (
@@ -312,12 +333,19 @@ export default function MovieDetailsPage() {
                   <Play fill="currentColor" size={18} />
                   {playback?.sourceLabel === 'Trailer' ? 'Play Trailer' : 'Play'}
                 </button>
-                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm">
-                  <Plus size={18} />
-                  Add to List
+                <button 
+                  onClick={handleToggleFavorite}
+                  className={cn(
+                    "flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-xl transition-colors text-sm",
+                    isLiked ? "bg-red-600/20 border-red-600 text-red-400 hover:bg-red-600/30" : "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+                  )}
+                >
+                  {isLiked ? <Check size={18} /> : <Plus size={18} />}
+                  {isLiked ? 'In Your List' : 'Add to List'}
                 </button>
                 <button
-                  onClick={() => setIsLiked(!isLiked)}
+                  onClick={handleToggleFavorite}
+                  title={isLiked ? 'Remove from Favorites' : 'Add to Favorites'}
                   className={cn(
                     'p-2.5 sm:p-3 md:p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-all',
                     isLiked && 'text-red-500 border-red-500 bg-red-500/10'

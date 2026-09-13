@@ -17,10 +17,11 @@ import {
   Volume2,
   VolumeX,
   Calendar,
-  Clock
+  Clock,
+  Check
 } from 'lucide-react';
 import Link from 'next/link';
-import { isUserAuthenticated, sampleMovies, getTVShows, getMovies } from '@/lib/data';
+import { isUserAuthenticated, sampleMovies, getTVShows, getMovies, isFavorite, toggleFavorite, addDownload, addWatchHistoryItem } from '@/lib/data';
 import { MovieCard } from '@/components/MovieCard';
 import { TVShowCard } from '@/components/TVShowCard';
 import { CastAvatar } from '@/components/CastAvatar';
@@ -87,12 +88,14 @@ export default function TVShowDetailsPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const showId = params.id;
+      const rawId = params.id;
+      const showId = Array.isArray(rawId) ? rawId[0] : rawId;
       if (!showId) return;
       const fetched = await fetchTVShowById(showId);
       if (cancelled) return;
       if (fetched) {
         setShow(fetched);
+        setIsLiked(isFavorite(String(fetched.id)));
         return;
       }
       // fallback to local
@@ -100,27 +103,32 @@ export default function TVShowDetailsPage() {
       const foundShow = storedShows.find((s: any) => s.id.toString() === showId);
       if (!cancelled && foundShow) {
         setShow(foundShow);
+        setIsLiked(isFavorite(String(foundShow.id)));
         return;
       }
       const sampleMovieMatch = sampleMovies.find((m: any) => `tv-${m.id}` === showId);
       if (!cancelled) {
         if (sampleMovieMatch) {
-          setShow({
+          const resolved = {
             ...sampleMovieMatch,
             id: showId,
             numberOfSeasons: 3,
             numberOfEpisodes: 24,
             seasons: [],
-          });
+          };
+          setShow(resolved);
+          setIsLiked(isFavorite(String(resolved.id)));
         } else {
-          setShow({
+          const resolved = {
             ...sampleMovies[0],
             id: showId,
             title: 'Sample TV Show',
             numberOfSeasons: 3,
             numberOfEpisodes: 24,
             seasons: [],
-          });
+          };
+          setShow(resolved);
+          setIsLiked(isFavorite(String(resolved.id)));
         }
       }
     })();
@@ -189,6 +197,39 @@ export default function TVShowDetailsPage() {
     }
 
     setIsTrailerPlaying((current) => !current);
+  };
+
+  const handleToggleFavorite = () => {
+    if (!show) return;
+    const nowFavorite = toggleFavorite(show);
+    setIsLiked(nowFavorite);
+    setShareMessage(nowFavorite ? 'Added to your favorites' : 'Removed from your favorites');
+  };
+
+  const handleDownload = () => {
+    if (!show) return;
+    addDownload({
+      title: show.title,
+      posterPath: show.posterPath,
+      url: show.trailerUrl,
+      quality: '1080p',
+      size: '2.1 GB'
+    });
+    setShareMessage('Download started! Available in Downloads tab.');
+  };
+
+  const handleWatchNow = () => {
+    if (!show) return;
+    addWatchHistoryItem({
+      id: show.id,
+      title: show.title,
+      posterPath: show.posterPath,
+      progress: 10,
+      isMovie: false,
+    });
+    if (watchHref) {
+      router.push(watchHref);
+    }
   };
 
   const handleShare = async () => {
@@ -335,7 +376,7 @@ export default function TVShowDetailsPage() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
                 <button
-                  onClick={() => watchHref && router.push(watchHref)}
+                  onClick={handleWatchNow}
                   disabled={!watchHref}
                   className={cn(
                     'flex items-center gap-2 px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3 md:py-4 bg-white text-black font-semibold rounded-xl transition-colors text-sm sm:text-base',
@@ -345,12 +386,19 @@ export default function TVShowDetailsPage() {
                   <Play fill="currentColor" size={18} />
                   Watch Now
                 </button>
-                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm">
-                  <Plus size={18} />
-                  Add to List
+                <button 
+                  onClick={handleToggleFavorite}
+                  className={cn(
+                    "flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-xl transition-colors text-sm",
+                    isLiked ? "bg-red-600/20 border-red-600 text-red-400 hover:bg-red-600/30" : "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+                  )}
+                >
+                  {isLiked ? <Check size={18} /> : <Plus size={18} />}
+                  {isLiked ? 'In Your List' : 'Add to List'}
                 </button>
                 <button
-                  onClick={() => setIsLiked(!isLiked)}
+                  onClick={handleToggleFavorite}
+                  title={isLiked ? 'Remove from Favorites' : 'Add to Favorites'}
                   className={cn(
                     'p-2.5 sm:p-3 md:p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-all',
                     isLiked && 'text-red-500 border-red-500 bg-red-500/10'
@@ -358,7 +406,10 @@ export default function TVShowDetailsPage() {
                 >
                   <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
                 </button>
-                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm">
+                <button 
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700 transition-colors text-sm"
+                >
                   <Download size={18} />
                   Download
                 </button>

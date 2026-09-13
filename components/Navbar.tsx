@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, User, Home, Tv, Smile, Clapperboard, Sparkles, Menu, X, Radio, Smartphone } from 'lucide-react';
+import { Search, Bell, User, Home, Tv, Smile, Clapperboard, Sparkles, Menu, X, Radio, Smartphone, Heart, Clock, Download } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ import {
   saveParentalControlSettings,
   verifyParentalPin,
   getGeneralSettings,
+  getUserNotifications,
 } from '@/lib/data';
 
 export function Navbar() {
@@ -22,6 +23,7 @@ export function Navbar() {
   const [kidsMode, setKidsMode] = useState(false);
   const [userLoggedIn, setUserLoggedIn] = useState(false);
   const [userAvatar, setUserAvatar] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
   const [showPinPrompt, setShowPinPrompt] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
@@ -73,6 +75,8 @@ export function Navbar() {
       setUserLoggedIn(isUserAuthenticated());
       setUserAvatar(getUserProfile().avatar);
       setNavbarSettings(getGeneralSettings());
+      const notifs = getUserNotifications();
+      setUnreadCount(notifs.filter(n => n.unread).length);
     };
 
     syncNavbarState();
@@ -80,12 +84,14 @@ export function Navbar() {
     window.addEventListener('playflix-users-updated', syncNavbarState);
     window.addEventListener('playflix-parental-controls-updated', syncNavbarState);
     window.addEventListener('playflix-general-settings-updated', syncNavbarState);
+    window.addEventListener('playflix-notifications-updated', syncNavbarState);
 
     return () => {
       window.removeEventListener('storage', syncNavbarState);
       window.removeEventListener('playflix-users-updated', syncNavbarState);
       window.removeEventListener('playflix-parental-controls-updated', syncNavbarState);
       window.removeEventListener('playflix-general-settings-updated', syncNavbarState);
+      window.removeEventListener('playflix-notifications-updated', syncNavbarState);
     };
   }, [pathname]);
 
@@ -293,9 +299,18 @@ export function Navbar() {
               <Search size={20} className="sm:w-6 sm:h-6" />
               <span className="hidden sm:inline text-sm font-medium">Search</span>
             </Link>
-            <button className="hidden sm:block text-gray-300 hover:text-white transition-colors">
-              <Bell size={20} />
-            </button>
+            <Link 
+              href={userLoggedIn ? "/account?tab=notifications" : "/login"} 
+              title="Notifications"
+              className="relative hidden sm:flex items-center justify-center w-10 h-10 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white transition-all duration-300"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
             <Link href={userLoggedIn ? '/account' : '/login'} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
               <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden border border-white/10 bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
                 {userLoggedIn && userAvatar ? (
@@ -404,6 +419,42 @@ export function Navbar() {
                   {kidsMode ? 'Kids On' : 'Kids'}
                 </button>
               )}
+
+              {/* Account Quick Links in Mobile Drawer */}
+              <div className="pt-4 mt-2 border-t border-zinc-800/80 flex flex-col gap-2">
+                <Link
+                  href="/account?tab=history"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white"
+                >
+                  <Clock size={16} />
+                  Watch History
+                </Link>
+                <Link
+                  href="/account?tab=favorites"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white"
+                >
+                  <Heart size={16} />
+                  My Favorites
+                </Link>
+                <Link
+                  href="/account?tab=downloads"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white"
+                >
+                  <Download size={16} />
+                  Downloads
+                </Link>
+                <Link
+                  href="/account?tab=profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white"
+                >
+                  <User size={16} />
+                  Account & Settings
+                </Link>
+              </div>
             </div>
           </div>
         </div>

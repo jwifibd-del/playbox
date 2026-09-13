@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Plus, Info, Star } from 'lucide-react';
+import { Play, Plus, Check, Info, Star, Heart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { isUserAuthenticated, TVShow } from '@/lib/data';
+import { isUserAuthenticated, TVShow, isFavorite, toggleFavorite } from '@/lib/data';
 import { formatRating } from '@/lib/utils';
 
 interface TVShowCardProps {
@@ -13,10 +13,23 @@ interface TVShowCardProps {
 
 export function TVShowCard({ tvShow }: TVShowCardProps) {
   const [isHovered, setIsHoveredState] = useState(false);
+  const [inFavorite, setInFavorite] = useState(false);
   const isMountedRef = useRef(true);
   const router = useRouter();
 
-  useEffect(() => () => { isMountedRef.current = false; }, []);
+  useEffect(() => {
+    setInFavorite(isFavorite(tvShow.id));
+    const handleFavUpdated = () => {
+      if (isMountedRef.current) {
+        setInFavorite(isFavorite(tvShow.id));
+      }
+    };
+    window.addEventListener('playflix-favorites-updated', handleFavUpdated);
+    return () => {
+      isMountedRef.current = false;
+      window.removeEventListener('playflix-favorites-updated', handleFavUpdated);
+    };
+  }, [tvShow.id]);
 
   const setIsHovered = useCallback((next: boolean) => {
     queueMicrotask(() => {
@@ -27,6 +40,12 @@ export function TVShowCard({ tvShow }: TVShowCardProps) {
   const handleOpenTVShow = useCallback(() => {
     router.push(isUserAuthenticated() ? `/tv/${tvShow.id}` : '/login');
   }, [router, tvShow.id]);
+
+  const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextState = toggleFavorite(tvShow);
+    setInFavorite(nextState);
+  }, [tvShow]);
 
   return (
     <motion.div
@@ -68,8 +87,12 @@ export function TVShowCard({ tvShow }: TVShowCardProps) {
               >
                 <Play fill="black" size={16} /> Play
               </button>
-              <button className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-colors" onClick={(e) => e.stopPropagation()}>
-                <Plus size={16} />
+              <button 
+                className={`p-2 backdrop-blur-sm rounded-full transition-colors ${inFavorite ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-white/20 hover:bg-white/30 text-white'}`} 
+                onClick={handleFavoriteClick}
+                title={inFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+              >
+                {inFavorite ? <Check size={16} /> : <Plus size={16} />}
               </button>
               <button
                 className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-colors"

@@ -10,43 +10,64 @@ export default function DownloadsPage() {
   const [storageStats, setStorageStats] = useState<StorageStats>(getStorageStats());
 
   useEffect(() => {
-    setDownloads(getDownloads());
+    const refreshDownloads = () => setDownloads(getDownloads());
+    refreshDownloads();
+    window.addEventListener('playflix-downloads-updated', refreshDownloads);
+
     // Simulate download progress
     const interval = setInterval(() => {
-      setDownloads(prev => 
-        prev.map(download => {
+      setDownloads(prev => {
+        let changed = false;
+        const updated = prev.map(download => {
           if (download.status === 'downloading' && download.progress < 100) {
+            changed = true;
+            const nextProg = Math.min(100, download.progress + 1);
             return {
               ...download,
-              progress: Math.min(100, download.progress + 1),
+              progress: nextProg,
+              status: nextProg >= 100 ? ('completed' as DownloadStatus) : download.status,
             };
           }
           return download;
-        })
-      );
-    }, 2000);
-    return () => clearInterval(interval);
+        });
+        if (changed) {
+          saveDownloads(updated);
+        }
+        return updated;
+      });
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('playflix-downloads-updated', refreshDownloads);
+    };
   }, []);
 
   const activeDownloads = downloads.filter(d => ['downloading', 'paused', 'pending'].includes(d.status));
   const completedDownloads = downloads.filter(d => d.status === 'completed');
 
   const togglePause = (id: string) => {
-    setDownloads(prev => 
-      prev.map(d => {
+    setDownloads(prev => {
+      const updated = prev.map(d => {
         if (d.id === id) {
           return {
             ...d,
-            status: d.status === 'downloading' ? 'paused' : 'downloading',
+            status: (d.status === 'downloading' ? 'paused' : 'downloading') as DownloadStatus,
           };
         }
         return d;
-      })
-    );
+      });
+      saveDownloads(updated);
+      return updated;
+    });
   };
 
   const deleteDownload = (id: string) => {
-    setDownloads(prev => prev.filter(d => d.id !== id));
+    setDownloads(prev => {
+      const updated = prev.filter(d => d.id !== id);
+      saveDownloads(updated);
+      return updated;
+    });
   };
 
   return (
