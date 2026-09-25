@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Play, MoreHorizontal } from 'lucide-react';
+import { Play, MoreHorizontal, Smartphone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ContinueWatchingItem, buildResumeUrl } from '@/lib/data';
 
@@ -49,6 +49,14 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
             if (item.posterPath) (ev.currentTarget as HTMLImageElement).src = item.posterPath;
           }}
         />
+
+        {/* Device Sync Badge */}
+        {item.lastDevice && item.lastDevice.startsWith('mobile') && (
+          <div className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-md bg-black/80 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 border border-amber-500/40 backdrop-blur-md shadow-sm">
+            <Smartphone className="h-3 w-3 text-amber-400" />
+            <span>{item.sourceDeviceName || 'Mobile'}</span>
+          </div>
+        )}
 
         {/* Progress Bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-zinc-800/90">

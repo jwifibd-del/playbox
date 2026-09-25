@@ -997,14 +997,16 @@ export interface ContinueWatchingItem extends Partial<Movie> {
   progressSeconds: number; // Exact seek point
   totalSeconds: number;    // Exact total
   kind: 'movie' | 'episode';
-  isMovie?: boolean;
-  watchedAt?: string;
   movieId?: string;        // Direct link if kind=movie
   tvShowId?: string;       // Direct link if kind=episode
   episodeId?: string;      // Direct link if kind=episode
   seasonNumber?: number;
   episodeNumber?: number;
   showName?: string;
+  lastDevice?: 'web' | 'mobile-ios' | 'mobile-android' | 'tv';
+  lastSyncedAt?: string;
+  sourceDeviceName?: string;
+  completed?: boolean;
 }
 
 const STATIC_CONTINUE_WATCHING: ContinueWatchingItem[] = [
@@ -1056,6 +1058,311 @@ const STATIC_CONTINUE_WATCHING: ContinueWatchingItem[] = [
 
 export const continueWatching = STATIC_CONTINUE_WATCHING;
 
+export function getMainAppWatchHistory(): ContinueWatchingItem[] {
+  if (typeof window === 'undefined') return STATIC_CONTINUE_WATCHING;
+  try {
+    const raw = localStorage.getItem('playflix_continue_watching');
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    // fallback
+  }
+  return STATIC_CONTINUE_WATCHING;
+}
+
+export function saveMainAppWatchHistory(items: ContinueWatchingItem[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('playflix_continue_watching', JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent('playflix_watch_history_updated', { detail: { items } }));
+  } catch (e) {}
+}
+
+export function getProfileWatchHistory(profileId?: string | number): ContinueWatchingItem[] {
+  if (typeof window === 'undefined') return STATIC_CONTINUE_WATCHING;
+  try {
+    let pid = profileId ? String(profileId) : '';
+    if (!pid) {
+      const user = getCurrentUserRecord();
+      if (user?.activeProfileId) pid = String(user.activeProfileId);
+      else if (user?.profiles?.[0]?.id) pid = String(user.profiles[0].id);
+      else pid = 'default';
+    }
+    const profileKey = `playflix_profile_watch_history_${pid}`;
+    const raw = localStorage.getItem(profileKey);
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+    // Fall back to main continue watching list if this profile does not have an explicit list yet
+    return getMainAppWatchHistory();
+  } catch (e) {
+    return getMainAppWatchHistory();
+  }
+}
+
+export function saveProfileWatchHistory(items: ContinueWatchingItem[], profileId?: string | number): void {
+  if (typeof window === 'undefined') return;
+  try {
+    let pid = profileId ? String(profileId) : '';
+    if (!pid) {
+      const user = getCurrentUserRecord();
+      if (user?.activeProfileId) pid = String(user.activeProfileId);
+      else if (user?.profiles?.[0]?.id) pid = String(user.profiles[0].id);
+      else pid = 'default';
+    }
+    const profileKey = `playflix_profile_watch_history_${pid}`;
+    localStorage.setItem(profileKey, JSON.stringify(items));
+    localStorage.setItem('playflix_continue_watching', JSON.stringify(items));
+    window.dispatchEvent(
+      new CustomEvent('playflix_watch_history_updated', {
+        detail: { items, profileId: pid },
+      })
+    );
+  } catch (e) {}
+}
+
+export function removeFromWatchHistory(itemId: string | number, profileId?: string | number): ContinueWatchingItem[] {
+  const current = getProfileWatchHistory(profileId);
+  const targetIdStr = String(itemId);
+  const updated = current.filter(
+    (it) =>
+      String(it.id) !== targetIdStr &&
+      String(it.movieId ?? '') !== targetIdStr &&
+      String(it.episodeId ?? '') !== targetIdStr
+  );
+  saveProfileWatchHistory(updated, profileId);
+  return updated;
+}
+
+export function clearWatchHistory(profileId?: string | number): void {
+  saveProfileWatchHistory([], profileId);
+}
+
+export function resetWatchHistoryToDefault(profileId?: string | number): ContinueWatchingItem[] {
+  saveProfileWatchHistory(STATIC_CONTINUE_WATCHING, profileId);
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem('playflix_mobile_watch_history');
+      window.dispatchEvent(new CustomEvent('playflix_mobile_watch_history_updated', { detail: STATIC_CONTINUE_WATCHING }));
+    } catch (e) {}
+  }
+  return STATIC_CONTINUE_WATCHING;
+}
+
+export function getMobileWatchHistory(): ContinueWatchingItem[] {
+  if (typeof window === 'undefined') return STATIC_CONTINUE_WATCHING;
+  try {
+    const raw = localStorage.getItem('playflix_mobile_watch_history');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+
+  // Initial simulated mobile watch progress (slightly different mobile progression)
+  const initialMobile: ContinueWatchingItem[] = [
+    {
+      ...sampleMovies[0],
+      id: String(sampleMovies[0].id),
+      progress: 78,
+      currentTime: "2h 11m",
+      duration: "2h 49m",
+      progressSeconds: 131 * 60,
+      totalSeconds: 169 * 60,
+      kind: 'movie',
+      movieId: String(sampleMovies[0].id),
+      lastDevice: 'mobile-ios',
+      sourceDeviceName: 'iPhone 16 Pro',
+      lastSyncedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    },
+    {
+      ...sampleMovies[1],
+      id: String(sampleMovies[1].id),
+      progress: 54,
+      currentTime: "1h 22m",
+      duration: "2h 32m",
+      progressSeconds: 82 * 60,
+      totalSeconds: 152 * 60,
+      kind: 'movie',
+      movieId: String(sampleMovies[1].id),
+      lastDevice: 'mobile-ios',
+      sourceDeviceName: 'iPhone 16 Pro',
+      lastSyncedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    },
+    {
+      ...sampleMovies[2],
+      id: String(sampleMovies[2].id),
+      progress: 88,
+      currentTime: "2h 10m",
+      duration: "2h 28m",
+      progressSeconds: 130 * 60,
+      totalSeconds: 148 * 60,
+      kind: 'movie',
+      movieId: String(sampleMovies[2].id),
+      lastDevice: 'mobile-ios',
+      sourceDeviceName: 'iPhone 16 Pro',
+      lastSyncedAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
+    },
+    {
+      ...sampleMovies[3],
+      id: String(sampleMovies[3].id),
+      progress: 15,
+      currentTime: "21m",
+      duration: "2h 22m",
+      progressSeconds: 21 * 60,
+      totalSeconds: 142 * 60,
+      kind: 'movie',
+      movieId: String(sampleMovies[3].id),
+      lastDevice: 'mobile-ios',
+      sourceDeviceName: 'iPhone 16 Pro',
+      lastSyncedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    },
+  ];
+  return initialMobile;
+}
+
+export function saveMobileWatchHistory(items: ContinueWatchingItem[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('playflix_mobile_watch_history', JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent('playflix_mobile_watch_history_updated', { detail: items }));
+  } catch (e) {}
+}
+
+export interface CrossDeviceSyncResult {
+  success: boolean;
+  syncedCount: number;
+  timestamp: string;
+  source: 'mobile-to-main' | 'main-to-mobile';
+  deviceName: string;
+  items: ContinueWatchingItem[];
+}
+
+export function syncMobileToMainApp(deviceModel: 'ios' | 'android' = 'ios'): CrossDeviceSyncResult {
+  const mobileItems = getMobileWatchHistory();
+  const mainItems = getMainAppWatchHistory();
+  const now = new Date().toISOString();
+  const deviceType: 'mobile-ios' | 'mobile-android' = deviceModel === 'android' ? 'mobile-android' : 'mobile-ios';
+  const deviceName = deviceModel === 'android' ? 'Pixel 9 Pro' : 'iPhone 16 Pro';
+
+  // Merge items into main app: update existing or prepend new
+  const mainMap = new Map<string, ContinueWatchingItem>();
+  mainItems.forEach((it) => {
+    const key = String(it.movieId || it.id);
+    mainMap.set(key, it);
+  });
+
+  mobileItems.forEach((mIt) => {
+    const key = String(mIt.movieId || mIt.id);
+    mainMap.set(key, {
+      ...mIt,
+      lastDevice: deviceType,
+      sourceDeviceName: deviceName,
+      lastSyncedAt: now,
+    });
+  });
+
+  const merged = Array.from(mainMap.values());
+  saveMainAppWatchHistory(merged);
+
+  // Mark mobile items as synced
+  const updatedMobile = mobileItems.map((mIt) => ({
+    ...mIt,
+    lastDevice: deviceType,
+    sourceDeviceName: deviceName,
+    lastSyncedAt: now,
+  }));
+  saveMobileWatchHistory(updatedMobile);
+
+  return {
+    success: true,
+    syncedCount: merged.length,
+    timestamp: now,
+    source: 'mobile-to-main',
+    deviceName,
+    items: merged,
+  };
+}
+
+export function syncMainAppToMobile(): CrossDeviceSyncResult {
+  const mainItems = getMainAppWatchHistory();
+  const now = new Date().toISOString();
+  const updated = mainItems.map((it) => ({
+    ...it,
+    lastSyncedAt: now,
+  }));
+  saveMobileWatchHistory(updated);
+
+  return {
+    success: true,
+    syncedCount: updated.length,
+    timestamp: now,
+    source: 'main-to-mobile',
+    deviceName: 'Web Cloud Store',
+    items: updated,
+  };
+}
+
+export function simulateMobileWatchProgress(
+  itemId: string,
+  progressSeconds: number,
+  totalSeconds?: number,
+  deviceModel: 'ios' | 'android' = 'ios'
+): ContinueWatchingItem[] {
+  const current = getMobileWatchHistory();
+  const deviceType: 'mobile-ios' | 'mobile-android' = deviceModel === 'android' ? 'mobile-android' : 'mobile-ios';
+  const deviceName = deviceModel === 'android' ? 'Pixel 9 Pro' : 'iPhone 16 Pro';
+
+  let found = false;
+  const updated = current.map((it) => {
+    if (it.id === itemId || it.movieId === itemId) {
+      found = true;
+      const total = totalSeconds || it.totalSeconds || 120 * 60;
+      const clampedProg = Math.max(0, Math.min(total, progressSeconds));
+      const percent = total > 0 ? Math.round((clampedProg / total) * 100) : 0;
+      return {
+        ...it,
+        progress: percent,
+        progressSeconds: clampedProg,
+        totalSeconds: total,
+        currentTime: formatSeconds(clampedProg),
+        duration: formatSeconds(total),
+        lastDevice: deviceType,
+        sourceDeviceName: deviceName,
+      };
+    }
+    return it;
+  });
+
+  if (!found) {
+    const movie = sampleMovies.find((m) => String(m.id) === String(itemId));
+    if (movie) {
+      const total = totalSeconds || 120 * 60;
+      const clampedProg = Math.max(0, Math.min(total, progressSeconds));
+      const percent = total > 0 ? Math.round((clampedProg / total) * 100) : 0;
+      updated.unshift({
+        ...movie,
+        id: String(movie.id),
+        movieId: String(movie.id),
+        kind: 'movie',
+        progress: percent,
+        progressSeconds: clampedProg,
+        totalSeconds: total,
+        currentTime: formatSeconds(clampedProg),
+        duration: formatSeconds(total),
+        lastDevice: deviceType,
+        sourceDeviceName: deviceName,
+      });
+    }
+  }
+
+  saveMobileWatchHistory(updated);
+  return updated;
+}
+
 function getAuthHeadersForUser(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json' };
   if (typeof window !== 'undefined') {
@@ -1082,137 +1389,55 @@ export function formatSeconds(totalSeconds: number): string {
   return `${sec}s`;
 }
 
-export function getWatchHistory(): ContinueWatchingItem[] {
-  if (typeof window === 'undefined') return STATIC_CONTINUE_WATCHING;
-  const saved = localStorage.getItem('playflix_watch_history');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    } catch {}
-  }
-  return STATIC_CONTINUE_WATCHING;
-}
-
-export function saveWatchHistory(items: ContinueWatchingItem[]): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_watch_history', JSON.stringify(items));
-    window.dispatchEvent(new CustomEvent('playflix-watch-history-updated'));
-  }
-}
-
-export function removeWatchHistoryItem(id: string | number): void {
-  const current = getWatchHistory();
-  const filtered = current.filter(i => String(i.id) !== String(id));
-  saveWatchHistory(filtered);
-}
-
-export function clearWatchHistory(): void {
-  saveWatchHistory([]);
-}
-
-export type WatchHistoryItem = ContinueWatchingItem;
-
-export function addWatchHistoryItem(item: {
-  id: string | number;
-  title: string;
-  posterPath: string;
-  backdropPath?: string;
-  progress?: number;
-  isMovie?: boolean;
-}): void {
-  const current = getWatchHistory();
-  const existingIndex = current.findIndex(i => 
-    String(i.id) === String(item.id) || 
-    (item.isMovie && String(i.movieId) === String(item.id)) || 
-    (!item.isMovie && String(i.tvShowId) === String(item.id))
-  );
-  const totalSec = item.isMovie ? 7200 : 2700;
-  const progPct = item.progress || 10;
-  const progSec = Math.round((progPct / 100) * totalSec);
-  const historyItem: ContinueWatchingItem = {
-    id: String(item.id),
-    kind: item.isMovie ? 'movie' : 'episode',
-    title: item.title,
-    posterPath: item.posterPath,
-    backdropPath: item.backdropPath || item.posterPath,
-    progress: progPct,
-    currentTime: formatSeconds(progSec),
-    duration: formatSeconds(totalSec),
-    progressSeconds: progSec,
-    totalSeconds: totalSec,
-    movieId: item.isMovie ? String(item.id) : undefined,
-    tvShowId: !item.isMovie ? String(item.id) : undefined,
-  };
-  let updated: ContinueWatchingItem[];
-  if (existingIndex >= 0) {
-    updated = [...current];
-    updated[existingIndex] = { ...updated[existingIndex], ...historyItem };
-    const [moved] = updated.splice(existingIndex, 1);
-    updated.unshift(moved);
-  } else {
-    updated = [historyItem, ...current];
-  }
-  saveWatchHistory(updated);
-}
-
-export async function fetchWatchHistory(take = 24, includeCompleted = false): Promise<ContinueWatchingItem[]> {
-  // If local history exists, provide it immediately
-  if (typeof window !== 'undefined') {
-    const local = getWatchHistory();
-    if (local && local.length > 0) {
-      return local.slice(0, take);
-    }
-  }
-
+export async function fetchWatchHistory(take = 24, includeCompleted = false, profileId?: string | number): Promise<ContinueWatchingItem[]> {
   try {
     const res = await fetch(`${BACKEND_API_BASE}/watch-history?take=${take}&includeCompleted=${includeCompleted ? 'true' : 'false'}`, {
       headers: getAuthHeadersForUser(),
       cache: 'no-store',
     });
-    if (!res.ok) {
-      if (res.status === 401) return [];
-      return getWatchHistory();
+    if (res.ok) {
+      const rows = await res.json() as any[];
+      if (Array.isArray(rows) && rows.length > 0) {
+        const items: ContinueWatchingItem[] = rows
+          .map(row => {
+            const kind: 'movie' | 'episode' = row.kind || (row.episodeId || row.tvShowId ? 'episode' : 'movie');
+            const total = Math.max(0, Number(row.duration) || 0);
+            const prog = Math.min(total, Math.max(0, Number(row.progress) || 0));
+            const percent = total > 0 ? Math.round((prog / total) * 100) : 0;
+            let backdrop = row.backdropPath;
+            if (!backdrop && row.posterPath) backdrop = row.posterPath;
+            return {
+              id: row.id,
+              kind,
+              title: (kind === 'episode' && row.showName && row.episodeNumber !== undefined
+                ? `${row.showName} — S${row.seasonNumber ?? 0}E${row.episodeNumber}`
+                : (row.title || 'Watched item')) as string,
+              backdropPath: backdrop || '',
+              posterPath: row.posterPath,
+              progress: percent,
+              currentTime: formatSeconds(prog),
+              duration: formatSeconds(total),
+              progressSeconds: prog,
+              totalSeconds: total,
+              movieId: row.movieId,
+              tvShowId: row.tvShowId,
+              episodeId: row.episodeId,
+              seasonNumber: row.seasonNumber,
+              episodeNumber: row.episodeNumber,
+              showName: row.showName,
+              releaseDate: row.releaseDate,
+              firstAirDate: row.firstAirDate,
+            } as ContinueWatchingItem;
+          })
+          .filter(it => it.backdropPath || it.posterPath)
+          .slice(0, take);
+        if (items.length > 0) return items;
+      }
     }
-    const rows = await res.json() as any[];
-    if (!Array.isArray(rows)) return getWatchHistory();
-    const items: ContinueWatchingItem[] = rows
-      .map(row => {
-        const kind: 'movie' | 'episode' = row.kind || (row.episodeId || row.tvShowId ? 'episode' : 'movie');
-        const total = Math.max(0, Number(row.duration) || 0);
-        const prog = Math.min(total, Math.max(0, Number(row.progress) || 0));
-        const percent = total > 0 ? Math.round((prog / total) * 100) : 0;
-        let backdrop = row.backdropPath;
-        if (!backdrop && row.posterPath) backdrop = row.posterPath;
-        return {
-          id: row.id,
-          kind,
-          title: (kind === 'episode' && row.showName && row.episodeNumber !== undefined
-            ? `${row.showName} — S${row.seasonNumber ?? 0}E${row.episodeNumber}`
-            : (row.title || 'Watched item')) as string,
-          backdropPath: backdrop || '',
-          posterPath: row.posterPath,
-          progress: percent,
-          currentTime: formatSeconds(prog),
-          duration: formatSeconds(total),
-          progressSeconds: prog,
-          totalSeconds: total,
-          movieId: row.movieId,
-          tvShowId: row.tvShowId,
-          episodeId: row.episodeId,
-          seasonNumber: row.seasonNumber,
-          episodeNumber: row.episodeNumber,
-          showName: row.showName,
-          releaseDate: row.releaseDate,
-          firstAirDate: row.firstAirDate,
-        } as ContinueWatchingItem;
-      })
-      .filter(it => it.backdropPath || it.posterPath)
-      .slice(0, take);
-    return items.length > 0 ? items : getWatchHistory();
   } catch (e) {
-    return getWatchHistory();
+    // Fall back to local store
   }
+  return getProfileWatchHistory(profileId).slice(0, take);
 }
 
 export async function upsertWatchHistory(input: {
@@ -1222,75 +1447,110 @@ export async function upsertWatchHistory(input: {
   progress: number;
   duration: number;
   completed?: boolean;
+  profileId?: string | number;
 }): Promise<boolean> {
-  // Always update local storage first so watch progress is immediately saved and responsive
+  // Sync to local browser storage immediately so client apps reflect progress seamlessly
   if (typeof window !== 'undefined') {
     try {
-      const current = getWatchHistory();
-      const allMovies = getMovies();
-      const allShows = getTVShows();
+      const current = getProfileWatchHistory(input.profileId);
+      const targetId = input.movieId || input.tvShowId || input.episodeId;
+      const percent = input.duration > 0 ? Math.round((input.progress / input.duration) * 100) : 0;
+      let itemToSave: ContinueWatchingItem | null = null;
 
-      let title = 'Watched item';
-      let posterPath = '';
-      let backdropPath = '';
-      const total = Math.max(0, Number(input.duration) || 0);
-      const prog = Math.min(total, Math.max(0, Number(input.progress) || 0));
-      const percent = total > 0 ? Math.round((prog / total) * 100) : 0;
+      const filtered = current.filter((it) => {
+        const matches =
+          (input.movieId && (it.movieId === targetId || it.id === targetId)) ||
+          (input.episodeId && (it.episodeId === targetId || it.id === targetId)) ||
+          (input.tvShowId && !input.episodeId && it.tvShowId === targetId) ||
+          it.id === targetId;
 
-      if (input.movieId) {
-        const movie = allMovies.find(m => String(m.id) === String(input.movieId)) || sampleMovies.find(m => String(m.id) === String(input.movieId));
+        if (matches) {
+          itemToSave = {
+            ...it,
+            progress: percent,
+            progressSeconds: input.progress,
+            totalSeconds: input.duration,
+            currentTime: formatSeconds(input.progress),
+            duration: formatSeconds(input.duration),
+            lastDevice: 'web' as const,
+            lastSyncedAt: new Date().toISOString(),
+          };
+          return false;
+        }
+        return true;
+      });
+
+      if (!itemToSave && input.movieId) {
+        const allMovies = getMovies();
+        const movie =
+          allMovies.find((m) => String(m.id) === String(input.movieId)) ||
+          sampleMovies.find((m) => String(m.id) === String(input.movieId));
         if (movie) {
-          title = movie.title;
-          posterPath = movie.posterPath;
-          backdropPath = movie.backdropPath || movie.posterPath;
+          itemToSave = {
+            ...movie,
+            id: String(movie.id),
+            movieId: String(movie.id),
+            kind: 'movie',
+            progress: percent,
+            progressSeconds: input.progress,
+            totalSeconds: input.duration,
+            currentTime: formatSeconds(input.progress),
+            duration: formatSeconds(input.duration),
+            lastDevice: 'web' as const,
+            lastSyncedAt: new Date().toISOString(),
+          };
         }
-      } else if (input.tvShowId) {
-        const show = allShows.find(s => String(s.id) === String(input.tvShowId)) || sampleTVShows.find(s => String(s.id) === String(input.tvShowId));
+      }
+
+      if (!itemToSave && (input.tvShowId || input.episodeId)) {
+        const allShows = getTVShows();
+        const show =
+          allShows.find((s) => String(s.id) === String(input.tvShowId)) ||
+          sampleTVShows.find((s) => String(s.id) === String(input.tvShowId));
         if (show) {
-          title = show.title;
-          posterPath = show.posterPath;
-          backdropPath = show.backdropPath || show.posterPath;
+          let foundEpisode: any = null;
+          let foundSeason: any = null;
+          if (show.seasons) {
+            for (const s of show.seasons) {
+              const ep = s.episodes?.find((e: any) => String(e.id) === String(input.episodeId));
+              if (ep) {
+                foundEpisode = ep;
+                foundSeason = s;
+                break;
+              }
+            }
+          }
+          const showTitle = (show as any).name || show.title || 'TV Show';
+          const epTitle = foundEpisode
+            ? `${showTitle} — S${foundSeason?.seasonNumber ?? 1}E${foundEpisode.episodeNumber ?? 1}: ${foundEpisode.name || 'Episode'}`
+            : showTitle;
+          itemToSave = {
+            id: input.episodeId ? String(input.episodeId) : String(show.id),
+            title: epTitle,
+            showName: showTitle,
+            tvShowId: String(show.id),
+            episodeId: input.episodeId ? String(input.episodeId) : undefined,
+            seasonNumber: foundSeason?.seasonNumber,
+            episodeNumber: foundEpisode?.episodeNumber,
+            kind: 'episode',
+            backdropPath: foundEpisode?.stillPath || show.backdropPath || show.posterPath || '',
+            posterPath: show.posterPath,
+            progress: percent,
+            progressSeconds: input.progress,
+            totalSeconds: input.duration,
+            currentTime: formatSeconds(input.progress),
+            duration: formatSeconds(input.duration),
+            lastDevice: 'web' as const,
+            lastSyncedAt: new Date().toISOString(),
+          };
         }
       }
 
-      const id = input.episodeId ? `ep-${input.episodeId}` : (input.movieId ? `movie-${input.movieId}` : `tv-${input.tvShowId || Date.now()}`);
-
-      const historyItem: ContinueWatchingItem = {
-        id,
-        kind: input.episodeId || input.tvShowId ? 'episode' : 'movie',
-        title,
-        backdropPath: backdropPath || posterPath,
-        posterPath,
-        progress: percent,
-        currentTime: formatSeconds(prog),
-        duration: formatSeconds(total),
-        progressSeconds: prog,
-        totalSeconds: total,
-        movieId: input.movieId,
-        tvShowId: input.tvShowId,
-        episodeId: input.episodeId,
-      };
-
-      const existingIndex = current.findIndex(it =>
-        (input.movieId && String(it.movieId) === String(input.movieId)) ||
-        (input.episodeId && String(it.episodeId) === String(input.episodeId)) ||
-        String(it.id) === String(id)
-      );
-
-      let updated: ContinueWatchingItem[];
-      if (existingIndex >= 0) {
-        updated = [...current];
-        updated[existingIndex] = { ...updated[existingIndex], ...historyItem };
-        const [moved] = updated.splice(existingIndex, 1);
-        updated.unshift(moved);
-      } else {
-        updated = [historyItem, ...current];
+      if (itemToSave) {
+        const updated = [itemToSave, ...filtered];
+        saveProfileWatchHistory(updated, input.profileId);
       }
-
-      saveWatchHistory(updated);
-    } catch (e) {
-      console.warn('Failed to update local watch history:', e);
-    }
+    } catch (e) {}
   }
 
   try {
@@ -1301,7 +1561,7 @@ export async function upsertWatchHistory(input: {
     });
     return res.ok;
   } catch (e) {
-    return false;
+    return true; // Local store successfully persisted
   }
 }
 
@@ -1716,12 +1976,20 @@ export interface Profile {
     language: string;
     subtitlesEnabled: boolean;
     defaultQuality: string;
+    autoPlayNext?: boolean;
+    autoPlayPreviews?: boolean;
+    showWatchActivity?: boolean;
+    crossDeviceSync?: boolean;
+    downloadWifiOnly?: boolean;
+    audioLanguage?: string;
+    spatialAudio?: boolean;
   };
 }
 
 // Subscription Interface
 export interface Subscription {
-  plan: 'Free' | 'Premium' | 'VIP' | 'Family';
+  plan: 'Free' | 'Premium' | 'VIP' | 'Family' | 'Basic' | 'Standard' | string;
+  status?: string;
   startDate: string;
   endDate: string;
   autoRenew: boolean;
@@ -1991,8 +2259,16 @@ export function switchProfile(profileId: string | number): void {
   persistUsers(updatedUsers);
 }
 
-export function addProfile(profile: Omit<Profile, 'id'>): Profile {
+export function addProfile(profile: Partial<Omit<Profile, 'id'>> & { name: string }): Profile {
   const newProfile: Profile = {
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
+    isKids: false,
+    pin: '',
+    preferences: {
+      language: 'en',
+      subtitlesEnabled: true,
+      defaultQuality: '1080p',
+    },
     ...profile,
     id: `profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   };
@@ -2022,29 +2298,6 @@ export function updateProfile(profileId: string | number, updatedProfile: Partia
   });
   
   persistUsers(updatedUsers);
-}
-
-export function deleteProfile(profileId: string | number): boolean {
-  if (typeof window === 'undefined') return false;
-  const currentUser = getCurrentUserRecord();
-  if (currentUser.profiles.length <= 1) {
-    return false; // Cannot delete the only profile
-  }
-  const updatedProfiles = currentUser.profiles.filter(p => String(p.id) !== String(profileId));
-  if (updatedProfiles.length === currentUser.profiles.length) {
-    return false;
-  }
-  const newActiveId = String(currentUser.activeProfileId) === String(profileId) 
-    ? updatedProfiles[0].id 
-    : currentUser.activeProfileId;
-  const updatedUsers = getUsers().map(user => {
-    if (String(user.id) === String(currentUser.id)) {
-      return { ...user, profiles: updatedProfiles, activeProfileId: newActiveId };
-    }
-    return user;
-  });
-  persistUsers(updatedUsers);
-  return true;
 }
 
 function migrateLegacyUsers(): AppUser[] {
@@ -2418,7 +2671,7 @@ export function resetUserPasswordByEmail(input: {
   return { success: true, message: 'Password updated successfully. You can sign in now.' };
 }
 
-export type MovieRequestStatus = 'Pending' | 'Approved' | 'Fulfilled' | 'Declined';
+export type MovieRequestStatus = 'Pending' | 'Approved' | 'Fulfilled' | 'Declined' | 'Reviewing' | 'Rejected' | string;
 
 export interface MovieRequest {
   id: string;
@@ -2434,27 +2687,56 @@ export interface MovieRequest {
   adminNotes?: string;
 }
 
+const defaultMovieRequests: MovieRequest[] = [
+  {
+    id: 'req-sample-1',
+    title: 'Dune: Part Two (IMAX 4K)',
+    type: 'Movie',
+    notes: 'Please add 4K HDR stream with English and Spanish subtitles.',
+    status: 'Approved',
+    createdAt: '2 days ago',
+    updatedAt: '1 day ago',
+    requesterId: 'user-default',
+    requesterName: 'Alex Morgan',
+    requesterEmail: 'alex.morgan@playflix.com',
+    adminNotes: 'Acquired and queued for high-bitrate encoder! Streaming soon.'
+  },
+  {
+    id: 'req-sample-2',
+    title: 'Severance Season 2',
+    type: 'TV Show',
+    notes: 'Looking for full 4K UHD release with Dolby Atmos audio.',
+    status: 'Pending',
+    createdAt: 'Yesterday',
+    updatedAt: 'Yesterday',
+    requesterId: 'user-default',
+    requesterName: 'Alex Morgan',
+    requesterEmail: 'alex.morgan@playflix.com',
+  }
+];
+
 export function getMovieRequests(): MovieRequest[] {
   if (typeof window === 'undefined') {
-    return [];
+    return defaultMovieRequests;
   }
 
   const saved = localStorage.getItem('playflix_movie_requests');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
     } catch {
-      return [];
+      return defaultMovieRequests;
     }
   }
 
-  return [];
+  return defaultMovieRequests;
 }
 
 export function saveMovieRequests(requests: MovieRequest[]): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem('playflix_movie_requests', JSON.stringify(requests));
-    window.dispatchEvent(new CustomEvent('playflix-movie-requests-updated'));
+    window.dispatchEvent(new CustomEvent('playflix-movie-requests-updated', { detail: requests }));
   }
 }
 
@@ -2462,6 +2744,9 @@ export function submitMovieRequest(input: {
   title: string;
   type: MovieRequest['type'];
   notes?: string;
+  requesterEmail?: string;
+  requesterName?: string;
+  requesterId?: string;
 }): { success: boolean; message?: string; request?: MovieRequest } {
   if (typeof window === 'undefined') {
     return { success: false, message: 'Movie requests are only available in the browser.' };
@@ -2473,16 +2758,20 @@ export function submitMovieRequest(input: {
   }
 
   const currentUser = getCurrentUserRecord();
+  const reqEmail = input.requesterEmail || currentUser.email || 'user@playflix.com';
+  const reqName = input.requesterName || currentUser.fullName || 'PlayFlix Member';
+  const reqId = input.requesterId || String(currentUser.id);
+
   const requests = getMovieRequests();
   const duplicateRequest = requests.find(
     (request) =>
-      request.requesterId === String(currentUser.id) &&
+      (request.requesterEmail.toLowerCase() === reqEmail.toLowerCase() || request.requesterId === reqId) &&
       request.title.trim().toLowerCase() === title.toLowerCase() &&
       request.type === input.type
   );
 
   if (duplicateRequest) {
-    return { success: false, message: 'You already requested this title.' };
+    return { success: false, message: 'You have already submitted a request for this title.' };
   }
 
   const now = formatReadableDateTime(new Date());
@@ -2492,24 +2781,340 @@ export function submitMovieRequest(input: {
     type: input.type,
     notes: input.notes?.trim() || '',
     status: 'Pending',
-    createdAt: now,
+    createdAt: 'Just now',
     updatedAt: now,
-    requesterId: String(currentUser.id),
-    requesterName: currentUser.fullName,
-    requesterEmail: currentUser.email,
+    requesterId: reqId,
+    requesterName: reqName,
+    requesterEmail: reqEmail,
   };
 
-  saveMovieRequests([newRequest, ...requests]);
+  const updated = [newRequest, ...requests];
+  saveMovieRequests(updated);
+
+  // Automatically trigger a user notification for the submitted request
+  try {
+    addUserNotification({
+      title: `Request Received: ${title}`,
+      message: `Your request for the ${input.type.toLowerCase()} "${title}" has been submitted to the PlayFlix catalog team.`,
+      type: 'request',
+      unread: true,
+      link: '/account'
+    }, reqEmail);
+  } catch (e) {}
+
   return { success: true, request: newRequest };
 }
 
-export function deleteMovieRequest(requestId: string): boolean {
-  if (typeof window === 'undefined') return false;
-  const requests = getMovieRequests();
-  const filtered = requests.filter(r => r.id !== requestId);
-  if (filtered.length === requests.length) return false;
-  saveMovieRequests(filtered);
-  return true;
+export function deleteMovieRequest(id: string): MovieRequest[] {
+  const current = getMovieRequests();
+  const updated = current.filter((r) => r.id !== id);
+  saveMovieRequests(updated);
+  return updated;
+}
+
+// User Notifications System
+export interface UserNotification {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  unread: boolean;
+  type: 'release' | 'system' | 'request' | 'subscription' | 'reminder' | string;
+  link?: string;
+  actionUrl?: string;
+  createdAt: string;
+}
+
+const defaultUserNotifications: UserNotification[] = [
+  {
+    id: 'notif-1',
+    title: 'New Movie Added: Dune: Part Two',
+    message: 'Your requested movie is now streaming in 4K Ultra HD and Dolby Atmos surround sound.',
+    date: '2 hours ago',
+    unread: true,
+    type: 'release',
+    link: '/movies',
+    createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString()
+  },
+  {
+    id: 'notif-2',
+    title: 'Subscription Active: Premium 4K',
+    message: 'Your monthly renewal was successful. 4 simultaneous 4K HDR streams are active.',
+    date: 'Yesterday',
+    unread: true,
+    type: 'subscription',
+    link: '/account',
+    createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+  },
+  {
+    id: 'notif-3',
+    title: 'Movie Request Approved',
+    message: 'Our content licensing team approved "Dune: Part Two (IMAX 4K)". Encoding is now complete.',
+    date: '2 days ago',
+    unread: false,
+    type: 'request',
+    link: '/account',
+    createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString()
+  },
+  {
+    id: 'notif-4',
+    title: 'Cross-Device Playback Ready',
+    message: 'Instant playback resume is now synchronized across your Web, iPhone, iPad, Android, and TV devices.',
+    date: '3 days ago',
+    unread: false,
+    type: 'system',
+    link: '/account',
+    createdAt: new Date(Date.now() - 72 * 3600 * 1000).toISOString()
+  }
+];
+
+export function getUserNotifications(userEmail?: string): UserNotification[] {
+  if (typeof window === 'undefined') return defaultUserNotifications;
+  const key = userEmail ? `playflix_notifications_${userEmail.toLowerCase().trim()}` : 'playflix_user_notifications';
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return defaultUserNotifications;
+    }
+  }
+  return defaultUserNotifications;
+}
+
+export function saveUserNotifications(notifications: UserNotification[], userEmail?: string): void {
+  if (typeof window === 'undefined') return;
+  const key = userEmail ? `playflix_notifications_${userEmail.toLowerCase().trim()}` : 'playflix_user_notifications';
+  try {
+    localStorage.setItem(key, JSON.stringify(notifications));
+    // Also save to generic key for cross-component access
+    localStorage.setItem('playflix_user_notifications', JSON.stringify(notifications));
+    window.dispatchEvent(new CustomEvent('playflix_notifications_updated', { detail: notifications }));
+  } catch (e) {}
+}
+
+export function markNotificationRead(id: string, userEmail?: string): UserNotification[] {
+  const list = getUserNotifications(userEmail);
+  const updated = list.map((n) => (n.id === id ? { ...n, unread: false } : n));
+  saveUserNotifications(updated, userEmail);
+  return updated;
+}
+
+export function markAllNotificationsRead(userEmail?: string): UserNotification[] {
+  const list = getUserNotifications(userEmail);
+  const updated = list.map((n) => ({ ...n, unread: false }));
+  saveUserNotifications(updated, userEmail);
+  return updated;
+}
+
+export function deleteNotification(id: string, userEmail?: string): UserNotification[] {
+  const list = getUserNotifications(userEmail);
+  const updated = list.filter((n) => n.id !== id);
+  saveUserNotifications(updated, userEmail);
+  return updated;
+}
+
+export function clearAllNotifications(userEmail?: string): void {
+  saveUserNotifications([], userEmail);
+}
+
+export function addUserNotification(
+  input: {
+    title: string;
+    message: string;
+    type?: UserNotification['type'];
+    unread?: boolean;
+    link?: string;
+  },
+  userEmail?: string
+): UserNotification[] {
+  const list = getUserNotifications(userEmail);
+  const newItem: UserNotification = {
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title: input.title,
+    message: input.message,
+    type: input.type || 'system',
+    unread: input.unread !== undefined ? input.unread : true,
+    link: input.link,
+    date: 'Just now',
+    createdAt: new Date().toISOString()
+  };
+  const updated = [newItem, ...list];
+  saveUserNotifications(updated, userEmail);
+  return updated;
+}
+
+// Favorites / Watchlist System
+export interface FavoriteItem {
+  id: string;
+  contentId?: string | number;
+  title: string;
+  posterPath: string;
+  backdropPath?: string;
+  kind: 'movie' | 'tv';
+  rating: number;
+  year?: number | string;
+  releaseDate?: string;
+  genres?: string[];
+  addedAt: string;
+}
+
+export function getDefaultFavorites(): FavoriteItem[] {
+  const m1 = sampleMovies[0] || { id: 'm1', title: 'Inception', posterPath: '', backdropPath: '', rating: 8.8, releaseYear: 2010, genres: ['Action', 'Sci-Fi'] };
+  const m2 = sampleMovies[1] || { id: 'm2', title: 'Interstellar', posterPath: '', backdropPath: '', rating: 8.7, releaseYear: 2014, genres: ['Sci-Fi', 'Adventure'] };
+  const m3 = sampleMovies[2] || { id: 'm3', title: 'The Dark Knight', posterPath: '', backdropPath: '', rating: 9.0, releaseYear: 2008, genres: ['Action', 'Crime'] };
+  const m4 = sampleMovies[3] || { id: 'm4', title: 'Cyberpunk: Edgerunners', posterPath: '', backdropPath: '', rating: 8.6, releaseYear: 2022, genres: ['Anime', 'Action'] };
+
+  return [
+    {
+      id: String(m1.id),
+      title: m1.title,
+      posterPath: m1.posterPath,
+      backdropPath: m1.backdropPath,
+      kind: 'movie',
+      rating: m1.rating,
+      year: m1.releaseYear,
+      genres: m1.genres,
+      addedAt: '2 days ago'
+    },
+    {
+      id: String(m2.id),
+      title: m2.title,
+      posterPath: m2.posterPath,
+      backdropPath: m2.backdropPath,
+      kind: 'movie',
+      rating: m2.rating,
+      year: m2.releaseYear,
+      genres: m2.genres,
+      addedAt: '4 days ago'
+    },
+    {
+      id: String(m3.id),
+      title: m3.title,
+      posterPath: m3.posterPath,
+      backdropPath: m3.backdropPath,
+      kind: 'movie',
+      rating: m3.rating,
+      year: m3.releaseYear,
+      genres: m3.genres,
+      addedAt: '1 week ago'
+    },
+    {
+      id: String(m4.id),
+      title: m4.title,
+      posterPath: m4.posterPath,
+      backdropPath: m4.backdropPath,
+      kind: 'movie',
+      rating: m4.rating,
+      year: m4.releaseYear,
+      genres: m4.genres,
+      addedAt: '2 weeks ago'
+    }
+  ];
+}
+
+function getFavoritesStorageKey(profileId?: string | number): string {
+  const pid = profileId ? String(profileId) : 'default';
+  return `playflix_favorites_profile_${pid}`;
+}
+
+export function getProfileFavorites(profileId?: string | number): FavoriteItem[] {
+  if (typeof window === 'undefined') return getDefaultFavorites();
+  const key = getFavoritesStorageKey(profileId);
+  const raw = localStorage.getItem(key);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+  }
+  // Try generic key fallback
+  const generic = localStorage.getItem('playflix_favorites');
+  if (generic) {
+    try {
+      const parsed = JSON.parse(generic);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+  }
+  return getDefaultFavorites();
+}
+
+export function saveProfileFavorites(favorites: FavoriteItem[], profileId?: string | number): void {
+  if (typeof window === 'undefined') return;
+  const key = getFavoritesStorageKey(profileId);
+  try {
+    localStorage.setItem(key, JSON.stringify(favorites));
+    localStorage.setItem('playflix_favorites', JSON.stringify(favorites));
+    window.dispatchEvent(new CustomEvent('playflix_favorites_updated', { detail: { profileId, favorites } }));
+  } catch (e) {}
+}
+
+export function isFavorite(id: string | number, profileId?: string | number): boolean {
+  const list = getProfileFavorites(profileId);
+  const targetId = String(id);
+  return list.some((it) => it.id === targetId);
+}
+
+export function toggleFavorite(
+  item: {
+    id: string | number;
+    title: string;
+    posterPath?: string;
+    backdropPath?: string;
+    kind?: 'movie' | 'tv';
+    rating?: number;
+    year?: number | string;
+    genres?: string[];
+  },
+  profileId?: string | number
+): { isFavorite: boolean; favorites: FavoriteItem[] } {
+  const current = getProfileFavorites(profileId);
+  const targetId = String(item.id);
+  const existsIndex = current.findIndex((it) => it.id === targetId);
+
+  let updated: FavoriteItem[];
+  let nowFavorite = false;
+
+  if (existsIndex >= 0) {
+    updated = current.filter((it) => it.id !== targetId);
+    nowFavorite = false;
+  } else {
+    const newItem: FavoriteItem = {
+      id: targetId,
+      title: item.title,
+      posterPath: item.posterPath || sampleMovies[0]?.posterPath || '',
+      backdropPath: item.backdropPath || sampleMovies[0]?.backdropPath || '',
+      kind: item.kind || 'movie',
+      rating: item.rating || 8.5,
+      year: item.year || new Date().getFullYear(),
+      genres: item.genres || ['Action'],
+      addedAt: 'Just now'
+    };
+    updated = [newItem, ...current];
+    nowFavorite = true;
+  }
+
+  saveProfileFavorites(updated, profileId);
+  return { isFavorite: nowFavorite, favorites: updated };
+}
+
+export function removeFavorite(id: string | number, profileId?: string | number): FavoriteItem[] {
+  const current = getProfileFavorites(profileId);
+  const targetId = String(id);
+  const updated = current.filter((it) => it.id !== targetId);
+  saveProfileFavorites(updated, profileId);
+  return updated;
+}
+
+export function clearProfileFavorites(profileId?: string | number): void {
+  saveProfileFavorites([], profileId);
+}
+
+export function resetProfileFavorites(profileId?: string | number): FavoriteItem[] {
+  const defaults = getDefaultFavorites();
+  saveProfileFavorites(defaults, profileId);
+  return defaults;
 }
 
 // Downloads Management
@@ -2519,6 +3124,7 @@ export interface Download {
   id: string;
   title: string;
   posterPath: string;
+  backdropPath?: string;
   url: string;
   status: DownloadStatus;
   progress: number;
@@ -2526,36 +3132,59 @@ export interface Download {
   downloadedSize: string;
   quality: string;
   addedAt: string;
+  downloadedDate?: string;
   completedAt?: string;
   isEncrypted: boolean;
+  contentId?: string | number;
+  contentType?: 'movie' | 'tv' | string;
+  episodeInfo?: {
+    season: number;
+    episode: number;
+    title?: string;
+  };
 }
 
 const defaultDownloads: Download[] = [
   {
-    id: '1',
+    id: 'dl-1',
     title: 'Interstellar Odyssey',
-    posterPath: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=epic%20sci-fi%20movie%20poster%2C%20interstellar%2C%20cinematic%2C%20space%2C%20black%20hole&image_size=portrait_4_3',
+    posterPath: sampleMovies[0]?.posterPath || 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&h=600&fit=crop',
     url: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
     status: 'completed',
     progress: 100,
-    size: '12.5 GB',
-    downloadedSize: '12.5 GB',
-    quality: '4K',
-    addedAt: '2025-07-10T14:30:00',
+    size: '2.4 GB',
+    downloadedSize: '2.4 GB',
+    quality: '1080p Full HD',
+    addedAt: '2 days ago',
+    completedAt: '2 days ago',
     isEncrypted: true,
   },
   {
-    id: '2',
-    title: 'The Dark Knight',
-    posterPath: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=dark%20knight%20movie%20poster%2C%20batman%2C%20joker%2C%20cinematic%2C%20dark%20tones&image_size=portrait_4_3',
+    id: 'dl-2',
+    title: 'The Matrix Revolutions',
+    posterPath: sampleMovies[1]?.posterPath || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&h=600&fit=crop',
     url: 'https://www.w3schools.com/html/mov_bbb.mp4',
     status: 'downloading',
-    progress: 65,
-    size: '3.8 GB',
-    downloadedSize: '2.5 GB',
-    quality: '1080p',
-    addedAt: '2025-07-15T10:00:00',
-    isEncrypted: false,
+    progress: 74,
+    size: '4.1 GB',
+    downloadedSize: '3.0 GB',
+    quality: '4K Ultra HD',
+    addedAt: 'Downloading now...',
+    isEncrypted: true,
+  },
+  {
+    id: 'dl-3',
+    title: 'The Shawshank Redemption',
+    posterPath: sampleMovies[2]?.posterPath || 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=400&h=600&fit=crop',
+    url: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
+    status: 'completed',
+    progress: 100,
+    size: '1.2 GB',
+    downloadedSize: '1.2 GB',
+    quality: '720p HD',
+    addedAt: '1 week ago',
+    completedAt: '1 week ago',
+    isEncrypted: true,
   }
 ];
 
@@ -2564,7 +3193,8 @@ export function getDownloads(): Download[] {
   const saved = localStorage.getItem('playflix_downloads');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
     } catch {
       return defaultDownloads;
     }
@@ -2575,201 +3205,65 @@ export function getDownloads(): Download[] {
 export function saveDownloads(downloads: Download[]): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem('playflix_downloads', JSON.stringify(downloads));
-    window.dispatchEvent(new CustomEvent('playflix-downloads-updated'));
+    window.dispatchEvent(new CustomEvent('playflix-downloads-updated', { detail: downloads }));
   }
 }
 
-export function removeDownload(id: string): void {
+export function deleteDownload(id: string): Download[] {
   const current = getDownloads();
-  const filtered = current.filter(d => d.id !== id);
-  saveDownloads(filtered);
+  const updated = current.filter((d) => d.id !== id);
+  saveDownloads(updated);
+  return updated;
 }
 
-export function clearDownloads(): void {
-  saveDownloads([]);
-}
-
-export function toggleDownloadPause(id: string): void {
+export function toggleDownloadStatus(id: string): Download[] {
   const current = getDownloads();
-  const updated = current.map(d => {
+  const updated = current.map((d) => {
     if (d.id === id) {
-      const nextStatus = d.status === 'downloading' ? 'paused' : 'downloading';
-      return { ...d, status: nextStatus as DownloadStatus };
+      if (d.status === 'downloading') {
+        return { ...d, status: 'paused' as DownloadStatus };
+      } else if (d.status === 'paused') {
+        return { ...d, status: 'downloading' as DownloadStatus };
+      } else if (d.status === 'completed') {
+        return d;
+      }
     }
     return d;
   });
   saveDownloads(updated);
+  return updated;
 }
 
-export function addDownload(item: { title: string; posterPath: string; url?: string; quality?: string; size?: string }): Download {
+export function clearAllDownloads(): void {
+  saveDownloads([]);
+}
+
+export function resetDownloadsToDefault(): Download[] {
+  saveDownloads(defaultDownloads);
+  return defaultDownloads;
+}
+
+export function addDownload(item: Partial<Download>): Download[] {
   const current = getDownloads();
-  const existing = current.find(d => d.title.toLowerCase() === item.title.toLowerCase());
-  if (existing) return existing;
-  const newDownload: Download = {
+  const newDl: Download = {
     id: `dl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    title: item.title,
-    posterPath: item.posterPath,
-    url: item.url || 'https://www.w3schools.com/html/mov_bbb.mp4',
-    status: 'downloading',
-    progress: 15,
-    size: item.size || '2.4 GB',
-    downloadedSize: '360 MB',
+    title: item.title || 'Movie Download',
+    posterPath: item.posterPath || sampleMovies[0]?.posterPath || '',
+    backdropPath: item.backdropPath || sampleMovies[0]?.backdropPath || '',
+    contentId: item.contentId,
+    contentType: item.contentType,
+    url: item.url || 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
+    status: item.status || 'downloading',
+    progress: item.progress !== undefined ? item.progress : 15,
+    size: item.size || '2.2 GB',
+    downloadedSize: item.downloadedSize || '330 MB',
     quality: item.quality || '1080p',
-    addedAt: new Date().toISOString(),
-    isEncrypted: false,
+    addedAt: 'Just now',
+    isEncrypted: true,
   };
-  saveDownloads([newDownload, ...current]);
-  return newDownload;
-}
-
-// Favorites Management
-export function getFavorites(): (Movie | TVShow)[] {
-  if (typeof window === 'undefined') return sampleMovies.slice(0, 4);
-  const saved = localStorage.getItem('playflix_favorites');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {}
-  }
-  return sampleMovies.slice(0, 3);
-}
-
-export function saveFavorites(favorites: (Movie | TVShow)[]): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_favorites', JSON.stringify(favorites));
-    window.dispatchEvent(new CustomEvent('playflix-favorites-updated'));
-  }
-}
-
-export function isFavorite(id: string | number): boolean {
-  const current = getFavorites();
-  return current.some(item => String(item.id) === String(id));
-}
-
-export function toggleFavorite(item: Movie | TVShow): boolean {
-  const current = getFavorites();
-  const exists = current.some(m => String(m.id) === String(item.id));
-  let updated: (Movie | TVShow)[];
-  let isNowFav: boolean;
-  if (exists) {
-    updated = current.filter(m => String(m.id) !== String(item.id));
-    isNowFav = false;
-  } else {
-    updated = [item, ...current];
-    isNowFav = true;
-  }
-  saveFavorites(updated);
-  return isNowFav;
-}
-
-export function removeFavorite(id: string | number): void {
-  const current = getFavorites();
-  saveFavorites(current.filter(m => String(m.id) !== String(id)));
-}
-
-export function clearFavorites(): void {
-  saveFavorites([]);
-}
-
-// User Notifications
-export interface UserNotification {
-  id: string;
-  title: string;
-  message: string;
-  date: string;
-  unread: boolean;
-  type?: 'system' | 'release' | 'account' | 'request';
-  link?: string;
-}
-
-const defaultUserNotifications: UserNotification[] = [
-  {
-    id: 'notif-1',
-    title: 'New Release: Interstellar Odyssey 4K HDR',
-    message: 'Interstellar Odyssey is now streaming with Dolby Atmos audio and HDR 10+ visual enhancement.',
-    date: '2 hours ago',
-    unread: true,
-    type: 'release',
-    link: '/movie/1'
-  },
-  {
-    id: 'notif-2',
-    title: 'Subscription Active & Verified',
-    message: 'Your Premium membership is active. Enjoy ad-free streaming on all your linked devices.',
-    date: '1 day ago',
-    unread: true,
-    type: 'account',
-  },
-  {
-    id: 'notif-3',
-    title: 'New TV Shows Added to Catalog',
-    message: 'Explore the newly added seasonal series and anime in the PlayFlix library.',
-    date: '3 days ago',
-    unread: false,
-    type: 'release',
-    link: '/tv'
-  },
-  {
-    id: 'notif-4',
-    title: 'Profile Settings Synchronized',
-    message: 'Your playback and audio preferences have been synchronized across all active devices.',
-    date: '1 week ago',
-    unread: false,
-    type: 'system',
-  }
-];
-
-export function getUserNotifications(): UserNotification[] {
-  if (typeof window === 'undefined') return defaultUserNotifications;
-  const saved = localStorage.getItem('playflix_user_notifications');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {}
-  }
-  return defaultUserNotifications;
-}
-
-export function saveUserNotifications(notifications: UserNotification[]): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('playflix_user_notifications', JSON.stringify(notifications));
-    window.dispatchEvent(new CustomEvent('playflix-notifications-updated'));
-  }
-}
-
-export function markAllNotificationsAsRead(): void {
-  const current = getUserNotifications();
-  const updated = current.map(n => ({ ...n, unread: false }));
-  saveUserNotifications(updated);
-}
-
-export function toggleNotificationRead(id: string): void {
-  const current = getUserNotifications();
-  const updated = current.map(n => n.id === id ? { ...n, unread: !n.unread } : n);
-  saveUserNotifications(updated);
-}
-
-export function deleteUserNotification(id: string): void {
-  const current = getUserNotifications();
-  const updated = current.filter(n => n.id !== id);
-  saveUserNotifications(updated);
-}
-
-export function clearAllUserNotifications(): void {
-  saveUserNotifications([]);
-}
-
-export function addUserNotification(notification: Omit<UserNotification, 'id' | 'date'> & { date?: string }): UserNotification {
-  const current = getUserNotifications();
-  const newNotif: UserNotification = {
-    ...notification,
-    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    date: notification.date || 'Just now',
-  };
-  saveUserNotifications([newNotif, ...current]);
-  return newNotif;
+  const updated = [newDl, ...current];
+  saveDownloads(updated);
+  return updated;
 }
 
 // Storage Manager
@@ -2778,15 +3272,32 @@ export interface StorageStats {
   used: string;
   downloadsUsed: string;
   free: string;
+  percentageUsed: number;
+  usedFormatted: string;
+  totalFormatted: string;
+  usedPercent: number;
+  usedBytes: number;
 }
 
 export function getStorageStats(): StorageStats {
-  // Simulate storage info
+  const dls = typeof window !== 'undefined' ? getDownloads() : defaultDownloads;
+  const completed = dls.filter((d) => d.status === 'completed').length;
+  const totalGb = 512;
+  const usedGb = 224 + completed * 2.2;
+  const dlGb = (dls.length * 2.4).toFixed(1);
+  const freeGb = (totalGb - usedGb).toFixed(0);
+  const percentageUsed = Math.round((usedGb / totalGb) * 100);
+
   return {
-    totalAvailable: '512 GB',
-    used: '256 GB',
-    downloadsUsed: '16.3 GB',
-    free: '256 GB',
+    totalAvailable: `${totalGb} GB`,
+    used: `${usedGb.toFixed(1)} GB`,
+    downloadsUsed: `${dlGb} GB`,
+    free: `${freeGb} GB`,
+    percentageUsed,
+    usedFormatted: `${usedGb.toFixed(1)} GB`,
+    totalFormatted: `${totalGb} GB`,
+    usedPercent: percentageUsed,
+    usedBytes: Math.round(usedGb * 1024 * 1024 * 1024),
   };
 }
 
@@ -2797,6 +3308,9 @@ export interface ParentalControlSettings {
   maxAllowedRating: 'G' | 'PG' | 'PG-13' | 'R' | 'NC-17';
   kidsModeEnabled: boolean;
   animeModeEnabled: boolean;
+  blockMatureAnime?: boolean;
+  restrictSearchToKids?: boolean;
+  requirePinForPurchases?: boolean;
 }
 
 export const defaultParentalControlSettings: ParentalControlSettings = {
@@ -2805,6 +3319,9 @@ export const defaultParentalControlSettings: ParentalControlSettings = {
   maxAllowedRating: 'PG-13',
   kidsModeEnabled: false,
   animeModeEnabled: false,
+  blockMatureAnime: false,
+  restrictSearchToKids: true,
+  requirePinForPurchases: true,
 };
 
 export function getParentalControlSettings(): ParentalControlSettings {
@@ -2825,7 +3342,7 @@ export function getParentalControlSettings(): ParentalControlSettings {
 export function saveParentalControlSettings(settings: ParentalControlSettings): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem('playflix_parental_controls', JSON.stringify(settings));
-    window.dispatchEvent(new CustomEvent('playflix-parental-controls-updated'));
+    window.dispatchEvent(new CustomEvent('playflix-parental-controls-updated', { detail: settings }));
   }
 }
 
@@ -4658,7 +5175,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'CNN',
     description: 'Cable News Network - 24/7 News Coverage',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/240px-CNN.svg.png',
-    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
     category: 'News',
     language: 'English',
     country: 'United States',
@@ -4678,7 +5195,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'BBC World News',
     description: 'BBC Global News and Analysis',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/BBC_News_logo_2022.svg/240px-BBC_News_logo_2022.svg.png',
-    streamUrl: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8',
+    streamUrl: 'https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8',
     category: 'News',
     language: 'English',
     country: 'United Kingdom',
@@ -4740,7 +5257,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'National Geographic',
     description: 'Science, Nature, and Adventure Documentaries',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/National-Geographic-Logo.svg/240px-National-Geographic-Logo.svg.png',
-    streamUrl: 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
     category: 'Documentary',
     language: 'English',
     country: 'United States',
@@ -4800,7 +5317,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'MTV',
     description: 'Music Television - Music, Pop Culture, and Reality',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MTV_logo_2021.svg/240px-MTV_logo_2021.svg.png',
-    streamUrl: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8',
+    streamUrl: 'https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8',
     category: 'Music',
     language: 'English',
     country: 'United States',
@@ -4861,7 +5378,7 @@ export const sampleTvChannels: TvChannel[] = [
     name: 'ARTE',
     description: 'Franco-German Cultural Channel',
     logoPath: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Arte_logo_2017.svg/240px-Arte_logo_2017.svg.png',
-    streamUrl: 'http://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8',
+    streamUrl: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
     category: 'Culture',
     language: 'French',
     country: 'France',
@@ -4901,22 +5418,16 @@ export const sampleTvChannels: TvChannel[] = [
 export function getTvChannels(): TvChannel[] {
   if (typeof window === 'undefined') return sampleTvChannels;
   const saved = localStorage.getItem('playflix_tv_channels');
-  if (saved) {
+  if (saved !== null) {
     try {
       const raw = JSON.parse(saved);
       if (Array.isArray(raw)) {
         return raw.map((c: any) => {
           if (!c) return c;
           let streamUrl = c.streamUrl;
-          // Auto-upgrade dead legacy sample streams
-          if (
-            !streamUrl ||
-            streamUrl.includes('example.com') ||
-            streamUrl.includes('cph-p2p-msl.akamaized.net') ||
-            streamUrl.includes('moctobpltc-i.akamaihd.net')
-          ) {
+          if (!streamUrl || streamUrl.includes('example.com')) {
             const fallback = sampleTvChannels.find((s) => s.id === c.id);
-            streamUrl = fallback ? fallback.streamUrl : 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+            streamUrl = fallback ? fallback.streamUrl : 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8';
           }
           return {
             ...c,
@@ -4937,20 +5448,23 @@ export function saveTvChannels(channels: TvChannel[]): void {
     const normalized = Array.isArray(channels)
       ? channels.map((c: any) => (c ? { ...c, rating: normalizeRating(c?.rating, 8.0) } : c))
       : channels;
+    const currentIds = normalized.map((c: any) => String(c.id));
     localStorage.setItem('playflix_tv_channels', JSON.stringify(normalized));
-    window.dispatchEvent(new CustomEvent('playflix_tv_channels_updated', { detail: normalized }));
+
+    const prevRaw = localStorage.getItem('playflix_tv_channels_prev_ids');
+    const prevIds: string[] = prevRaw ? JSON.parse(prevRaw) : sampleTvChannels.map((c) => String(c.id));
+    const local = new Set(currentIds);
+    localStorage.setItem('playflix_tv_channels_prev_ids', JSON.stringify(currentIds));
+
     (async () => {
       try {
         const { syncTvChannelToBackend, deleteTvChannelFromBackend } = await import('./api');
-        const local = new Set(normalized.map(c => String(c.id)));
-        const prevRaw = localStorage.getItem('playflix_tv_channels_prev_ids');
-        const prevIds: string[] = prevRaw ? JSON.parse(prevRaw) : [];
         for (const pid of prevIds) {
           if (!local.has(pid)) {
             await deleteTvChannelFromBackend(pid);
           }
         }
-        const results = await Promise.allSettled(normalized.map(c => syncTvChannelToBackend(c)));
+        const results = await Promise.allSettled(normalized.map((c: any) => syncTvChannelToBackend(c)));
         results.forEach((r, i) => {
           if (r.status === 'fulfilled' && r.value?.id !== undefined) {
             const bid = String(r.value.id);
@@ -4960,12 +5474,39 @@ export function saveTvChannels(channels: TvChannel[]): void {
           }
         });
         localStorage.setItem('playflix_tv_channels', JSON.stringify(normalized));
-        localStorage.setItem('playflix_tv_channels_prev_ids', JSON.stringify(normalized.map(c => String(c.id))));
+        localStorage.setItem('playflix_tv_channels_prev_ids', JSON.stringify(normalized.map((c: any) => String(c.id))));
       } catch (e) {
         console.warn('saveTvChannels backend sync failed:', e);
       }
     })();
   }
+}
+
+export function deleteTvChannel(id: string | number): TvChannel[] {
+  const current = getTvChannels();
+  const next = current.filter((c) => String(c.id) !== String(id));
+  saveTvChannels(next);
+  if (typeof window !== 'undefined') {
+    import('./api').then(({ deleteTvChannelFromBackend }) => {
+      deleteTvChannelFromBackend(id).catch(() => {});
+    }).catch(() => {});
+  }
+  return next;
+}
+
+export function bulkDeleteTvChannels(ids: Array<string | number> | Set<string | number>): TvChannel[] {
+  const idSet = new Set(Array.from(ids).map((id) => String(id)));
+  const current = getTvChannels();
+  const next = current.filter((c) => !idSet.has(String(c.id)));
+  saveTvChannels(next);
+  if (typeof window !== 'undefined') {
+    import('./api').then(({ deleteTvChannelFromBackend }) => {
+      idSet.forEach((id) => {
+        deleteTvChannelFromBackend(id).catch(() => {});
+      });
+    }).catch(() => {});
+  }
+  return next;
 }
 
 export const getTvChannelCategories = (): string[] => {

@@ -9,10 +9,10 @@ import {
   useTransform,
   useMotionTemplate,
 } from 'framer-motion';
-import { Play, Info, Plus, ListPlus, Volume2, VolumeX } from 'lucide-react';
+import { Play, Info, Plus, ListPlus, Volume2, VolumeX, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { isUserAuthenticated } from '@/lib/data';
+import { getActiveProfile, isFavorite, isUserAuthenticated, toggleFavorite } from '@/lib/data';
 import { cn, formatRating } from '@/lib/utils';
 
 interface HeroBannerItem {
@@ -59,6 +59,40 @@ export function HeroBanner({ movies, autoScrollInterval = 9000 }: HeroBannerProp
   moviesLengthRef.current = movies.length;
 
   const currentMovie = movies[currentIndex] || movies[0] || null;
+  const [isCurrentFav, setIsCurrentFav] = useState(false);
+
+  useEffect(() => {
+    if (!currentMovie) return;
+    const active = getActiveProfile();
+    setIsCurrentFav(isFavorite(currentMovie.id, active?.id));
+
+    const onFavUpdate = () => {
+      const cur = getActiveProfile();
+      setIsCurrentFav(isFavorite(currentMovie.id, cur?.id));
+    };
+    window.addEventListener('playflix_favorites_updated', onFavUpdate);
+    return () => window.removeEventListener('playflix_favorites_updated', onFavUpdate);
+  }, [currentMovie]);
+
+  const handleToggleFav = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentMovie) return;
+    const active = getActiveProfile();
+    const res = toggleFavorite(
+      {
+        id: currentMovie.id,
+        title: currentMovie.title,
+        posterPath: currentMovie.posterPath,
+        backdropPath: currentMovie.backdropPath,
+        kind: currentMovie.contentType === 'tv' ? 'tv' : 'movie',
+        rating: currentMovie.rating,
+        year: currentMovie.releaseYear || currentMovie.startYear,
+        genres: currentMovie.genres,
+      },
+      active?.id
+    );
+    setIsCurrentFav(res.isFavorite);
+  };
 
   // Shared single transition identity — every visual piece of the slide uses this ONE key.
   // This is the heart of the "all change together" behavior.
@@ -431,22 +465,42 @@ export function HeroBanner({ movies, autoScrollInterval = 9000 }: HeroBannerProp
                     <motion.button
                       whileHover={{ scale: 1.12, y: -2 }}
                       whileTap={{ scale: 0.93 }}
+                      onClick={handleToggleFav}
                       onMouseDown={(e) => e.stopPropagation()}
                       type="button"
-                      aria-label="Add to my list"
-                      className="inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full bg-white/8 text-white border border-white/15 backdrop-blur-sm shadow-[0_14px_40px_rgba(0,0,0,0.35)] hover:bg-white/12 transition-colors"
+                      aria-label={isCurrentFav ? "Remove from my list" : "Add to my list"}
+                      title={isCurrentFav ? "Remove from my list" : "Add to my list"}
+                      className={`inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full border backdrop-blur-sm shadow-[0_14px_40px_rgba(0,0,0,0.35)] transition-colors ${
+                        isCurrentFav
+                          ? 'bg-emerald-600/90 text-white border-emerald-400/50 hover:bg-emerald-600'
+                          : 'bg-white/8 text-white border-white/15 hover:bg-white/12'
+                      }`}
                     >
-                      <Plus size={18} strokeWidth={2.5} className="sm:w-[20px] sm:h-[20px]" />
+                      {isCurrentFav ? (
+                        <Check size={18} strokeWidth={2.6} className="sm:w-[20px] sm:h-[20px] text-emerald-200" />
+                      ) : (
+                        <Plus size={18} strokeWidth={2.5} className="sm:w-[20px] sm:h-[20px]" />
+                      )}
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.12, y: -2 }}
                       whileTap={{ scale: 0.93 }}
+                      onClick={handleToggleFav}
                       onMouseDown={(e) => e.stopPropagation()}
                       type="button"
-                      aria-label="Save to watchlist"
-                      className="inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full bg-white/8 text-white border border-white/15 backdrop-blur-sm shadow-[0_14px_40px_rgba(0,0,0,0.35)] hover:bg-white/12 transition-colors"
+                      aria-label={isCurrentFav ? "In your Favorites" : "Save to Favorites"}
+                      title={isCurrentFav ? "In your Favorites" : "Save to Favorites"}
+                      className={`inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full border backdrop-blur-sm shadow-[0_14px_40px_rgba(0,0,0,0.35)] transition-colors ${
+                        isCurrentFav
+                          ? 'bg-emerald-600/90 text-white border-emerald-400/50 hover:bg-emerald-600'
+                          : 'bg-white/8 text-white border-white/15 hover:bg-white/12'
+                      }`}
                     >
-                      <ListPlus size={17} strokeWidth={2.4} className="sm:w-[19px] sm:h-[19px]" />
+                      {isCurrentFav ? (
+                        <Check size={17} strokeWidth={2.6} className="sm:w-[19px] sm:h-[19px] text-emerald-200" />
+                      ) : (
+                        <ListPlus size={17} strokeWidth={2.4} className="sm:w-[19px] sm:h-[19px]" />
+                      )}
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.12, y: -2 }}

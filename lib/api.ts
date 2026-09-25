@@ -569,6 +569,7 @@ export async function fetchTvChannels(includeInactive = false): Promise<TvChanne
   const backendChannels: TvChannel[] = backend.ok
     ? backend.data.map(mapBackendTvChannel)
     : [];
+  const hasSavedLocal = typeof window !== 'undefined' && localStorage.getItem('playflix_tv_channels') !== null;
   const localChannels: TvChannel[] = (() => {
     try {
       return getTvChannels();
@@ -576,11 +577,14 @@ export async function fetchTvChannels(includeInactive = false): Promise<TvChanne
       return sampleTvChannels;
     }
   })();
-  const merged = mergeById<TvChannel>(
-    [backendChannels, localChannels, sampleTvChannels],
-    'backend-first'
-  );
-  return merged.length > 0 ? merged : sampleTvChannels;
+  if (backendChannels.length > 0) {
+    const merged = mergeById<TvChannel>(
+      hasSavedLocal ? [backendChannels, localChannels] : [backendChannels, localChannels, sampleTvChannels],
+      'backend-first'
+    );
+    return merged;
+  }
+  return hasSavedLocal ? localChannels : (localChannels.length > 0 ? localChannels : sampleTvChannels);
 }
 
 export async function fetchTvChannelById(

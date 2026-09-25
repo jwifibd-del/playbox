@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Plus, Check, Info, Star, Heart } from 'lucide-react';
+import { Play, Plus, Info, Star, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { isUserAuthenticated, Movie, TVShow, isFavorite, toggleFavorite } from '@/lib/data';
+import { getActiveProfile, isFavorite, isUserAuthenticated, Movie, toggleFavorite, TVShow } from '@/lib/data';
 import { formatRating } from '@/lib/utils';
 
 interface MovieCardProps {
@@ -13,21 +13,23 @@ interface MovieCardProps {
 
 export function MovieCard({ movie }: MovieCardProps) {
   const [isHovered, setIsHoveredState] = useState(false);
-  const [inFavorite, setInFavorite] = useState(false);
+  const [inFavorites, setInFavorites] = useState(false);
   const isMountedRef = useRef(true);
   const router = useRouter();
 
   useEffect(() => {
-    setInFavorite(isFavorite(movie.id));
-    const handleFavUpdated = () => {
-      if (isMountedRef.current) {
-        setInFavorite(isFavorite(movie.id));
-      }
+    const active = getActiveProfile();
+    setInFavorites(isFavorite(movie.id, active?.id));
+
+    const onFavUpdate = () => {
+      const cur = getActiveProfile();
+      setInFavorites(isFavorite(movie.id, cur?.id));
     };
-    window.addEventListener('playflix-favorites-updated', handleFavUpdated);
+
+    window.addEventListener('playflix_favorites_updated', onFavUpdate);
     return () => {
       isMountedRef.current = false;
-      window.removeEventListener('playflix-favorites-updated', handleFavUpdated);
+      window.removeEventListener('playflix_favorites_updated', onFavUpdate);
     };
   }, [movie.id]);
 
@@ -46,12 +48,6 @@ export function MovieCard({ movie }: MovieCardProps) {
       router.push(isUserAuthenticated() ? `/movie/${movie.id}` : '/login');
     }
   }, [isTVShow, movie.id, router]);
-
-  const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    const nextState = toggleFavorite(movie);
-    setInFavorite(nextState);
-  }, [movie]);
 
   return (
     <motion.div
@@ -95,16 +91,31 @@ export function MovieCard({ movie }: MovieCardProps) {
               >
                 <Play fill="black" size={16} /> Play
               </button>
-              <button 
-                className={`p-2 rounded-full transition-colors ${
-                  inFavorite 
-                    ? 'bg-red-600 text-white hover:bg-red-700' 
-                    : 'bg-white/20 text-white backdrop-blur-sm hover:bg-white/30'
+              <button
+                className={`p-2 backdrop-blur-sm rounded-full transition-colors ${
+                  inFavorites ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white/20 text-white hover:bg-white/30'
                 }`}
-                title={inFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
-                onClick={handleFavoriteClick}
+                title={inFavorites ? 'Remove from Favorites' : 'Add to Favorites'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const active = getActiveProfile();
+                  const res = toggleFavorite(
+                    {
+                      id: movie.id,
+                      title: movie.title,
+                      posterPath: movie.posterPath,
+                      backdropPath: movie.backdropPath,
+                      kind: isTVShow ? 'tv' : 'movie',
+                      rating: movie.rating,
+                      year: isTVShow ? movie.startYear : movie.releaseYear,
+                      genres: movie.genres,
+                    },
+                    active?.id
+                  );
+                  setInFavorites(res.isFavorite);
+                }}
               >
-                {inFavorite ? <Check size={16} /> : <Plus size={16} />}
+                {inFavorites ? <Check size={16} className="text-white" /> : <Plus size={16} />}
               </button>
               <button
                 className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-colors"

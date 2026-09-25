@@ -69,6 +69,22 @@ export default function Home() {
       setIsPageReady(true);
     }
     loadData();
+
+    const handleHistoryUpdate = () => {
+      fetchWatchHistory(24, false).then((history) => {
+        if (history && history.length > 0) {
+          setWatchHistory(history);
+        }
+      });
+    };
+
+    window.addEventListener('playflix_watch_history_updated', handleHistoryUpdate);
+    window.addEventListener('storage', handleHistoryUpdate);
+
+    return () => {
+      window.removeEventListener('playflix_watch_history_updated', handleHistoryUpdate);
+      window.removeEventListener('storage', handleHistoryUpdate);
+    };
   }, [router]);
   const trendingMovies = movies.slice(0, 6);
   const popularMovies = movies;

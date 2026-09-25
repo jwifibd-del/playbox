@@ -2,71 +2,107 @@
 
 import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { Download, DownloadStatus, getDownloads, saveDownloads, getStorageStats, StorageStats } from '@/lib/data';
-import { Pause, Play, Trash2, CheckCircle2, Clock, HardDriveDownload } from 'lucide-react';
+import { Download, DownloadStatus, getDownloads, saveDownloads, getStorageStats, StorageStats, sampleMovies } from '@/lib/data';
+import { Pause, Play, Trash2, CheckCircle2, Clock, HardDriveDownload, Sparkles, Filter, Smartphone } from 'lucide-react';
+import Link from 'next/link';
+import { StorageBreakdownVisualization, categorizeQuality } from '@/components/StorageBreakdownVisualization';
 
 export default function DownloadsPage() {
   const [downloads, setDownloads] = useState<Download[]>([]);
   const [storageStats, setStorageStats] = useState<StorageStats>(getStorageStats());
+  const [categoryFilter, setCategoryFilter] = useState<'all' | '4k' | '1080p' | '720p'>('all');
 
   useEffect(() => {
-    const refreshDownloads = () => setDownloads(getDownloads());
-    refreshDownloads();
-    window.addEventListener('playflix-downloads-updated', refreshDownloads);
-
+    setDownloads(getDownloads());
     // Simulate download progress
     const interval = setInterval(() => {
-      setDownloads(prev => {
-        let changed = false;
-        const updated = prev.map(download => {
+      setDownloads(prev => 
+        prev.map(download => {
           if (download.status === 'downloading' && download.progress < 100) {
-            changed = true;
-            const nextProg = Math.min(100, download.progress + 1);
             return {
               ...download,
-              progress: nextProg,
-              status: nextProg >= 100 ? ('completed' as DownloadStatus) : download.status,
+              progress: Math.min(100, download.progress + 1),
             };
           }
           return download;
-        });
-        if (changed) {
-          saveDownloads(updated);
-        }
-        return updated;
-      });
-    }, 3000);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('playflix-downloads-updated', refreshDownloads);
-    };
+        })
+      );
+    }, 2000);
+    return () => clearInterval(interval);
   }, []);
 
-  const activeDownloads = downloads.filter(d => ['downloading', 'paused', 'pending'].includes(d.status));
-  const completedDownloads = downloads.filter(d => d.status === 'completed');
+  const filteredDownloads = downloads.filter(d => {
+    if (categoryFilter === 'all') return true;
+    return categorizeQuality(d.quality) === categoryFilter;
+  });
+
+  const activeDownloads = filteredDownloads.filter(d => ['downloading', 'paused', 'pending'].includes(d.status));
+  const completedDownloads = filteredDownloads.filter(d => d.status === 'completed');
 
   const togglePause = (id: string) => {
-    setDownloads(prev => {
-      const updated = prev.map(d => {
+    setDownloads(prev => 
+      prev.map(d => {
         if (d.id === id) {
           return {
             ...d,
-            status: (d.status === 'downloading' ? 'paused' : 'downloading') as DownloadStatus,
+            status: d.status === 'downloading' ? 'paused' : 'downloading',
           };
         }
         return d;
-      });
-      saveDownloads(updated);
-      return updated;
-    });
+      })
+    );
   };
 
   const deleteDownload = (id: string) => {
     setDownloads(prev => {
-      const updated = prev.filter(d => d.id !== id);
-      saveDownloads(updated);
-      return updated;
+      const next = prev.filter(d => d.id !== id);
+      saveDownloads(next);
+      return next;
+    });
+  };
+
+  const handleAddMockDownload = (category: '4k' | '1080p' | '720p') => {
+    const movie = sampleMovies[Math.floor(Math.random() * sampleMovies.length)] || sampleMovies[0];
+    const newId = 'dl-' + Date.now();
+    let size = '1.8 GB';
+    let quality = '1080p';
+    if (category === '4k') {
+      size = (4.0 + Math.random() * 2.0).toFixed(1) + ' GB';
+      quality = '4K';
+    } else if (category === '1080p') {
+      size = (1.5 + Math.random() * 0.9).toFixed(1) + ' GB';
+      quality = '1080p';
+    } else {
+      size = Math.round(600 + Math.random() * 300) + ' MB';
+      quality = '720p';
+    }
+
+    const newDownload: Download = {
+      id: newId,
+      title: movie.title,
+      posterPath: movie.posterPath,
+      url: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
+      status: 'completed',
+      progress: 100,
+      size,
+      downloadedSize: size,
+      quality,
+      addedAt: new Date().toISOString(),
+      isEncrypted: true,
+    };
+
+    setDownloads(prev => {
+      const next = [newDownload, ...prev];
+      saveDownloads(next);
+      return next;
+    });
+  };
+
+  const handleClearCategory = (category: '4k' | '1080p' | '720p') => {
+    setDownloads(prev => {
+      const next = prev.filter(d => categorizeQuality(d.quality) !== category);
+      saveDownloads(next);
+      return next;
     });
   };
 
@@ -74,34 +110,34 @@ export default function DownloadsPage() {
     <main className="min-h-screen bg-[#080808] text-white">
       <Navbar />
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <h1 className="text-4xl font-bold mb-8">Downloads</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight">Downloads</h1>
+            <p className="text-zinc-400 text-sm mt-1">Manage offline media and storage allocation</p>
+          </div>
+          <Link
+            href="/mobile-app"
+            className="inline-flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition-all self-start sm:self-auto"
+          >
+            <Smartphone className="h-4 w-4" />
+            <span>Open Mobile App Simulator</span>
+          </Link>
+        </div>
         
-        {/* Storage Stats */}
-        <div className="bg-zinc-900 rounded-2xl p-6 mb-10 border border-zinc-800">
-          <div className="flex items-center gap-4 mb-4">
-            <HardDriveDownload className="text-red-500 w-8 h-8" />
-            <h2 className="text-2xl font-semibold">Storage Usage</h2>
-          </div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div className="p-4 bg-zinc-800 rounded-xl">
-                <p className="text-zinc-500 text-sm mb-1">Total Available</p>
-                <p className="text-xl font-bold">{storageStats.totalAvailable}</p>
-              </div>
-              <div className="p-4 bg-zinc-800 rounded-xl">
-                <p className="text-zinc-500 text-sm mb-1">Total Used</p>
-                <p className="text-xl font-bold">{storageStats.used}</p>
-              </div>
-              <div className="p-4 bg-zinc-800 rounded-xl">
-                <p className="text-zinc-500 text-sm mb-1">Downloads</p>
-                <p className="text-xl font-bold">{storageStats.downloadsUsed}</p>
-              </div>
-              <div className="p-4 bg-zinc-800 rounded-xl">
-                <p className="text-zinc-500 text-sm mb-1">Free</p>
-                <p className="text-xl font-bold">{storageStats.free}</p>
-              </div>
-            </div>
-          </div>
+        {/* Storage Breakdown Visualization Component */}
+        <div className="mb-10">
+          <StorageBreakdownVisualization
+            items={downloads}
+            deviceTotalGB={256}
+            systemUsedGB={48.5}
+            isCompact={false}
+            selectedCategory={categoryFilter}
+            onSelectCategory={setCategoryFilter}
+            onAddMockDownload={handleAddMockDownload}
+            onDeleteDownload={deleteDownload}
+            onClearCategory={handleClearCategory}
+            showQuickActions={true}
+          />
         </div>
         
         {/* Active Downloads */}

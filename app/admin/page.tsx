@@ -83,7 +83,7 @@ import { twMerge } from 'tailwind-merge'
 import { API_BASE } from '@/lib/api';
 import { maskStreamUrl } from '@/lib/utils';
 import { scrapeTVMazeShow, scrapeCuratedMovie } from '@/lib/open-scraper';
-import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, getTMDBSeasonDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, convertTMDBToMovieWithFanart, convertTMDBToTVShowWithEpisodesAndFanart, enrichMovieWithFanart, enrichTVShowWithFanart, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, deleteUser, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow, getXtreamConfigs, saveXtreamConfigs, getActiveXtreamConfig, setActiveXtreamConfig, XtreamConfig, getFanartMovieArt, getFanartTvArt, pickBestFanartImage, FanartMovieArt, FanartTvArt, TvChannel, getTvChannels, saveTvChannels, getTvChannelCategories } from '@/lib/data';
+import { sampleMovies, getAppLinks, saveAppLinks, AppLink, getGeneralSettings, saveGeneralSettings, GeneralSettings, getParentalControlSettings, saveParentalControlSettings, ParentalControlSettings, getHeroBanners, saveHeroBanners, getKidsHeroBanners, saveKidsHeroBanners, getAnimeHeroBanners, saveAnimeHeroBanners, HeroBanner, getGenres, saveGenres, Genre, getCountries, saveCountries, Country, getLanguages, saveLanguages, Language, getPushNotifications, savePushNotifications, PushNotification, getApiKeys, saveApiKeys, ApiKey, getExternalApiKeys, saveExternalApiKeys, ExternalApiKeys, getSliderSections, saveSliderSections, getKidsSliderSections, saveKidsSliderSections, getAnimeSliderSections, saveAnimeSliderSections, SliderSection, getHomepageSections, saveHomepageSections, getKidsHomepageSections, saveKidsHomepageSections, getAnimeHomepageSections, saveAnimeHomepageSections, HomepageSection, searchTMDB, getTMDBDetails, getTMDBSeasonDetails, convertTMDBToMovie, convertTMDBToTVShow, convertTMDBToTVShowWithEpisodes, convertTMDBToMovieWithFanart, convertTMDBToTVShowWithEpisodesAndFanart, enrichMovieWithFanart, enrichTVShowWithFanart, getMovies, saveMovies, getTVShows, saveTVShows, Movie, MovieSource, CastMember, CrewMember, Season, Episode, getScrapingConfig, saveScrapingConfig, addScrapingJob, updateScrapingJob, ScrapingConfig, ScrapingJob, ScraperSource, parseFilename, getUserProfile, saveUserProfile, UserProfile, getAdminCredentials, saveAdminCredentials, AdminCredentials, isAdminAuthenticated, logoutAdmin, getUsers, deleteUser, AppUser, getMovieRequests, saveMovieRequests, MovieRequest, TVShow, getXtreamConfigs, saveXtreamConfigs, getActiveXtreamConfig, setActiveXtreamConfig, XtreamConfig, getFanartMovieArt, getFanartTvArt, pickBestFanartImage, FanartMovieArt, FanartTvArt, TvChannel, getTvChannels, saveTvChannels, deleteTvChannel, bulkDeleteTvChannels, getTvChannelCategories } from '@/lib/data';
 
 function cn(...inputs: any[]) {
   return twMerge(clsx(inputs))
@@ -1085,6 +1085,7 @@ const AdminTvChannelCard = ({
   isSelected,
   onSelect,
 }: any) => {
+  const [copiedStream, setCopiedStream] = useState(false);
   const gradient = categoryAccent[channel.category] || 'from-sky-500 to-blue-500';
   const totalViewers = (channel.viewerCount || 0);
   const prettyViewers = totalViewers >= 1000000
@@ -1092,6 +1093,16 @@ const AdminTvChannelCard = ({
     : totalViewers >= 1000
     ? `${(totalViewers / 1000).toFixed(0)}K`
     : String(totalViewers);
+
+  const handleCopyStream = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (channel.streamUrl && typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(channel.streamUrl).then(() => {
+        setCopiedStream(true);
+        setTimeout(() => setCopiedStream(false), 2000);
+      }).catch(() => {});
+    }
+  };
 
   return (
     <motion.div
@@ -1106,15 +1117,18 @@ const AdminTvChannelCard = ({
       )}
     >
       <button
+        type="button"
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
+        aria-label={isSelected ? 'Deselect channel' : 'Select channel'}
+        title={isSelected ? 'Deselect channel' : 'Select for bulk actions'}
         className={cn(
-          'absolute top-3 left-3 z-20 w-6 h-6 rounded-lg border flex items-center justify-center transition-all',
+          'absolute top-3 left-3 z-20 w-7 h-7 rounded-xl border flex items-center justify-center transition-all shadow-lg',
           isSelected
-            ? 'bg-red-500 border-red-400 text-white'
-            : 'bg-zinc-900/80 border-zinc-700 text-zinc-500 opacity-0 group-hover:opacity-100 hover:text-white hover:border-zinc-500'
+            ? 'bg-red-600 border-red-400 text-white opacity-100 scale-105 ring-2 ring-red-500/50'
+            : 'bg-zinc-950/80 border-white/30 text-white/50 opacity-90 group-hover:opacity-100 hover:text-white hover:border-white/70 hover:scale-105'
         )}
       >
-        <Check className="w-3.5 h-3.5" />
+        <Check className={cn('w-4 h-4 transition-all', isSelected ? 'opacity-100 stroke-[3]' : 'opacity-30 group-hover:opacity-60')} />
       </button>
 
       <div className={`h-24 bg-gradient-to-br ${gradient} relative overflow-hidden`}>
@@ -1284,6 +1298,7 @@ const AdminTvChannelCard = ({
 
         <div className="flex items-center gap-2 pt-3 border-t border-zinc-800/60">
           <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold transition-colors"
           >
@@ -1291,7 +1306,22 @@ const AdminTvChannelCard = ({
             Edit
           </button>
           <button
+            type="button"
+            onClick={handleCopyStream}
+            title={copiedStream ? 'Stream URL copied!' : 'Copy Stream URL'}
+            className={cn(
+              'flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition-all',
+              copiedStream
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 border-zinc-700 hover:text-white'
+            )}
+          >
+            {copiedStream ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            title="Remove channel"
             className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -1332,6 +1362,7 @@ const TvChannelModal = ({ channel, onClose, onSave, categories }: any) => {
 
   const update = (patch: Partial<TvChannel>) => setForm((f) => ({ ...f, ...patch }))
   const [revealStreamUrl, setRevealStreamUrl] = useState(false)
+  const [showStreamTester, setShowStreamTester] = useState(false)
   const streamUrlInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -1492,6 +1523,54 @@ const TvChannelModal = ({ channel, onClose, onSave, categories }: any) => {
                         <AlertCircle className="w-3.5 h-3.5" />
                         URL must start with http://, https://, or rtmp://
                       </p>
+                    )}
+
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowStreamTester((v) => !v)}
+                        disabled={!form.streamUrl || !isValidStreamUrl(form.streamUrl)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-200 border border-zinc-700 transition-colors"
+                      >
+                        <Play className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
+                        {showStreamTester ? 'Hide Stream Player' : 'Test / Preview Stream'}
+                      </button>
+                    </div>
+
+                    {showStreamTester && form.streamUrl && isValidStreamUrl(form.streamUrl) && (
+                      <div className="mt-3 p-3 rounded-2xl bg-zinc-950 border border-zinc-700/70 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span className="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">
+                              Live Stream Tester
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowStreamTester(false)}
+                            className="text-zinc-500 hover:text-white text-[11px]"
+                          >
+                            Close Preview
+                          </button>
+                        </div>
+                        <div className="relative aspect-video rounded-xl bg-black overflow-hidden border border-zinc-800 flex items-center justify-center">
+                          <video
+                            src={form.streamUrl}
+                            controls
+                            playsInline
+                            autoPlay
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div className="text-[11px] text-zinc-400 truncate flex items-center justify-between">
+                          <span className="font-mono truncate">{form.streamUrl}</span>
+                          <span className="text-[10px] text-zinc-500 shrink-0 ml-2">Direct Playback Check</span>
+                        </div>
+                      </div>
                     )}
                   </Field>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -4308,12 +4387,39 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
   } = props
   const router = useRouter()
 
+  const [channelToDelete, setChannelToDelete] = useState<TvChannel | null>(null)
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'featured' | 'live' | 'offline' | '4k' | 'hd' | 'premium'>('all')
+  const [sortBy, setSortBy] = useState<'order' | 'name' | 'viewers' | 'rating'>('order')
+
   const categories = getTvChannelCategories();
+
+  const featuredCount = tvChannels.filter((c) => c.isFeatured).length;
+  const liveCount = tvChannels.filter((c) => c.isActive).length;
+  const offlineCount = tvChannels.filter((c) => !c.isActive).length;
+  const fourKCount = tvChannels.filter((c) => c.is4K).length;
+  const hdCount = tvChannels.filter((c) => c.isHD).length;
+  const premiumCount = tvChannels.filter((c) => c.isPaid).length;
+
   const filteredList: TvChannel[] = (() => {
     let list = tvChannels;
     if (tvChannelCategoryFilter !== 'All') {
       list = list.filter((c) => c.category === tvChannelCategoryFilter);
     }
+    if (statusFilter === 'featured') {
+      list = list.filter((c) => c.isFeatured);
+    } else if (statusFilter === 'live') {
+      list = list.filter((c) => c.isActive);
+    } else if (statusFilter === 'offline') {
+      list = list.filter((c) => !c.isActive);
+    } else if (statusFilter === '4k') {
+      list = list.filter((c) => c.is4K);
+    } else if (statusFilter === 'hd') {
+      list = list.filter((c) => c.isHD);
+    } else if (statusFilter === 'premium') {
+      list = list.filter((c) => c.isPaid);
+    }
+
     const q = tvChannelSearchQuery.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -4321,12 +4427,21 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
           c.name.toLowerCase().includes(q) ||
           (c.description || '').toLowerCase().includes(q) ||
           (c.country || '').toLowerCase().includes(q) ||
+          (c.language || '').toLowerCase().includes(q) ||
           (c.streamUrl || '').toLowerCase().includes(q) ||
           (c.nowPlaying || '').toLowerCase().includes(q) ||
+          (c.nextProgram || '').toLowerCase().includes(q) ||
+          (c.epgId || '').toLowerCase().includes(q) ||
           (c.packageName || '').toLowerCase().includes(q)
       );
     }
-    return [...list].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+
+    return [...list].sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'viewers') return (b.viewerCount || 0) - (a.viewerCount || 0);
+      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+      return (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name);
+    });
   })();
 
   const handleSaveTvChannel = async (data: TvChannel) => {
@@ -4384,28 +4499,30 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
     }
   };
 
-  const handleDeleteTvChannel = (id: string | number) => {
-    if (!confirm('Delete this TV Channel?')) return;
-    const next = tvChannels.filter((c) => String(c.id) !== String(id));
-    saveTvChannels(next);
-    const fresh = getTvChannels();
-    setTvChannels(fresh);
-    setSelectedTvChannelIds((s) => {
-      const ns = new Set(s);
-      ns.delete(String(id));
+  const handleConfirmDeleteChannel = () => {
+    if (!channelToDelete) return;
+    const targetId = channelToDelete.id;
+    const targetName = channelToDelete.name;
+    const next = deleteTvChannel(targetId);
+    setTvChannels(next);
+    setSelectedTvChannelIds((prev) => {
+      const ns = new Set(prev);
+      ns.delete(String(targetId));
+      ns.delete(targetId);
       return ns;
     });
-    showToast('TV Channel deleted', 'success');
+    setChannelToDelete(null);
+    showToast(`Channel "${targetName}" removed`, 'success');
   };
 
-  const handleBulkDeleteTvChannels = () => {
+  const handleConfirmBulkDelete = () => {
     if (selectedTvChannelIds.size === 0) return;
-    if (!confirm(`Delete ${selectedTvChannelIds.size} selected TV channel(s)?`)) return;
-    const next = tvChannels.filter((c) => !selectedTvChannelIds.has(String(c.id)));
-    saveTvChannels(next);
-    setTvChannels(getTvChannels());
+    const count = selectedTvChannelIds.size;
+    const next = bulkDeleteTvChannels(selectedTvChannelIds);
+    setTvChannels(next);
     setSelectedTvChannelIds(new Set());
-    showToast('Bulk delete completed', 'success');
+    setIsBulkDeleteModalOpen(false);
+    showToast(`Successfully deleted ${count} TV channel(s)`, 'success');
   };
 
   const handleSelectTvChannel = (id: string | number) => {
@@ -4416,6 +4533,49 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
       else ns.add(key);
       return ns;
     });
+  };
+
+  const handleToggleSelectAllVisible = () => {
+    const visibleIds = filteredList.map((c) => String(c.id));
+    if (visibleIds.length === 0) return;
+    const allSelected = visibleIds.every((id) => selectedTvChannelIds.has(id));
+    setSelectedTvChannelIds((prev) => {
+      const ns = new Set(prev);
+      if (allSelected) {
+        visibleIds.forEach((id) => ns.delete(id));
+      } else {
+        visibleIds.forEach((id) => ns.add(id));
+      }
+      return ns;
+    });
+  };
+
+  const handleBulkFeatureTvChannels = (featured: boolean) => {
+    if (selectedTvChannelIds.size === 0) return;
+    const count = selectedTvChannelIds.size;
+    const next = tvChannels.map((c) => {
+      if (selectedTvChannelIds.has(String(c.id)) || selectedTvChannelIds.has(c.id)) {
+        return { ...c, isFeatured: featured, updatedAt: new Date().toISOString() };
+      }
+      return c;
+    });
+    saveTvChannels(next);
+    setTvChannels(getTvChannels());
+    showToast(`${featured ? 'Featured' : 'Unfeatured'} ${count} channel(s)`, 'success');
+  };
+
+  const handleBulkSetActiveTvChannels = (active: boolean) => {
+    if (selectedTvChannelIds.size === 0) return;
+    const count = selectedTvChannelIds.size;
+    const next = tvChannels.map((c) => {
+      if (selectedTvChannelIds.has(String(c.id)) || selectedTvChannelIds.has(c.id)) {
+        return { ...c, isActive: active, updatedAt: new Date().toISOString() };
+      }
+      return c;
+    });
+    saveTvChannels(next);
+    setTvChannels(getTvChannels());
+    showToast(`Set ${count} channel(s) to ${active ? 'Live' : 'Offline'}`, 'success');
   };
 
   const handleToggleFeaturedTvChannel = (id: string | number) => {
@@ -4437,6 +4597,8 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
     saveTvChannels(next);
     setTvChannels(getTvChannels());
   };
+
+  const allVisibleSelected = filteredList.length > 0 && filteredList.every((c) => selectedTvChannelIds.has(String(c.id)));
 
   return (
     <>
@@ -4478,47 +4640,173 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
           value={tvChannels.length}
           icon={Radio}
           trend="up"
-          change={`+${tvChannels.filter((c) => c.isActive).length} Active`}
+          change={`${liveCount} Live • ${offlineCount} Offline`}
         />
         <StatCard
-          title="Featured"
-          value={tvChannels.filter((c) => c.isFeatured).length}
+          title="Featured Picks"
+          value={featuredCount}
           icon={Zap}
           trend="up"
-          change="Curated"
+          change="Curated for top display"
         />
         <StatCard
-          title="HD / 4K"
-          value={`${tvChannels.filter((c) => c.isHD).length} / ${tvChannels.filter((c) => c.is4K).length}`}
+          title="Resolution"
+          value={`${hdCount} HD • ${fourKCount} 4K`}
           icon={Palette}
+          change="High quality streams"
         />
         <StatCard
-          title="Categories"
+          title="Categories & Tiers"
           value={categories.length}
           icon={Tags}
-          change={`${tvChannels.filter((c) => c.isPaid).length} Premium`}
+          change={`${premiumCount} Premium Tiers`}
         />
       </div>
 
-      {/* Bulk actions + filters */}
-      <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-4 mb-8 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
+      {/* Quick Status / Curation Filters */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none">
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+            statusFilter === 'all'
+              ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-500/20'
+              : 'bg-zinc-900/70 text-zinc-400 hover:text-white border-zinc-800 hover:border-zinc-700'
+          )}
+        >
+          All Channels ({tvChannels.length})
+        </button>
+        <button
+          onClick={() => setStatusFilter('featured')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border flex items-center gap-1.5',
+            statusFilter === 'featured'
+              ? 'bg-amber-500 text-black border-amber-400 shadow-md shadow-amber-500/20'
+              : 'bg-zinc-900/70 text-amber-300/80 hover:text-amber-300 border-zinc-800 hover:border-zinc-700'
+          )}
+        >
+          <Zap className="w-3.5 h-3.5 fill-current" />
+          Featured Picks ({featuredCount})
+        </button>
+        <button
+          onClick={() => setStatusFilter('live')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border flex items-center gap-1.5',
+            statusFilter === 'live'
+              ? 'bg-emerald-500 text-black border-emerald-400 shadow-md shadow-emerald-500/20'
+              : 'bg-zinc-900/70 text-emerald-300/80 hover:text-emerald-300 border-zinc-800 hover:border-zinc-700'
+          )}
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          Live Active ({liveCount})
+        </button>
+        <button
+          onClick={() => setStatusFilter('offline')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+            statusFilter === 'offline'
+              ? 'bg-zinc-700 text-white border-zinc-600'
+              : 'bg-zinc-900/70 text-zinc-400 hover:text-white border-zinc-800 hover:border-zinc-700'
+          )}
+        >
+          Offline ({offlineCount})
+        </button>
+        <button
+          onClick={() => setStatusFilter('4k')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+            statusFilter === '4k'
+              ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-500/20'
+              : 'bg-zinc-900/70 text-zinc-400 hover:text-white border-zinc-800 hover:border-zinc-700'
+          )}
+        >
+          4K UHD ({fourKCount})
+        </button>
+        <button
+          onClick={() => setStatusFilter('hd')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+            statusFilter === 'hd'
+              ? 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-500/20'
+              : 'bg-zinc-900/70 text-zinc-400 hover:text-white border-zinc-800 hover:border-zinc-700'
+          )}
+        >
+          HD Ready ({hdCount})
+        </button>
+        <button
+          onClick={() => setStatusFilter('premium')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+            statusFilter === 'premium'
+              ? 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-500/20'
+              : 'bg-zinc-900/70 text-zinc-400 hover:text-white border-zinc-800 hover:border-zinc-700'
+          )}
+        >
+          Premium / Paid ({premiumCount})
+        </button>
+      </div>
+
+      {/* Bulk actions + filters toolbar */}
+      <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-4 mb-8 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
         {selectedTvChannelIds.size > 0 ? (
-          <div className="flex flex-wrap items-center gap-3 flex-1">
-            <span className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-medium">
+          <div className="flex flex-wrap items-center gap-2.5 flex-1">
+            <span className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-semibold">
               {selectedTvChannelIds.size} selected
             </span>
             <button
-              onClick={handleBulkDeleteTvChannels}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-600 text-white text-sm font-medium transition-colors"
+              type="button"
+              onClick={handleToggleSelectAllVisible}
+              className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition-colors"
             >
-              <Trash2 className="w-4 h-4" />
-              Bulk Delete
+              {allVisibleSelected ? 'Deselect Visible' : 'Select All Visible'}
             </button>
             <button
-              onClick={() => setSelectedTvChannelIds(new Set())}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors"
+              type="button"
+              onClick={() => setIsBulkDeleteModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/20"
             >
-              <X className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
+              Bulk Delete ({selectedTvChannelIds.size})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkFeatureTvChannels(true)}
+              title="Add to Featured Picks"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-medium transition-colors"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Feature
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkFeatureTvChannels(false)}
+              title="Remove from Featured Picks"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs font-medium transition-colors"
+            >
+              Unfeature
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkSetActiveTvChannels(true)}
+              title="Set selected channels to active/live"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-medium transition-colors"
+            >
+              Set Live
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkSetActiveTvChannels(false)}
+              title="Set selected channels to offline"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs font-medium transition-colors"
+            >
+              Set Offline
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedTvChannelIds(new Set())}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs transition-colors ml-auto"
+            >
+              <X className="w-3.5 h-3.5" />
               Clear
             </button>
           </div>
@@ -4529,11 +4817,12 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
               <input
                 value={tvChannelSearchQuery}
                 onChange={(e) => setTvChannelSearchQuery(e.target.value)}
-                placeholder="Search channels, streams, countries..."
+                placeholder="Search channels, streams, countries, epg..."
                 className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-500/60 focus:ring-2 focus:ring-red-500/20 text-sm"
               />
               {tvChannelSearchQuery && (
                 <button
+                  type="button"
                   onClick={() => setTvChannelSearchQuery('')}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-zinc-700 text-zinc-500 hover:text-white"
                 >
@@ -4549,14 +4838,32 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
               <option value="All">All Categories</option>
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
-                  {cat} (
-                  {tvChannels.filter((c) => c.category === cat).length})
+                  {cat} ({tvChannels.filter((c) => c.category === cat).length})
                 </option>
               ))}
             </select>
+            <select
+              value={sortBy}
+              onChange={(e: any) => setSortBy(e.target.value)}
+              className="px-4 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-red-500/60 focus:ring-2 focus:ring-red-500/20 text-sm min-w-[140px]"
+            >
+              <option value="order">Sort: Channel Order</option>
+              <option value="name">Sort: Name (A-Z)</option>
+              <option value="viewers">Sort: Viewer Count</option>
+              <option value="rating">Sort: Rating</option>
+            </select>
+            {filteredList.length > 0 && (
+              <button
+                type="button"
+                onClick={handleToggleSelectAllVisible}
+                className="px-3 py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-medium border border-zinc-700 whitespace-nowrap transition-colors"
+              >
+                Select All ({filteredList.length})
+              </button>
+            )}
           </div>
         )}
-        <div className="text-sm text-zinc-500 whitespace-nowrap">
+        <div className="text-xs text-zinc-500 whitespace-nowrap self-center">
           Showing <span className="text-zinc-200 font-semibold">{filteredList.length}</span> of{' '}
           <span className="text-zinc-200 font-semibold">{tvChannels.length}</span>
         </div>
@@ -4570,8 +4877,8 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
           </div>
           <h3 className="text-xl font-bold text-white mb-2">No TV Channels Found</h3>
           <p className="text-zinc-500 mb-6">
-            {tvChannelSearchQuery || tvChannelCategoryFilter !== 'All'
-              ? 'Try a different search or category filter'
+            {tvChannelSearchQuery || tvChannelCategoryFilter !== 'All' || statusFilter !== 'all'
+              ? 'Try a different search or filter'
               : 'Get started by adding your first live TV channel'}
           </p>
           <button
@@ -4595,7 +4902,7 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
                 setEditingTvChannel(ch);
                 setIsTvChannelModalOpen(true);
               }}
-              onDelete={() => handleDeleteTvChannel(ch.id)}
+              onDelete={() => setChannelToDelete(ch)}
               onToggleFeatured={() => handleToggleFeaturedTvChannel(ch.id)}
               onToggleActive={() => handleToggleActiveTvChannel(ch.id)}
               isSelected={selectedTvChannelIds.has(String(ch.id))}
@@ -4605,6 +4912,7 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
         </div>
       )}
 
+      {/* Add / Edit Channel Modal */}
       <AnimatePresence>
         {isTvChannelModalOpen && (
           <TvChannelModal
@@ -4616,6 +4924,123 @@ function AdminTvChannelsSection(props: AdminTvChannelsSectionProps) {
             onSave={handleSaveTvChannel}
             categories={categories}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Single Channel Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {channelToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Remove TV Channel</h3>
+                  <p className="text-xs text-zinc-400">This channel will be deleted permanently</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 flex items-center gap-3">
+                {channelToDelete.logoPath ? (
+                  <img
+                    src={channelToDelete.logoPath}
+                    alt={channelToDelete.name}
+                    className="w-12 h-12 rounded-xl object-contain bg-zinc-900 p-1 border border-zinc-800"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-500 font-bold text-sm">
+                    {channelToDelete.name.substring(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-sm font-semibold text-white truncate">{channelToDelete.name}</h4>
+                  <p className="text-xs text-zinc-500 truncate">{channelToDelete.category} • {channelToDelete.country || 'Global'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setChannelToDelete(null)}
+                  className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-sm font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteChannel}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition-colors shadow-lg shadow-rose-600/20"
+                >
+                  Delete Channel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {isBulkDeleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Bulk Delete Channels</h3>
+                  <p className="text-xs text-zinc-400">
+                    Are you sure you want to remove {selectedTvChannelIds.size} selected channel{selectedTvChannelIds.size > 1 ? 's' : ''}?
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 max-h-48 overflow-y-auto space-y-1.5">
+                {tvChannels
+                  .filter((c) => selectedTvChannelIds.has(String(c.id)))
+                  .map((c) => (
+                    <div key={`bulk-del-preview-${String(c.id)}`} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-zinc-900/50">
+                      <span className="text-zinc-300 font-medium truncate">{c.name}</span>
+                      <span className="text-zinc-500 text-[10px] ml-2 shrink-0">{c.category}</span>
+                    </div>
+                  ))}
+              </div>
+
+              <p className="text-xs text-rose-400/90 font-medium">
+                This action is permanent and removes the streams from your live channels directory.
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkDeleteModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-sm font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmBulkDelete}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition-colors shadow-lg shadow-rose-600/20"
+                >
+                  Delete {selectedTvChannelIds.size} Channel{selectedTvChannelIds.size > 1 ? 's' : ''}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>

@@ -27,15 +27,19 @@ import {
   HardDrive,
   Layers,
   ChevronRight,
+  RotateCcw,
+  Filter,
 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { sampleMovies, type Movie } from '@/lib/data';
 import { cn } from '@/lib/utils';
+import { StorageBreakdownVisualization, categorizeQuality } from '@/components/StorageBreakdownVisualization';
 
 export default function MobileAppPage() {
   const [deviceModel, setDeviceModel] = useState<'ios' | 'android'>('ios');
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'downloads' | 'live'>('home');
+  const [selectedSimCategory, setSelectedSimCategory] = useState<'all' | '4k' | '1080p' | '720p'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [offlineMode, setOfflineMode] = useState(false);
   const [isSimPlaying, setIsSimPlaying] = useState(false);
@@ -45,27 +49,85 @@ export default function MobileAppPage() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [installStatus, setInstallStatus] = useState<string | null>(null);
 
-  // Simulated downloads inside phone
-  const [simDownloads, setSimDownloads] = useState([
+  const initialSimDownloads = [
     {
       id: 'sim-1',
-      title: 'Interstellar Odyssey',
-      size: '1.8 GB',
-      quality: '1080p HDR',
+      title: 'Dune: Prophecy - S1E1',
+      size: '4.2 GB',
+      quality: '4K Ultra HD HDR',
       progress: 100,
       status: 'completed',
       poster: sampleMovies[0]?.posterPath,
     },
     {
       id: 'sim-2',
-      title: 'Neon Cyberpunk 2099',
-      size: '1.2 GB',
-      quality: '1080p',
-      progress: 68,
-      status: 'downloading',
+      title: 'Interstellar Odyssey',
+      size: '1.8 GB',
+      quality: '1080p Full HD',
+      progress: 100,
+      status: 'completed',
       poster: sampleMovies[1]?.posterPath || sampleMovies[0]?.posterPath,
     },
-  ]);
+    {
+      id: 'sim-3',
+      title: 'Neon Cyberpunk 2099',
+      size: '1.3 GB',
+      quality: '1080p Full HD',
+      progress: 68,
+      status: 'downloading',
+      poster: sampleMovies[2]?.posterPath || sampleMovies[0]?.posterPath,
+    },
+    {
+      id: 'sim-4',
+      title: 'Spirited Anime Legends',
+      size: '720 MB',
+      quality: '720p Standard HD',
+      progress: 100,
+      status: 'completed',
+      poster: sampleMovies[3]?.posterPath || sampleMovies[0]?.posterPath,
+    },
+  ];
+
+  // Simulated downloads inside phone
+  const [simDownloads, setSimDownloads] = useState(initialSimDownloads);
+
+  const handleResetDownloads = () => {
+    setSimDownloads(initialSimDownloads);
+  };
+
+  const handleAddMockDownload = (category: '4k' | '1080p' | '720p') => {
+    const movie = sampleMovies[Math.floor(Math.random() * sampleMovies.length)] || sampleMovies[0];
+    const newId = 'sim-' + Date.now();
+    let size = '1.8 GB';
+    let quality = '1080p Full HD';
+    if (category === '4k') {
+      size = (3.6 + Math.random() * 1.6).toFixed(1) + ' GB';
+      quality = '4K Ultra HD HDR';
+    } else if (category === '1080p') {
+      size = (1.4 + Math.random() * 0.8).toFixed(1) + ' GB';
+      quality = '1080p Full HD';
+    } else {
+      size = Math.round(550 + Math.random() * 320) + ' MB';
+      quality = '720p Standard HD';
+    }
+
+    setSimDownloads((prev) => [
+      {
+        id: newId,
+        title: movie.title,
+        size,
+        quality,
+        progress: 100,
+        status: 'completed',
+        poster: movie.posterPath,
+      },
+      ...prev,
+    ]);
+  };
+
+  const handleClearCategory = (category: '4k' | '1080p' | '720p') => {
+    setSimDownloads((prev) => prev.filter((d) => categorizeQuality(d.quality) !== category));
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -431,52 +493,128 @@ export default function MobileAppPage() {
                     )}
 
                     {activeTab === 'downloads' && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                          <div>
-                            <p className="text-xs font-bold text-white">Device Storage</p>
-                            <p className="text-[10px] text-zinc-400">3.0 GB used of 128 GB</p>
-                          </div>
-                          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-400">
-                            DRM Offline
+                      <div className="space-y-2.5">
+                        {/* Interactive Storage Breakdown Visualization (Compact Mobile view) */}
+                        <StorageBreakdownVisualization
+                          items={simDownloads}
+                          deviceTotalGB={deviceModel === 'ios' ? 128 : 256}
+                          systemUsedGB={deviceModel === 'ios' ? 21.2 : 23.8}
+                          isCompact={true}
+                          selectedCategory={selectedSimCategory}
+                          onSelectCategory={setSelectedSimCategory}
+                          onAddMockDownload={handleAddMockDownload}
+                        />
+
+                        {/* Category Filter Pills */}
+                        <div className="flex items-center gap-1 border-t border-zinc-800/80 pt-2 text-[10px]">
+                          <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider mr-1">
+                            Filter:
                           </span>
+                          {(['all', '4k', '1080p', '720p'] as const).map((cat) => {
+                            const count =
+                              cat === 'all'
+                                ? simDownloads.length
+                                : simDownloads.filter((d) => categorizeQuality(d.quality) === cat).length;
+                            return (
+                              <button
+                                key={cat}
+                                onClick={() => setSelectedSimCategory(cat)}
+                                className={cn(
+                                  'rounded-full px-2 py-0.5 font-bold transition-all text-[9px]',
+                                  selectedSimCategory === cat
+                                    ? 'bg-amber-400 text-black shadow-sm'
+                                    : 'bg-zinc-800/80 text-zinc-400 hover:text-zinc-200'
+                                )}
+                              >
+                                {cat === 'all' ? 'All' : cat.toUpperCase()} ({count})
+                              </button>
+                            );
+                          })}
                         </div>
 
-                        <div className="space-y-2">
-                          {simDownloads.map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center gap-2.5 rounded-xl border border-zinc-800 bg-zinc-900/70 p-2"
-                            >
-                              <img
-                                src={item.poster}
-                                alt={item.title}
-                                className="h-12 w-9 rounded-lg object-cover"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className="truncate text-xs font-bold text-white">{item.title}</p>
-                                <p className="text-[10px] text-zinc-400">
-                                  {item.quality} • {item.size}
-                                </p>
-                                {item.status === 'downloading' && (
-                                  <div className="mt-1 h-1 w-full rounded-full bg-zinc-800">
-                                    <div
-                                      className="h-full rounded-full bg-amber-400"
-                                      style={{ width: `${item.progress}%` }}
-                                    />
+                        {/* Downloaded Titles List */}
+                        <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-0.5 no-scrollbar">
+                          {simDownloads
+                            .filter((d) => selectedSimCategory === 'all' || categorizeQuality(d.quality) === selectedSimCategory)
+                            .map((item) => {
+                              const cat = categorizeQuality(item.quality);
+                              const badgeColor =
+                                cat === '4k'
+                                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                                  : cat === '1080p'
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+
+                              return (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center gap-2 rounded-xl border border-zinc-800/80 bg-zinc-900/80 p-1.5 transition-all hover:border-zinc-700"
+                                >
+                                  <img
+                                    src={item.poster}
+                                    alt={item.title}
+                                    className="h-11 w-8 rounded-lg object-cover flex-shrink-0"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="truncate text-[11px] font-bold text-white">{item.title}</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span className={cn('rounded px-1 py-0.2 text-[8px] font-bold border', badgeColor)}>
+                                        {cat.toUpperCase()}
+                                      </span>
+                                      <span className="text-[9px] font-mono text-zinc-400">{item.size}</span>
+                                      {item.status === 'completed' && (
+                                        <span className="text-[8px] text-emerald-400 font-medium">Ready</span>
+                                      )}
+                                    </div>
+                                    {item.status === 'downloading' && (
+                                      <div className="mt-1 h-1 w-full rounded-full bg-zinc-800 overflow-hidden">
+                                        <div
+                                          className="h-full rounded-full bg-amber-400"
+                                          style={{ width: `${item.progress}%` }}
+                                        />
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                              </div>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => {
+                                        const found = sampleMovies.find((m) => m.title === item.title) || sampleMovies[0];
+                                        setActiveSimMovie(found);
+                                        setActiveTab('home');
+                                        setIsSimPlaying(true);
+                                      }}
+                                      title="Play Offline"
+                                      className="rounded-lg bg-zinc-800 p-1 text-zinc-300 hover:bg-amber-400 hover:text-black transition-colors"
+                                    >
+                                      <Play className="h-2.5 w-2.5 fill-current" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setSimDownloads((prev) => prev.filter((d) => d.id !== item.id));
+                                      }}
+                                      title="Delete Download"
+                                      className="rounded-lg p-1 text-zinc-500 hover:bg-rose-500/20 hover:text-rose-400 transition-colors"
+                                    >
+                                      <Trash2 className="h-2.5 w-2.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                          {simDownloads.filter(
+                            (d) => selectedSimCategory === 'all' || categorizeQuality(d.quality) === selectedSimCategory
+                          ).length === 0 && (
+                            <div className="rounded-xl border border-dashed border-zinc-800 py-4 text-center">
+                              <p className="text-[10px] text-zinc-400">No {selectedSimCategory.toUpperCase()} titles stored</p>
                               <button
-                                onClick={() => {
-                                  setSimDownloads((prev) => prev.filter((d) => d.id !== item.id));
-                                }}
-                                className="rounded p-1 text-zinc-500 hover:text-rose-400"
+                                onClick={() => handleAddMockDownload(selectedSimCategory === 'all' ? '1080p' : selectedSimCategory)}
+                                className="mt-1.5 rounded-lg bg-amber-400/20 px-2 py-0.5 text-[9px] font-bold text-amber-300 hover:bg-amber-400/30"
                               >
-                                <Trash2 className="h-3 w-3" />
+                                + Download {selectedSimCategory.toUpperCase()} Title
                               </button>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </div>
                     )}
@@ -548,6 +686,49 @@ export default function MobileAppPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Detailed Mobile Storage Breakdown & Offline Manager Section */}
+      <section id="mobile-storage-breakdown" className="border-t border-zinc-900 bg-black/60 py-16 px-4 sm:px-6 md:px-12">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-400 mb-3">
+                <HardDrive className="h-3.5 w-3.5" />
+                <span>Offline Storage Architecture</span>
+              </div>
+              <h2 className="text-3xl font-black text-white sm:text-4xl tracking-tight">
+                Mobile Storage Breakdown & Optimization
+              </h2>
+              <p className="mt-2 text-sm text-zinc-400 max-w-2xl leading-relaxed">
+                Real-time visual breakdown displaying exact device storage consumption across 4K Ultra HD, 1080p Full HD, and 720p categories. Interactive actions below synchronize instantly with the smartphone simulator.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleResetDownloads}
+                className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/80 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:border-zinc-700 hover:text-white transition-all shadow-sm"
+              >
+                <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
+                Reset Sample Storage
+              </button>
+            </div>
+          </div>
+
+          <StorageBreakdownVisualization
+            items={simDownloads}
+            deviceTotalGB={deviceModel === 'ios' ? 128 : 256}
+            systemUsedGB={deviceModel === 'ios' ? 21.2 : 23.8}
+            isCompact={false}
+            selectedCategory={selectedSimCategory}
+            onSelectCategory={setSelectedSimCategory}
+            onAddMockDownload={handleAddMockDownload}
+            onDeleteDownload={(id) => setSimDownloads((prev) => prev.filter((d) => d.id !== id))}
+            onClearCategory={handleClearCategory}
+            showQuickActions={true}
+          />
         </div>
       </section>
 
